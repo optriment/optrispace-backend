@@ -1,14 +1,10 @@
 #!/bin/sh -eu
 
-# this script is for starting from inside appropriate docker container
+cd /app/pkg/internal/db/db-migrations
 
-cd /app/src/pkg/internal/db/db-migrations
+make migrate-up
 
-sleep 1s # wait till DB started though... Hope this will be
-
-env DB_URL=postgres://postgres:postgres@postgres:5432/optrwork?sslmode=disable make migrate-up
-
-cd /app/src
+cd /app
 
 _term() { 
   echo "Caught SIGTERM signal!" 
@@ -17,7 +13,7 @@ _term() {
 
 trap _term TERM INT
 
-go run . run -L trace --server.host :8080 --pprof.hostport :5005 --server.trace=true &
+go run . run --config /app/docker-compose-dev/backend/dev.yaml -d $DB_URL &
 
-child=$! 
+child=$!
 wait "$child"

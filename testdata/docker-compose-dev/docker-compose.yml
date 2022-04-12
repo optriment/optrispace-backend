@@ -14,12 +14,15 @@ services:
       - 65432:5432
 
   backend:
-    image: $GOLANG_IMG
+    build:
+      context: ../../
+      dockerfile: ./testdata/docker-compose-dev/backend/Dockerfile
     restart: always
-    volumes:
-      - ./backend:/app
-      - ../../:/app/src
-    command: /app/docker-entrypoint.sh
+    # volumes:
+    #   - ./backend:/app
+    #   - ../../:/app/src
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/optrwork?sslmode=disable
     ports:
       - 8080:8080
       - 5005:5005

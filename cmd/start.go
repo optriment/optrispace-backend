@@ -49,6 +49,8 @@ func init() {
 		cc.PersistentFlags().StringP(settDbUrl, "d", "postgres://postgres:postgres@localhost:5432/optrwork?sslmode=disable", "database connection URL")
 
 		cc.PersistentFlags().Bool(settHideBanner, false, "hide banner")
+
+		cc.PersistentFlags().Bool(settServerCors, false, "enable CORS with allow any (*) origin")
 	})
 }
 
@@ -63,6 +65,10 @@ func doStart(ctx context.Context) error {
 
 	if viper.GetBool(settServerTrace) {
 		e.Use(middleware.Logger())
+	}
+
+	if viper.GetBool(settServerCors) {
+		e.Use(middleware.CORS())
 	}
 
 	standardHandler := e.HTTPErrorHandler

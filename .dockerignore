@@ -1,0 +1,6 @@
+**/.vscode/
+**/.bin/
+bolt.db
+**/.stderr
+**/.stdout
+**/.build/

@@ -7,5 +7,3 @@ pprof:
 server:
   host: :8080
   cors: true
-db:
-  url: postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
