@@ -9,6 +9,7 @@ const (
 
 	settServerHost  = "server.host"
 	settServerTrace = "server.trace"
+	settServerCors  = "server.cors"
 
 	settDbUrl = "db.url"
 )

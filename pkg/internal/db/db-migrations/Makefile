@@ -1,5 +1,5 @@
 version		=v4.15.1
-platform	=linux
+platform	?=linux
 
 DB_URL	?=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
 SCRDIR 	?=file://./scripts
