@@ -3,3 +3,4 @@
 bolt.db
 .stderr
 .stdout
+.build/

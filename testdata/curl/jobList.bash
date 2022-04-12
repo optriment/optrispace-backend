@@ -4,5 +4,5 @@ ROOTURL=localhost:8080
 
 echo "ReadAll"
 
-curl -X GET "$ROOTURL/jobs" | jq .
+curl -vv -X GET "$ROOTURL/jobs" | jq .
 

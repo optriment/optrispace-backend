@@ -14,7 +14,8 @@ type (
 
 	// Person: customer, executor, seller, buyer etc.
 	Person struct {
-		Wallet string `json:"wallet"`
+		ID      string `json:"id,omitempty"`
+		Address string `json:"address,omitempty"`
 	}
 
 	// Project is a sequence of contracts group
@@ -25,5 +26,10 @@ type (
 	Contract struct{}
 
 	// Application is an application for a job
-	Application struct{}
+	Application struct {
+		ID           string    `json:"id,omitempty"`
+		CreationTime time.Time `json:"creationTime,omitempty"`
+		Applicant    *Person   `json:"applicant,omitempty"`
+		Job          *Job      `json:"job,omitempty"`
+	}
 )

@@ -1,0 +1,10 @@
+hide-banner: false
+log:
+  level: trace
+  caller: false
+pprof:
+  hostport: :8088
+server:
+  host: :8080
+db:
+  url: postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable

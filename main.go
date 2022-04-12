@@ -3,7 +3,10 @@ Copyright © 2022 Optriment
 */
 package main
 
-import "optrispace.com/work/cmd"
+import (
+	_ "github.com/lib/pq"
+	"optrispace.com/work/cmd"
+)
 
 func main() {
 	cmd.Execute()
