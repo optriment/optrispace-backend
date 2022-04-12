@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -45,7 +46,7 @@ func init() {
 		cc.PersistentFlags().StringP(settServerHost, "s", ":8080", "server:host for listen incoming HTTP requests")
 		cc.PersistentFlags().Bool(settServerTrace, false, "trace all requests to server")
 
-		cc.PersistentFlags().StringP(settBoltPath, "b", "bolt.db", "path to bolt db file")
+		cc.PersistentFlags().StringP(settDbUrl, "d", "postgres://postgres:postgres@localhost:5432/optrwork?sslmode=disable", "database connection URL")
 
 		cc.PersistentFlags().Bool(settHideBanner, false, "hide banner")
 	})
@@ -100,12 +101,21 @@ func doStart(ctx context.Context) error {
 func addControllers(ctx context.Context, e *echo.Echo) error {
 	var rr []controller.Registerer
 
-	svc, err := service.NewJobService(ctx, viper.GetString(settBoltPath))
+	db, err := sql.Open("postgres", viper.GetString(settDbUrl))
 	if err != nil {
-		return nil
+		return fmt.Errorf("unable to open DB: %w", err)
 	}
+	go func() {
+		<-ctx.Done()
+		err := db.Close()
+		log.Debug().Err(err).Msg("Closing postgres DB")
+	}()
 
-	rr = append(rr, controller.NewJobController(svc))
+	rr = append(rr,
+		controller.NewJob(service.NewJob(db)),
+		controller.NewApplication(service.NewApplication(db)),
+		controller.NewPerson(service.NewPerson(db)),
+	)
 
 	for _, r := range rr {
 		r.Register(e)

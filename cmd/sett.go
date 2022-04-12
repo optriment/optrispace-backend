@@ -10,5 +10,5 @@ const (
 	settServerHost  = "server.host"
 	settServerTrace = "server.trace"
 
-	settBoltPath = "bolt.path"
+	settDbUrl = "db.url"
 )

@@ -6,9 +6,9 @@ echo "Creating"
 
 curl -vv -X POST "$ROOTURL/jobs" \
     -H 'Content-Type: application/json' \
-    --data @job.json \
+    --data @- \
     > .stdout \
-    2> .stderr \
+    2> .stderr <<< '{    "title": "Заголовок задачи","description": "Описание задачи, возможно, \nв несколько строк","customer": {"id": "ih7vRdVVUpZiVe4zn3pZNA"}}'
 
 cat .stdout
 

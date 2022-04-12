@@ -1,0 +1,3 @@
+= DB migrations
+
+Please, visit https://github.com/golang-migrate/migrate
