@@ -1,0 +1,22 @@
+= Optrispace backend
+
+== Start development version
+
+Prerequisites::
+    • docker engine v20
+    • docker-compose v1.29
+
+If you need to test development version of the backend just clone repo and issue commands in the root directory:
+
+----
+cd testdata/docker-compose-dev/
+docker-compose up --build -d
+----
+
+It's required sometimes to use clean run the application. For this run just use `docker-compose down` command along with commands above:
+
+----
+cd testdata/docker-compose-dev/
+docker-compose down
+docker-compose up --build -d
+----
