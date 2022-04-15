@@ -2,8 +2,10 @@ package model
 
 import "errors"
 
+// Errors
 var (
 	ErrEntityNotFound          = errors.New("entity not found")
-	ErrRequiredFieldNotFilled  = errors.New("required field not filled")
+	ErrValueIsRequired         = errors.New("value is required")
 	ErrConnectionAlreadyExists = errors.New("connection already exists")
+	ErrUnauthorized            = errors.New("user not authorized")
 )

@@ -11,12 +11,14 @@ import (
 )
 
 type (
+	// Application controller
 	Application struct {
 		name string
 		svc  service.Application
 	}
 )
 
+// NewApplication create new service
 func NewApplication(svc service.Application) Registerer {
 	return &Application{
 		name: "applications",
@@ -24,6 +26,7 @@ func NewApplication(svc service.Application) Registerer {
 	}
 }
 
+// Register implements Registerer interface
 func (cont *Application) Register(e *echo.Echo) {
 	e.POST(cont.name, cont.add)
 	// e.GET(name, cont.list)
@@ -34,8 +37,8 @@ func (cont *Application) Register(e *echo.Echo) {
 
 func (cont *Application) add(c echo.Context) error {
 	type appl struct {
-		ApplicantID string `json:"applicantId,omitempty"`
-		JobID       string `json:"jobId,omitempty"`
+		ApplicantID string `json:"applicant_id,omitempty"`
+		JobID       string `json:"job_id,omitempty"`
 	}
 
 	application := new(appl)
@@ -49,6 +52,6 @@ func (cont *Application) add(c echo.Context) error {
 		return fmt.Errorf("unable to create application %+v: %w", application, err)
 	}
 
-	c.Response().Header().Set("Location", path.Join("/", cont.name, createdAppl.ID))
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", cont.name, createdAppl.ID))
 	return c.JSON(http.StatusCreated, createdAppl)
 }

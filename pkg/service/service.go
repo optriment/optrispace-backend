@@ -4,27 +4,40 @@ import (
 	"context"
 	"database/sql"
 
-	"optrispace.com/work/pkg/internal/service/pgsvc"
+	"github.com/labstack/echo/v4"
 	"optrispace.com/work/pkg/model"
+	"optrispace.com/work/pkg/service/pgsvc"
 )
 
 type (
+
+	// Security creates user representation from echo.Context, if there is such data
+	Security interface {
+		// FromContext acquires user from echo and persisten storage
+		// It will return never nil
+		FromContext(c echo.Context) (*model.UserContext, error)
+	}
+
+	// GenericCRUD represents the standart methods for CRUD operations
+	GenericCRUD[E any] interface {
+		// Add saves the entity into storage
+		Add(ctx context.Context, e *E) (*E, error)
+		// Get reads specified entity from storage by specified id
+		// It can return model.ErrNotFound
+		Get(ctx context.Context, id string) (*E, error)
+
+		// List reads all items from storage
+		List(ctx context.Context) ([]*E, error)
+	}
+
 	// Job handles job offers
 	Job interface {
-		// Add saves the job offer into storage
-		Add(ctx context.Context, job *model.Job) (*model.Job, error)
-		// Get reads specified job from storage by specified id
-		// It can return model.ErrNotFound
-		Get(ctx context.Context, id string) (*model.Job, error)
-
-		// List reads all items from storage and returns result to
-		List(ctx context.Context) ([]*model.Job, error)
+		GenericCRUD[model.Job]
 	}
 
 	// Person is a person who pay or earn
 	Person interface {
-		// Add creates new person
-		Add(ctx context.Context, person *model.Person) (*model.Person, error)
+		GenericCRUD[model.Person]
 	}
 
 	// Application is application for a job offer
@@ -34,14 +47,22 @@ type (
 	}
 )
 
+// NewSecurity creates job service
+func NewSecurity(db *sql.DB) Security {
+	return pgsvc.NewSecurity(db)
+}
+
+// NewJob creates job service
 func NewJob(db *sql.DB) Job {
 	return pgsvc.NewJob(db)
 }
 
+// NewPerson creates person service
 func NewPerson(db *sql.DB) Person {
 	return pgsvc.NewPerson(db)
 }
 
+// NewApplication creates application service
 func NewApplication(db *sql.DB) Application {
 	return pgsvc.NewApplication(db)
 }
