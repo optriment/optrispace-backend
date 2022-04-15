@@ -1,0 +1,33 @@
+version: "3.7"
+services:
+  postgres:
+    image: $POSTGRES_IMG
+    restart: unless-stopped
+    volumes:
+      # - ./postgres/init-postgres:/docker-entrypoint-initdb.d:ro
+      - pgdata-optrwork:/data/postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=optrwork
+    ports:
+      - 65432:5432
+
+  backend:
+    build:
+      context: ../../
+      dockerfile: ./ops/docker-compose-dev/backend/Dockerfile
+    restart: always
+    # volumes:
+    #   - ./backend:/app
+    #   - ../../:/app/src
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/optrwork?sslmode=disable
+    ports:
+      - 8080:8080
+      - 5005:5005
+    depends_on:
+      - postgres
+
+volumes:
+    pgdata-optrwork:

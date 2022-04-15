@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 Optriment
-
 */
 package cmd
 
@@ -20,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 	"optrispace.com/work/pkg/controller"
 	"optrispace.com/work/pkg/service"
+	"optrispace.com/work/pkg/web"
 )
 
 const (
@@ -46,7 +46,7 @@ func init() {
 		cc.PersistentFlags().StringP(settServerHost, "s", ":8080", "server:host for listen incoming HTTP requests")
 		cc.PersistentFlags().Bool(settServerTrace, false, "trace all requests to server")
 
-		cc.PersistentFlags().StringP(settDbUrl, "d", "postgres://postgres:postgres@localhost:5432/optrwork?sslmode=disable", "database connection URL")
+		cc.PersistentFlags().StringP(settDbURL, "d", "postgres://postgres:postgres@localhost:5432/optrwork?sslmode=disable", "database connection URL")
 
 		cc.PersistentFlags().Bool(settHideBanner, false, "hide banner")
 
@@ -54,6 +54,7 @@ func init() {
 	})
 }
 
+// doStart creates and run echo instance with appropriate middlewares
 func doStart(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -71,12 +72,7 @@ func doStart(ctx context.Context) error {
 		e.Use(middleware.CORS())
 	}
 
-	standardHandler := e.HTTPErrorHandler
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		standardHandler(err, c)
-		log.Error().Err(err).Int("status", c.Response().Status).Stringer("url", c.Request().URL).
-			Msg("Failed to process request")
-	}
+	e.HTTPErrorHandler = web.GetErrorHandler(e.HTTPErrorHandler)
 	e.Use(middleware.Recover())
 
 	// testing stuff
@@ -95,19 +91,24 @@ func doStart(ctx context.Context) error {
 	if strings.TrimSpace(listenHost) == "" {
 		return fmt.Errorf("%w: %s settings", errSpecifyServerHost, settServerHost)
 	}
-	go e.Start(listenHost)
+	go func() {
+		errIn := e.Start(listenHost)
+		log.Error().Err(errIn).Msg("Echo finished")
+	}()
 
 	<-ctx.Done()
 
-	shutdownCtx, _ := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownCtx, cancelTerminator := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancelTerminator()
 
 	return e.Shutdown(shutdownCtx)
 }
 
+// addControllers creates and registers controllers
 func addControllers(ctx context.Context, e *echo.Echo) error {
 	var rr []controller.Registerer
 
-	db, err := sql.Open("postgres", viper.GetString(settDbUrl))
+	db, err := sql.Open("postgres", viper.GetString(settDbURL))
 	if err != nil {
 		return fmt.Errorf("unable to open DB: %w", err)
 	}
@@ -117,8 +118,10 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 		log.Debug().Err(err).Msg("Closing postgres DB")
 	}()
 
+	sm := service.NewSecurity(db)
+
 	rr = append(rr,
-		controller.NewJob(service.NewJob(db)),
+		controller.NewJob(service.NewJob(db), sm),
 		controller.NewApplication(service.NewApplication(db)),
 		controller.NewPerson(service.NewPerson(db)),
 	)

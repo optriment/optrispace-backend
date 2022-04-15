@@ -13,6 +13,8 @@ cd testdata/docker-compose-dev/
 docker-compose up --build -d
 ----
 
+WARNING: Be carefully about using `--build` — it's strongly required!
+
 It's required sometimes to use clean run the application. For this run just use `docker-compose down` command along with commands above:
 
 ----
@@ -20,3 +22,25 @@ cd testdata/docker-compose-dev/
 docker-compose down
 docker-compose up --build -d
 ----
+
+WARNING: Be carefully about using `--build` — it's strongly required!
+
+== Run integration tests
+
+Prerequisites::
+    • application successfully started
+    • go v1.18 installed in PATH location
+    • GNU Make v4 in PATH location
+
+Ensure the application started, and variables `DB_URL`, `APP_URL` point to the correct locations. Just issue commands:
+
+----
+env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 make intest
+----
+
+or if there were any troubles (not the preferred way though):
+
+----
+env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 go test intest/
+----
+

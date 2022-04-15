@@ -8,24 +8,30 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
+	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/model"
 	"optrispace.com/work/pkg/service"
 )
 
 type (
+	// Job controller
 	Job struct {
 		name string
 		svc  service.Job
+		sm   service.Security
 	}
 )
 
-func NewJob(svc service.Job) Registerer {
+// NewJob create new service
+func NewJob(svc service.Job, sm service.Security) Registerer {
 	return &Job{
 		name: "jobs",
 		svc:  svc,
+		sm:   sm,
 	}
 }
 
+// Register implements Registerer interface
 func (cont *Job) Register(e *echo.Echo) {
 	e.POST(cont.name, cont.add)
 	e.GET(cont.name, cont.list)
@@ -34,35 +40,61 @@ func (cont *Job) Register(e *echo.Echo) {
 	log.Debug().Str("controller", cont.name).Msg("Registered")
 }
 
-// nolint: dupl
 func (cont *Job) add(c echo.Context) error {
-	job := new(model.Job)
+	type addingJob struct {
+		Title       string          `json:"title,omitempty"`
+		Description string          `json:"description,omitempty"`
+		Budget      decimal.Decimal `json:"budget,omitempty"`
+		Duration    int32           `json:"duration,omitempty"`
+	}
 
-	if err := c.Bind(job); err != nil {
+	uc, err := cont.sm.FromContext(c)
+	if err != nil {
 		return err
 	}
 
-	job.ID = ""
-	job, err := cont.svc.Add(c.Request().Context(), job)
+	ae := new(addingJob)
+
+	if e := c.Bind(ae); e != nil {
+		return e
+	}
+
+	if ae.Title == "" {
+		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
+	}
+
+	if ae.Description == "" {
+		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
+	}
+
+	o := &model.Job{
+		Title:       ae.Title,
+		Description: ae.Description,
+		Budget:      ae.Budget,
+		Duration:    ae.Duration,
+		CreatedBy:   uc.Subject,
+	}
+
+	o, err = cont.svc.Add(c.Request().Context(), o)
 	if err != nil {
 		return fmt.Errorf("unable to save job: %w", err)
 	}
 
-	c.Response().Header().Set("Location", path.Join("/", cont.name, job.ID))
-	return c.JSON(http.StatusCreated, job)
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", cont.name, o.ID))
+	return c.JSON(http.StatusCreated, o)
 }
 
 func (cont *Job) list(c echo.Context) error {
-	jj, err := cont.svc.List(c.Request().Context())
+	oo, err := cont.svc.List(c.Request().Context())
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, jj)
+	return c.JSON(http.StatusOK, oo)
 }
 
 func (cont *Job) get(c echo.Context) error {
 	id := c.Param("id")
-	job, err := cont.svc.Get(c.Request().Context(), id)
+	o, err := cont.svc.Get(c.Request().Context(), id)
 	if errors.Is(model.ErrEntityNotFound, err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
 	}
@@ -70,5 +102,5 @@ func (cont *Job) get(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, job)
+	return c.JSON(http.StatusOK, o)
 }
