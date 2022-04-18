@@ -34,7 +34,7 @@ run:
 
 .phony: run-intest
 run-intest:
-	env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 go test ./intest/
+	env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 go test -v ./intest/
 
 $(LINTBIN):
 	@echo "Getting $@"

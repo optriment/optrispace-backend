@@ -2,6 +2,8 @@
 
 # specify script name as the first script paramameter
 
+cd $(dirname $(realpath $0))
+
 SCRDIR=./scripts
 MBIN=./.bin/migrate
 

@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 	"optrispace.com/work/pkg/model"
+	"optrispace.com/work/pkg/web"
 )
 
 type (
@@ -39,7 +39,7 @@ func (s *SecuritySvc) FromContext(c echo.Context) (*model.UserContext, error) {
 
 	p, err := NewPerson(s.db).Get(c.Request().Context(), auth)
 	if err != nil {
-		log.Warn().Err(err).Msg("Unable to authorize")
+		web.EchoLog(c).Warn().Err(err).Msg("Unable to authorize")
 		err = model.ErrUnauthorized
 	}
 

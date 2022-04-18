@@ -9,3 +9,4 @@ packages:
 overrides:
   - go_type: "github.com/shopspring/decimal.Decimal"
     db_type: "decimal"
+    nullable: true

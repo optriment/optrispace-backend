@@ -14,11 +14,41 @@ type Application struct {
 	// PK
 	ID string
 	// Application timestamp. When application was created.
-	CreationTs time.Time
+	CreatedAt time.Time
+	// Application update timestamp. When application was updated last time.
+	UpdatedAt time.Time
+	// Applicant's initial comment on the application
+	Comment string
+	// Proposed price
+	Price string
 	// Job offer
 	JobID string
 	// Potential performer
 	ApplicantID string
+}
+
+// Job offer table
+type Contract struct {
+	// PK
+	ID string
+	// Creation timestamp
+	CreatedAt time.Time
+	// When the contract was updated last time
+	UpdatedAt time.Time
+	// Application was created before the contract
+	ApplicationID sql.NullString
+	// Person who performing the job
+	PerformerID string
+	// Customer for the job. Who paying.
+	CustomerID string
+	// Contract title. Like "web site creation". Can be copied from the appropriate job.
+	Title string
+	// Details about the contract. May be long, long text. Also can be copied from the appropriate job.
+	Description string
+	// The crontract price
+	Price string
+	// The contract duration
+	Duration sql.NullInt32
 }
 
 // Job offer table
@@ -35,10 +65,10 @@ type Job struct {
 	Duration sql.NullInt32
 	// Creation timestamp
 	CreatedAt time.Time
-	// Who created this job and should pay for it
-	CreatedBy string
 	// When the job was updated last time
 	UpdatedAt time.Time
+	// Who created this job and should pay for it
+	CreatedBy string
 }
 
 // Person who can pay, get or earn money

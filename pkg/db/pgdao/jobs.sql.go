@@ -16,7 +16,7 @@ insert into jobs (
     id, title, description, budget, duration, created_by
 ) values (
     $1, $2, $3, $4, $5, $6
-) returning id, title, description, budget, duration, created_at, created_by, updated_at
+) returning id, title, description, budget, duration, created_at, updated_at, created_by
 `
 
 type JobAddParams struct {
@@ -45,8 +45,8 @@ func (q *Queries) JobAdd(ctx context.Context, arg JobAddParams) (Job, error) {
 		&i.Budget,
 		&i.Duration,
 		&i.CreatedAt,
-		&i.CreatedBy,
 		&i.UpdatedAt,
+		&i.CreatedBy,
 	)
 	return i, err
 }
@@ -61,22 +61,24 @@ select
     j.created_at,
     j.created_by,
     j.updated_at,
-    p.address
+    p.address,
+    (select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
     left join persons p on j.created_by = p.id
 	where j.id = $1::varchar
 `
 
 type JobGetRow struct {
-	ID          string
-	Title       string
-	Description string
-	Budget      sql.NullString
-	Duration    sql.NullInt32
-	CreatedAt   time.Time
-	CreatedBy   string
-	UpdatedAt   time.Time
-	Address     sql.NullString
+	ID               string
+	Title            string
+	Description      string
+	Budget           sql.NullString
+	Duration         sql.NullInt32
+	CreatedAt        time.Time
+	CreatedBy        string
+	UpdatedAt        time.Time
+	Address          sql.NullString
+	ApplicationCount int64
 }
 
 func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
@@ -92,6 +94,7 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 		&i.CreatedBy,
 		&i.UpdatedAt,
 		&i.Address,
+		&i.ApplicationCount,
 	)
 	return i, err
 }

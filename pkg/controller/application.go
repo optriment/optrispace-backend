@@ -1,57 +1,118 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
+	"github.com/shopspring/decimal"
+	"optrispace.com/work/pkg/model"
 	"optrispace.com/work/pkg/service"
 )
 
 type (
 	// Application controller
 	Application struct {
-		name string
-		svc  service.Application
+		svc service.Application
+		sm  service.Security
 	}
 )
 
 // NewApplication create new service
-func NewApplication(svc service.Application) Registerer {
+func NewApplication(svc service.Application, sm service.Security) Registerer {
 	return &Application{
-		name: "applications",
-		svc:  svc,
+		svc: svc,
+		sm:  sm,
 	}
 }
 
 // Register implements Registerer interface
 func (cont *Application) Register(e *echo.Echo) {
-	e.POST(cont.name, cont.add)
-	// e.GET(name, cont.list)
-	// e.GET(name+"/:id", cont.get)
+	e.POST(resourceJob+"/:job_id/"+resourceApplication, cont.add)
+	e.GET(resourceApplication+"/:id", cont.get)
+	e.GET(resourceApplication, cont.list)
+	e.GET(resourceJob+"/:job_id/"+resourceApplication, cont.list)
 	// e.PUT(name+"/:id", cont.update)
-	log.Debug().Str("controller", cont.name).Msg("Registered")
+	log.Debug().Str("controller", resourceApplication).Msg("Registered")
 }
 
 func (cont *Application) add(c echo.Context) error {
-	type appl struct {
-		ApplicantID string `json:"applicant_id,omitempty"`
-		JobID       string `json:"job_id,omitempty"`
+	type incomingApplication struct {
+		Comment string          `json:"comment,omitempty"`
+		Price   decimal.Decimal `json:"price,omitempty"`
 	}
 
-	application := new(appl)
-
-	if err := c.Bind(application); err != nil {
+	uc, err := cont.sm.FromContext(c)
+	if err != nil {
 		return err
 	}
 
-	createdAppl, err := cont.svc.Add(c.Request().Context(), application.ApplicantID, application.JobID)
-	if err != nil {
-		return fmt.Errorf("unable to create application %+v: %w", application, err)
+	ie := new(incomingApplication)
+
+	if err := c.Bind(ie); err != nil {
+		return err
 	}
 
-	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", cont.name, createdAppl.ID))
+	if ie.Comment == "" {
+		return fmt.Errorf("comment required: %w", model.ErrValueIsRequired)
+	}
+
+	if decimal.Zero.Equal(ie.Price) {
+		return fmt.Errorf("price required: %w", model.ErrValueIsRequired)
+	}
+
+	createdAppl, err := cont.svc.Add(c.Request().Context(), &model.Application{
+		Applicant: uc.Subject,
+		Comment:   ie.Comment,
+		Price:     ie.Price,
+		Job:       &model.Job{ID: c.Param("job_id")},
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create application %+v: %w", ie, err)
+	}
+
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceApplication, createdAppl.ID))
 	return c.JSON(http.StatusCreated, createdAppl)
+}
+
+func (cont *Application) get(c echo.Context) error {
+	ctx := c.Request().Context()
+	id := c.Param("id")
+	o, err := cont.svc.Get(ctx, id)
+	if errors.Is(model.ErrEntityNotFound, err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
+	}
+
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, o)
+}
+
+func (cont *Application) list(c echo.Context) error {
+	ctx := c.Request().Context()
+	jobID := c.Param("job_id")
+
+	uc, err := cont.sm.FromContext(c)
+	if err != nil {
+		return err
+	}
+
+	if jobID == "" { // full list for the current user
+		oo, err := cont.svc.ListBy(ctx, "", uc.Subject.ID)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, oo)
+	}
+
+	oo, err := cont.svc.ListBy(ctx, jobID, "")
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, oo)
 }

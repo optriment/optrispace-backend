@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ryboe/q"
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
@@ -88,14 +87,15 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 		}
 
 		result = &model.Job{
-			ID:          j.ID,
-			Title:       j.Title,
-			Description: j.Description,
-			Budget:      budget,
-			Duration:    j.Duration.Int32,
-			CreatedAt:   j.CreatedAt,
-			CreatedBy:   &model.Person{ID: j.CreatedBy},
-			UpdatedAt:   j.UpdatedAt,
+			ID:                j.ID,
+			Title:             j.Title,
+			Description:       j.Description,
+			Budget:            budget,
+			Duration:          j.Duration.Int32,
+			CreatedAt:         j.CreatedAt,
+			CreatedBy:         &model.Person{ID: j.CreatedBy},
+			UpdatedAt:         j.UpdatedAt,
+			ApplicationsCount: uint(j.ApplicationCount),
 		}
 		return nil
 	})
@@ -106,7 +106,6 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 	var result []*model.Job = make([]*model.Job, 0)
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
 		jj, err := queries.JobsList(ctx)
-		q.Q(jj, err)
 		if err != nil {
 			return fmt.Errorf("unable to JobReadAll job: %w", err)
 		}

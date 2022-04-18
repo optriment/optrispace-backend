@@ -10,14 +10,6 @@ import (
 )
 
 type (
-
-	// Security creates user representation from echo.Context, if there is such data
-	Security interface {
-		// FromContext acquires user from echo and persisten storage
-		// It will return never nil
-		FromContext(c echo.Context) (*model.UserContext, error)
-	}
-
 	// GenericCRUD represents the standart methods for CRUD operations
 	GenericCRUD[E any] interface {
 		// Add saves the entity into storage
@@ -28,6 +20,13 @@ type (
 
 		// List reads all items from storage
 		List(ctx context.Context) ([]*E, error)
+	}
+
+	// Security creates user representation from echo.Context, if there is such data
+	Security interface {
+		// FromContext acquires user from echo and persisten storage
+		// It will return never nil
+		FromContext(c echo.Context) (*model.UserContext, error)
 	}
 
 	// Job handles job offers
@@ -42,8 +41,10 @@ type (
 
 	// Application is application for a job offer
 	Application interface {
-		// Add creates new connection for applicant and job offer
-		Add(ctx context.Context, jobID, applicantID string) (*model.Application, error)
+		GenericCRUD[model.Application]
+		// ListBy returns list of entities by specified filters
+		// If jobID != "", method returns list of jobs
+		ListBy(ctx context.Context, jobID, applicantID string) ([]*model.Application, error)
 	}
 )
 

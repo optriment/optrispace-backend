@@ -9,3 +9,9 @@ type (
 		Register(e *echo.Echo)
 	}
 )
+
+const (
+	resourceJob         = "jobs"
+	resourcePerson      = "persons"
+	resourceApplication = "applications"
+)

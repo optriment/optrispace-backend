@@ -72,6 +72,8 @@ linters-settings:
       - github.com/davecgh/go-spew/spew
       - github.com/kr/pretty
       - log
+      - github.com/ryboe/q
+      
   misspell:
     locale: US
   lll:
