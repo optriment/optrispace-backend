@@ -62,6 +62,8 @@ func doStart(ctx context.Context) error {
 	e := echo.New()
 
 	e.HideBanner = viper.GetBool(settHideBanner)
+
+	e.Pre(web.PrepareContext)
 	e.Pre(middleware.RemoveTrailingSlash())
 
 	if viper.GetBool(settServerTrace) {
@@ -122,7 +124,7 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 
 	rr = append(rr,
 		controller.NewJob(service.NewJob(db), sm),
-		controller.NewApplication(service.NewApplication(db)),
+		controller.NewApplication(service.NewApplication(db), sm),
 		controller.NewPerson(service.NewPerson(db)),
 	)
 

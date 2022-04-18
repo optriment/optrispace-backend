@@ -14,26 +14,24 @@ import (
 type (
 	// Person controller
 	Person struct {
-		name string
-		svc  service.Person
+		svc service.Person
 	}
 )
 
 // NewPerson create new service
 func NewPerson(svc service.Person) Registerer {
 	return &Person{
-		name: "persons",
-		svc:  svc,
+		svc: svc,
 	}
 }
 
 // Register implements Registerer interface
 func (cont *Person) Register(e *echo.Echo) {
-	e.POST(cont.name, cont.add)
-	e.GET(cont.name, cont.list)
-	e.GET(cont.name+"/:id", cont.get)
+	e.POST(resourcePerson, cont.add)
+	e.GET(resourcePerson, cont.list)
+	e.GET(resourcePerson+"/:id", cont.get)
 	// e.PUT(name+"/:id", cont.update)
-	log.Debug().Str("controller", cont.name).Msg("Registered")
+	log.Debug().Str("controller", resourcePerson).Msg("Registered")
 }
 
 func (cont *Person) add(c echo.Context) error {
@@ -50,7 +48,7 @@ func (cont *Person) add(c echo.Context) error {
 		return fmt.Errorf("unable to save job: %w", err)
 	}
 
-	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", cont.name, person.ID))
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourcePerson, person.ID))
 	return c.JSON(http.StatusCreated, person)
 }
 

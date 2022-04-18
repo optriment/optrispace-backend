@@ -23,10 +23,12 @@ select
     j.created_at,
     j.created_by,
     j.updated_at,
-    p.address
+    p.address,
+    (select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
     left join persons p on j.created_by = p.id
-	where j.id = @id::varchar;
+	where j.id = @id::varchar
+    ;
 
 -- name: JobAdd :one
 insert into jobs (

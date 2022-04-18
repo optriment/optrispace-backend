@@ -16,28 +16,26 @@ import (
 type (
 	// Job controller
 	Job struct {
-		name string
-		svc  service.Job
-		sm   service.Security
+		svc service.Job
+		sm  service.Security
 	}
 )
 
 // NewJob create new service
 func NewJob(svc service.Job, sm service.Security) Registerer {
 	return &Job{
-		name: "jobs",
-		svc:  svc,
-		sm:   sm,
+		svc: svc,
+		sm:  sm,
 	}
 }
 
 // Register implements Registerer interface
 func (cont *Job) Register(e *echo.Echo) {
-	e.POST(cont.name, cont.add)
-	e.GET(cont.name, cont.list)
-	e.GET(cont.name+"/:id", cont.get)
+	e.POST(resourceJob, cont.add)
+	e.GET(resourceJob, cont.list)
+	e.GET(resourceJob+"/:id", cont.get)
 	// e.PUT(name+"/:id", cont.update)
-	log.Debug().Str("controller", cont.name).Msg("Registered")
+	log.Debug().Str("controller", resourceJob).Msg("Registered")
 }
 
 func (cont *Job) add(c echo.Context) error {
@@ -53,25 +51,25 @@ func (cont *Job) add(c echo.Context) error {
 		return err
 	}
 
-	ae := new(addingJob)
+	ie := new(addingJob)
 
-	if e := c.Bind(ae); e != nil {
+	if e := c.Bind(ie); e != nil {
 		return e
 	}
 
-	if ae.Title == "" {
+	if ie.Title == "" {
 		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
 	}
 
-	if ae.Description == "" {
+	if ie.Description == "" {
 		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
 	}
 
 	o := &model.Job{
-		Title:       ae.Title,
-		Description: ae.Description,
-		Budget:      ae.Budget,
-		Duration:    ae.Duration,
+		Title:       ie.Title,
+		Description: ie.Description,
+		Budget:      ie.Budget,
+		Duration:    ie.Duration,
 		CreatedBy:   uc.Subject,
 	}
 
@@ -80,7 +78,7 @@ func (cont *Job) add(c echo.Context) error {
 		return fmt.Errorf("unable to save job: %w", err)
 	}
 
-	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", cont.name, o.ID))
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceJob, o.ID))
 	return c.JSON(http.StatusCreated, o)
 }
 
