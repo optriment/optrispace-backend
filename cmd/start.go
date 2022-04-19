@@ -77,9 +77,14 @@ func doStart(ctx context.Context) error {
 	e.HTTPErrorHandler = web.GetErrorHandler(e.HTTPErrorHandler)
 	e.Use(middleware.Recover())
 
-	// testing stuff
-	e.Any("echo", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Ok!")
+	e.Any("info", func(c echo.Context) error {
+		var s strings.Builder
+		s.WriteString("Registered routes:\n\n")
+		rr := c.Echo().Routes()
+		for _, r := range rr {
+			s.WriteString(fmt.Sprintf("%v\n", r))
+		}
+		return c.JSON(http.StatusOK, rr)
 	})
 
 	// stopping

@@ -70,7 +70,7 @@ func (cont *Job) add(c echo.Context) error {
 		Description: ie.Description,
 		Budget:      ie.Budget,
 		Duration:    ie.Duration,
-		CreatedBy:   uc.Subject,
+		CreatedBy:   uc.Subject.ID,
 	}
 
 	o, err = cont.svc.Add(c.Request().Context(), o)

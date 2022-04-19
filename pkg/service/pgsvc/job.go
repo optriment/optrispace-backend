@@ -40,7 +40,7 @@ func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 					Int32: e.Duration,
 					Valid: e.Duration > 0,
 				},
-				CreatedBy: e.CreatedBy.ID,
+				CreatedBy: e.CreatedBy,
 			})
 		if err != nil {
 			return fmt.Errorf("unable to JobAdd job: %w", err)
@@ -58,10 +58,8 @@ func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 			Budget:      budget,
 			Duration:    j.Duration.Int32,
 			CreatedAt:   j.CreatedAt,
-			CreatedBy: &model.Person{
-				ID: j.CreatedBy,
-			},
-			UpdatedAt: j.UpdatedAt,
+			CreatedBy:   j.CreatedBy,
+			UpdatedAt:   j.UpdatedAt,
 		}
 		return nil
 	})
@@ -93,7 +91,7 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 			Budget:            budget,
 			Duration:          j.Duration.Int32,
 			CreatedAt:         j.CreatedAt,
-			CreatedBy:         &model.Person{ID: j.CreatedBy},
+			CreatedBy:         j.CreatedBy,
 			UpdatedAt:         j.UpdatedAt,
 			ApplicationsCount: uint(j.ApplicationCount),
 		}
@@ -122,7 +120,7 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 				Budget:      budget,
 				Duration:    j.Duration.Int32,
 				CreatedAt:   j.CreatedAt,
-				CreatedBy:   &model.Person{ID: j.CreatedBy},
+				CreatedBy:   j.CreatedBy,
 				UpdatedAt:   j.UpdatedAt,
 			})
 		}
