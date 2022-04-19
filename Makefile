@@ -22,7 +22,7 @@ migrate-drop:
 
 .phony: docker-compose-up
 docker-compose-up:
-	cd ops/docker-compose-dev && docker-compose up -d
+	cd ops/docker-compose-dev && docker-compose up -d --build
 
 .phony: docker-compose-down
 docker-compose-down:
@@ -34,7 +34,7 @@ run:
 
 .phony: run-intest
 run-intest:
-	env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 go test -v ./intest/
+	env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 go test -count=1 -v ./intest/
 
 $(LINTBIN):
 	@echo "Getting $@"

@@ -6,6 +6,7 @@ package cmd
 import (
 	"bytes"
 	"net/http"
+	_ "net/http/pprof"
 	"runtime"
 
 	"github.com/rs/zerolog"
@@ -32,7 +33,8 @@ func (gid *goroutineID) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	e.Str(gid.Name, getGIDstring())
 }
 
-// startPprof запускает веб-сервер для возврата отладочной информации
+// startPprof starts debug service
+// just follow /debug/pprof/
 func startPprof(hostport string) {
 	log.Debug().Msgf("Starting pprof http server at %s", hostport)
 	go func() {
