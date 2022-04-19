@@ -101,7 +101,7 @@ func TestJob(t *testing.T) {
 			assert.True(t, decimal.RequireFromString("100.2").Equal(e.Budget))
 			assert.EqualValues(t, 30, e.Duration)
 			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
-			assert.Equal(t, createdBy.ID, e.CreatedBy.ID)
+			assert.Equal(t, createdBy.ID, e.CreatedBy)
 			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
 
 			d, err := pgdao.New(db).JobGet(bgctx, e.ID)
@@ -150,7 +150,7 @@ func TestJob(t *testing.T) {
 			assert.True(t, decimal.Zero.Equal(e.Budget))
 			assert.EqualValues(t, 0, e.Duration)
 			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
-			assert.Equal(t, createdBy.ID, e.CreatedBy.ID)
+			assert.Equal(t, createdBy.ID, e.CreatedBy)
 			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
 
 			d, err := pgdao.New(db).JobGet(bgctx, e.ID)
@@ -236,7 +236,7 @@ func TestJob(t *testing.T) {
 				assert.True(t, decimal.RequireFromString("100.2").Equal(e.Budget))
 				assert.EqualValues(t, 30, e.Duration)
 				assert.NotEmpty(t, e.CreatedAt)
-				assert.Equal(t, createdBy.ID, e.CreatedBy.ID)
+				assert.Equal(t, createdBy.ID, e.CreatedBy)
 				assert.NotEmpty(t, e.UpdatedAt)
 				assert.Equal(t, uint(0), e.ApplicationsCount)
 			}
