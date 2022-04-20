@@ -53,18 +53,16 @@ func (q *Queries) JobAdd(ctx context.Context, arg JobAddParams) (Job, error) {
 
 const jobGet = `-- name: JobGet :one
 select
-    j.id,
-    j.title,
-    j.description,
-    j.budget,
-    j.duration,
-    j.created_at,
-    j.created_by,
-    j.updated_at,
-    p.address,
-    (select count(*) from applications a where a.job_id = j.id) as application_count
+    j.id
+    ,j.title
+    ,j.description
+    ,j.budget
+    ,j.duration
+    ,j.created_at
+    ,j.created_by
+    ,j.updated_at
+    ,(select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
-    left join persons p on j.created_by = p.id
 	where j.id = $1::varchar
 `
 
@@ -77,7 +75,6 @@ type JobGetRow struct {
 	CreatedAt        time.Time
 	CreatedBy        string
 	UpdatedAt        time.Time
-	Address          sql.NullString
 	ApplicationCount int64
 }
 
@@ -93,7 +90,6 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 		&i.CreatedAt,
 		&i.CreatedBy,
 		&i.UpdatedAt,
-		&i.Address,
 		&i.ApplicationCount,
 	)
 	return i, err
@@ -101,17 +97,15 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 
 const jobsList = `-- name: JobsList :many
 select
-    j.id,
-    j.title,
-    j.description,
-    j.budget,
-    j.duration,
-    j.created_at,
-    j.created_by,
-    j.updated_at,
-    p.address
+     j.id
+    ,j.title
+    ,j.description
+    ,j.budget
+    ,j.duration
+    ,j.created_at
+    ,j.created_by
+    ,j.updated_at
     from jobs j
-    left join persons p on j.created_by = p.id
     order by created_at
 `
 
@@ -124,7 +118,6 @@ type JobsListRow struct {
 	CreatedAt   time.Time
 	CreatedBy   string
 	UpdatedAt   time.Time
-	Address     sql.NullString
 }
 
 func (q *Queries) JobsList(ctx context.Context) ([]JobsListRow, error) {
@@ -145,7 +138,6 @@ func (q *Queries) JobsList(ctx context.Context) ([]JobsListRow, error) {
 			&i.CreatedAt,
 			&i.CreatedBy,
 			&i.UpdatedAt,
-			&i.Address,
 		); err != nil {
 			return nil, err
 		}

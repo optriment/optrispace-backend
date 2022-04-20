@@ -75,8 +75,16 @@ type Job struct {
 type Person struct {
 	// PK
 	ID string
+	// Authentication realm (inhouse by default)
+	Realm string
+	// Login for authentication (must be unique for the separate authentication realm)
+	Login string
+	// Salty password hash
+	PasswordHash string
+	// User name for displaying
+	DisplayName string
 	// Creation time
 	CreatedAt time.Time
-	// This person's cryptocurrency address
-	Address string
+	// User Email
+	Email string
 }

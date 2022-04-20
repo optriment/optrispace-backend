@@ -11,54 +11,91 @@ import (
 
 const personAdd = `-- name: PersonAdd :one
 insert into persons (
-    id, address
+    id, realm, login, password_hash, display_name, email
 ) values (
-    $1, $2
+    $1, $2, $3, $4, $5, $6
 ) 
-on conflict (address)
-do 
-   update set address = $2
-returning id, created_at, address
+returning id, realm, login, password_hash, display_name, created_at, email
 `
 
 type PersonAddParams struct {
-	ID      string
-	Address string
+	ID           string
+	Realm        string
+	Login        string
+	PasswordHash string
+	DisplayName  string
+	Email        string
 }
 
 func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, error) {
-	row := q.db.QueryRowContext(ctx, personAdd, arg.ID, arg.Address)
+	row := q.db.QueryRowContext(ctx, personAdd,
+		arg.ID,
+		arg.Realm,
+		arg.Login,
+		arg.PasswordHash,
+		arg.DisplayName,
+		arg.Email,
+	)
 	var i Person
-	err := row.Scan(&i.ID, &i.CreatedAt, &i.Address)
+	err := row.Scan(
+		&i.ID,
+		&i.Realm,
+		&i.Login,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.Email,
+	)
 	return i, err
 }
 
 const personGet = `-- name: PersonGet :one
-select id, created_at, address from persons
+select id, realm, login, password_hash, display_name, created_at, email from persons
 	where id = $1::varchar
 `
 
 func (q *Queries) PersonGet(ctx context.Context, id string) (Person, error) {
 	row := q.db.QueryRowContext(ctx, personGet, id)
 	var i Person
-	err := row.Scan(&i.ID, &i.CreatedAt, &i.Address)
+	err := row.Scan(
+		&i.ID,
+		&i.Realm,
+		&i.Login,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.Email,
+	)
 	return i, err
 }
 
-const personGetByAddress = `-- name: PersonGetByAddress :one
-select id, created_at, address from persons
-	where address = $1::varchar
+const personGetByLogin = `-- name: PersonGetByLogin :one
+select id, realm, login, password_hash, display_name, created_at, email from persons p
+	where p.login = $1::varchar and p.realm = $2::varchar
 `
 
-func (q *Queries) PersonGetByAddress(ctx context.Context, address string) (Person, error) {
-	row := q.db.QueryRowContext(ctx, personGetByAddress, address)
+type PersonGetByLoginParams struct {
+	Login string
+	Realm string
+}
+
+func (q *Queries) PersonGetByLogin(ctx context.Context, arg PersonGetByLoginParams) (Person, error) {
+	row := q.db.QueryRowContext(ctx, personGetByLogin, arg.Login, arg.Realm)
 	var i Person
-	err := row.Scan(&i.ID, &i.CreatedAt, &i.Address)
+	err := row.Scan(
+		&i.ID,
+		&i.Realm,
+		&i.Login,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.Email,
+	)
 	return i, err
 }
 
 const personsList = `-- name: PersonsList :many
-select id, created_at, address from persons
+select id, realm, login, password_hash, display_name, created_at, email from persons
 `
 
 func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
@@ -70,7 +107,15 @@ func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
 	var items []Person
 	for rows.Next() {
 		var i Person
-		if err := rows.Scan(&i.ID, &i.CreatedAt, &i.Address); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Realm,
+			&i.Login,
+			&i.PasswordHash,
+			&i.DisplayName,
+			&i.CreatedAt,
+			&i.Email,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

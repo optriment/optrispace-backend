@@ -16,16 +16,16 @@ import (
 type (
 	// Job controller
 	Job struct {
-		svc service.Job
 		sm  service.Security
+		svc service.Job
 	}
 )
 
 // NewJob create new service
-func NewJob(svc service.Job, sm service.Security) Registerer {
+func NewJob(sm service.Security, svc service.Job) Registerer {
 	return &Job{
-		svc: svc,
 		sm:  sm,
+		svc: svc,
 	}
 }
 
@@ -46,7 +46,7 @@ func (cont *Job) add(c echo.Context) error {
 		Duration    int32           `json:"duration,omitempty"`
 	}
 
-	uc, err := cont.sm.FromContext(c)
+	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}

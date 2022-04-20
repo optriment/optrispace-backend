@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/lib/pq"
-	"github.com/ryboe/q"
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
@@ -39,14 +38,13 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			ApplicantID: application.Applicant.ID,
 		})
 
-		if pqe, ok := err.(*pq.Error); ok {
+		if pqe, ok := err.(*pq.Error); ok { //nolint: errorlint
 			if pqe.Code == "23505" {
 				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrDuplication)
 			}
 		}
 
 		if err != nil {
-			q.Q(err)
 			return fmt.Errorf("unable to ApplicationAdd: %w", err)
 		}
 
@@ -98,7 +96,7 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 	})
 }
 
-// Get implements Application interface
+// List implements Application interface
 func (s *ApplicationSvc) List(ctx context.Context) ([]*model.Application, error) {
 	return s.listBy(ctx, "", "")
 }
@@ -119,7 +117,7 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, applicantID string) 
 			return fmt.Errorf("unable to ApplicationsListBy: %w", err)
 		}
 
-		for _, a := range aa { //nolint: dupl
+		for _, a := range aa {
 			var contract *model.Contract
 			if a.ContractID.Valid {
 				contract = &model.Contract{ID: a.ContractID.String}

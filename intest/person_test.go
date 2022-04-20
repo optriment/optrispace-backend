@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
+	"optrispace.com/work/pkg/service/pgsvc"
 )
 
 func TestPerson(t *testing.T) {
@@ -21,35 +21,28 @@ func TestPerson(t *testing.T) {
 	startURL := appURL + "/" + resourceName
 
 	var createdID string
-	address := uuid.New().String()
 
-	require.NoError(t, pgdao.New(db).JobsPurge(bgctx))
-	require.NoError(t, pgdao.New(db).PersonsPurge(bgctx))
+	require.NoError(t, pgdao.PurgeDB(bgctx, db))
 
-	t.Run("get•empty", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
-		require.NoError(t, err)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			ee := make([]model.Person, 0)
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
-			assert.Empty(t, ee)
-		}
+	creator, err := pgsvc.NewPerson(db).Add(bgctx, &model.Person{
+		Password: "12345678",
 	})
+	require.NoError(t, err)
 
-	t.Run("post", func(t *testing.T) {
+	t.Run("post•full", func(t *testing.T) {
 		body := `{
-			"address":"` + address + `"
+			"realm": "my-realm",
+			"login": "user1",
+			"password": "12345678",
+			"display_name": "Breanne McGlynn",
+			"email":"predovic.macy@hotmail.com"
 		}`
-
-		n := time.Now()
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -62,9 +55,24 @@ func TestPerson(t *testing.T) {
 
 			assert.True(t, strings.HasPrefix(res.Header.Get("location"), "/"+resourceName+"/"+e.ID))
 			assert.NotEmpty(t, e.ID)
-			assert.Equal(t, address, e.Address)
-			// assert.NotEmpty(t, newObj.CreatedAt)
-			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
+
+			assert.NotEmpty(t, e.ID)
+			assert.Equal(t, "user1", e.Login)
+			assert.Equal(t, "my-realm", e.Realm)
+			assert.Equal(t, "Breanne McGlynn", e.DisplayName)
+			assert.NotEmpty(t, e.CreatedAt)
+			assert.Equal(t, "predovic.macy@hotmail.com", e.Email)
+
+			d, err := pgdao.New(db).PersonGet(bgctx, e.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, e.ID, d.ID)
+				assert.Equal(t, "my-realm", d.Realm)
+				assert.Equal(t, "user1", d.Login)
+				assert.NoError(t, pgsvc.CompareHashAndPassword(d.PasswordHash, "12345678"))
+				assert.Equal(t, "Breanne McGlynn", d.DisplayName)
+				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
+				assert.Equal(t, "predovic.macy@hotmail.com", d.Email)
+			}
 
 		}
 	})
@@ -72,6 +80,9 @@ func TestPerson(t *testing.T) {
 	t.Run("get", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
 		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -83,7 +94,6 @@ func TestPerson(t *testing.T) {
 			if assert.NotEmpty(t, ee) {
 				for _, e := range ee {
 					assert.NotEmpty(t, e.ID)
-					assert.NotEmpty(t, e.Address)
 					assert.NotEmpty(t, e.CreatedAt)
 				}
 			}
@@ -93,6 +103,9 @@ func TestPerson(t *testing.T) {
 	t.Run("get/:id", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/"+createdID, nil)
 		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -101,21 +114,40 @@ func TestPerson(t *testing.T) {
 			e := new(model.Person)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
-			if assert.NotEmpty(t, e) {
-				assert.NotEmpty(t, e.ID)
-				assert.Equal(t, address, e.Address)
-				assert.NotEmpty(t, e.CreatedAt)
-			}
+			assert.Equal(t, createdID, e.ID)
+
+			assert.NotEmpty(t, e.ID)
+			assert.Equal(t, "user1", e.Login)
+			assert.Equal(t, "my-realm", e.Realm)
+			assert.Equal(t, "Breanne McGlynn", e.DisplayName)
+			assert.NotEmpty(t, e.CreatedAt)
+			assert.Equal(t, "predovic.macy@hotmail.com", e.Email)
+
 		}
 	})
 
 	t.Run("get/:id•404", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/not-existent-entity", nil)
 		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status)
+	})
+
+	t.Run("get/:id•401", func(t *testing.T) {
+		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/not-existent-entity", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusUnauthorized, res.StatusCode, "Invalid result status code '%s'", res.Status)
 	})
 }

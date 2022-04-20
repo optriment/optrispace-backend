@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/controller"
 	"optrispace.com/work/pkg/service"
 	"optrispace.com/work/pkg/web"
@@ -63,8 +64,9 @@ func doStart(ctx context.Context) error {
 
 	e.HideBanner = viper.GetBool(settHideBanner)
 
-	e.Pre(web.PrepareContext)
+	e.Pre(clog.PrepareContext)
 	e.Pre(middleware.RemoveTrailingSlash())
+	// e.Pre(web.Auth)
 
 	if viper.GetBool(settServerTrace) {
 		e.Use(middleware.Logger())
@@ -77,14 +79,8 @@ func doStart(ctx context.Context) error {
 	e.HTTPErrorHandler = web.GetErrorHandler(e.HTTPErrorHandler)
 	e.Use(middleware.Recover())
 
-	e.Any("info", func(c echo.Context) error {
-		var s strings.Builder
-		s.WriteString("Registered routes:\n\n")
-		rr := c.Echo().Routes()
-		for _, r := range rr {
-			s.WriteString(fmt.Sprintf("%v\n", r))
-		}
-		return c.JSON(http.StatusOK, rr)
+	e.GET("info", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, c.Echo().Routes())
 	})
 
 	// stopping
@@ -127,10 +123,13 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 
 	sm := service.NewSecurity(db)
 
+	e.Pre(web.Auth(sm))
+
 	rr = append(rr,
-		controller.NewJob(service.NewJob(db), sm),
-		controller.NewApplication(service.NewApplication(db), sm),
-		controller.NewPerson(service.NewPerson(db)),
+		controller.NewAuth(sm, service.NewPerson(db)),
+		controller.NewJob(sm, service.NewJob(db)),
+		controller.NewApplication(sm, service.NewApplication(db)),
+		controller.NewPerson(sm, service.NewPerson(db)),
 	)
 
 	for _, r := range rr {

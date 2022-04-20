@@ -14,38 +14,37 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
-	"optrispace.com/work/pkg/web"
 )
 
 func TestApplication(t *testing.T) {
 	resourceName := "applications"
 
-	require.NoError(t, pgdao.New(db).ApplicationsPurge(bgctx))
+	require.NoError(t, pgdao.PurgeDB(bgctx, db))
 
-	require.NoError(t, pgdao.New(db).JobsPurge(bgctx))
 	createdBy, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
-		ID:      pgdao.NewID(),
-		Address: pgdao.NewID() + pgdao.NewID(),
+		ID:    pgdao.NewID(),
+		Login: "created-by",
 	})
 	require.NoError(t, err)
 
 	applicant1, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
-		ID:      pgdao.NewID(),
-		Address: pgdao.NewID() + pgdao.NewID(),
+		ID:    pgdao.NewID(),
+		Login: "applicant1",
 	})
 	require.NoError(t, err)
 
 	applicant2, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
-		ID:      pgdao.NewID(),
-		Address: pgdao.NewID() + pgdao.NewID(),
+		ID:    pgdao.NewID(),
+		Login: "applicant2",
 	})
 	require.NoError(t, err)
 
 	applicant3, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
-		ID:      pgdao.NewID(),
-		Address: pgdao.NewID() + pgdao.NewID(),
+		ID:    pgdao.NewID(),
+		Login: "applicant3",
 	})
 	require.NoError(t, err)
 
@@ -80,7 +79,7 @@ func TestApplication(t *testing.T) {
 	t.Run("get•empty-job", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, jobURL, nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 
 		res, err := http.DefaultClient.Do(req)
@@ -99,7 +98,7 @@ func TestApplication(t *testing.T) {
 	t.Run("get•empty-applications", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationsURL, nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
 		q.Q(applicationsURL)
@@ -119,7 +118,7 @@ func TestApplication(t *testing.T) {
 		}`
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 
 		res, err := http.DefaultClient.Do(req)
@@ -140,7 +139,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
 
@@ -186,7 +185,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
 
@@ -196,7 +195,7 @@ func TestApplication(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, "^Error while processing request:.*$", e["message"])
+			assert.Regexp(t, "^Value is required:.*$", e["message"])
 		}
 	})
 
@@ -207,7 +206,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
 
@@ -217,14 +216,14 @@ func TestApplication(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, "^Error while processing request:.*$", e["message"])
+			assert.Regexp(t, "^Value is required:.*$", e["message"])
 		}
 	})
 
 	t.Run("job-get/:id", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, jobURL, nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -250,7 +249,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
 
@@ -297,7 +296,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant3.ID)
 
@@ -344,7 +343,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
 
@@ -363,7 +362,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		// req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
 
@@ -382,7 +381,7 @@ func TestApplication(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
 
