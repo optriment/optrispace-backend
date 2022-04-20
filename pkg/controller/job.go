@@ -62,7 +62,7 @@ func (cont *Job) add(c echo.Context) error {
 	}
 
 	if ie.Description == "" {
-		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
+		return fmt.Errorf("description required: %w", model.ErrValueIsRequired)
 	}
 
 	o := &model.Job{

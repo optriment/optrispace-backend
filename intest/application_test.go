@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/ryboe/q"
@@ -68,12 +67,41 @@ func TestApplication(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	applID := make([]string, 3)
-
-	_ = job2
+	application1, err := pgdao.New(db).ApplicationAdd(bgctx, pgdao.ApplicationAddParams{
+		ID:          pgdao.NewID(),
+		Comment:     "Do it!",
+		Price:       "42.35",
+		JobID:       job2.ID,
+		ApplicantID: applicant1.ID,
+	})
+	require.NoError(t, err)
 
 	jobURL := appURL + "/jobs/" + job.ID
 	applicationsURL := jobURL + "/" + resourceName
+	applicationURL := appURL + "/" + resourceName + "/" + application1.ID
+
+	t.Run("get /applications/:id", func(t *testing.T) {
+		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationURL, nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.Application)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			if assert.NotEmpty(t, e) {
+				assert.NotEmpty(t, e.ID)
+				assert.Equal(t, "Do it!", e.Comment)
+				assert.True(t, decimal.RequireFromString("42.35").Equal(e.Price))
+				assert.Equal(t, job2.ID, e.Job.ID)
+				assert.Equal(t, applicant1.ID, e.Applicant.ID)
+			}
+		}
+	})
 
 	// just the job without applications
 	t.Run("get•empty-job", func(t *testing.T) {
@@ -143,8 +171,6 @@ func TestApplication(t *testing.T) {
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
 
-		n := time.Now()
-
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
@@ -152,13 +178,11 @@ func TestApplication(t *testing.T) {
 			e := new(model.Application)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
-			applID[0] = e.ID
-
 			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+resourceName+"/"+e.ID))
 
 			assert.NotEmpty(t, e.ID)
-			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
-			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
+			assert.NotEmpty(t, e.CreatedAt)
+			assert.NotEmpty(t, e.UpdatedAt)
 			assert.Equal(t, applicant1.ID, e.Applicant.ID)
 			assert.Equal(t, "I will make this easy!", e.Comment)
 			assert.True(t, decimal.RequireFromString("123.670000009899232").Equal(e.Price))
@@ -253,8 +277,6 @@ func TestApplication(t *testing.T) {
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
 
-		n := time.Now()
-
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
@@ -262,13 +284,11 @@ func TestApplication(t *testing.T) {
 			e := new(model.Application)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
-			applID[1] = e.ID
-
 			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+resourceName+"/"+e.ID))
 
 			assert.NotEmpty(t, e.ID)
-			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
-			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
+			assert.NotEmpty(t, e.CreatedAt)
+			assert.NotEmpty(t, e.UpdatedAt)
 			assert.Equal(t, applicant2.ID, e.Applicant.ID)
 			assert.Equal(t, "Second one", e.Comment)
 			assert.True(t, decimal.RequireFromString("3334.77776555").Equal(e.Price))
@@ -300,8 +320,6 @@ func TestApplication(t *testing.T) {
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant3.ID)
 
-		n := time.Now()
-
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
@@ -309,13 +327,11 @@ func TestApplication(t *testing.T) {
 			e := new(model.Application)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
-			applID[2] = e.ID
-
 			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+resourceName+"/"+e.ID))
 
 			assert.NotEmpty(t, e.ID)
-			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
-			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
+			assert.NotEmpty(t, e.CreatedAt)
+			assert.NotEmpty(t, e.UpdatedAt)
 			assert.Equal(t, applicant3.ID, e.Applicant.ID)
 			assert.Equal(t, "رقم ثلاثة", e.Comment)
 			assert.True(t, decimal.RequireFromString("8887.0009999").Equal(e.Price))

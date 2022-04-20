@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/shopspring/decimal"
@@ -76,8 +75,6 @@ func TestJob(t *testing.T) {
 			"duration": 30
 		}`
 
-		n := time.Now()
-
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -99,9 +96,9 @@ func TestJob(t *testing.T) {
 			assert.Equal(t, "There are words here. Very much words.", e.Description)
 			assert.True(t, decimal.RequireFromString("100.2").Equal(e.Budget))
 			assert.EqualValues(t, 30, e.Duration)
-			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
+			assert.NotEmpty(t, e.CreatedAt)
 			assert.Equal(t, createdBy.ID, e.CreatedBy)
-			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
+			assert.NotEmpty(t, e.UpdatedAt)
 
 			d, err := pgdao.New(db).JobGet(bgctx, e.ID)
 			if assert.NoError(t, err) {
@@ -125,8 +122,6 @@ func TestJob(t *testing.T) {
 			"description": "There are words here. Very much words. Without optional fields."
 		}`
 
-		n := time.Now()
-
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -147,9 +142,9 @@ func TestJob(t *testing.T) {
 			assert.Equal(t, "There are words here. Very much words. Without optional fields.", e.Description)
 			assert.True(t, decimal.Zero.Equal(e.Budget))
 			assert.EqualValues(t, 0, e.Duration)
-			assert.WithinDuration(t, n, e.CreatedAt, time.Since(n))
+			assert.NotEmpty(t, e.CreatedAt)
 			assert.Equal(t, createdBy.ID, e.CreatedBy)
-			assert.WithinDuration(t, n, e.UpdatedAt, time.Since(n))
+			assert.NotEmpty(t, e.UpdatedAt)
 
 			d, err := pgdao.New(db).JobGet(bgctx, e.ID)
 			if assert.NoError(t, err) {

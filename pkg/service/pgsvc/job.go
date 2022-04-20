@@ -114,14 +114,15 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 			}
 
 			result = append(result, &model.Job{
-				ID:          j.ID,
-				Title:       j.Title,
-				Description: j.Description,
-				Budget:      budget,
-				Duration:    j.Duration.Int32,
-				CreatedAt:   j.CreatedAt,
-				CreatedBy:   j.CreatedBy,
-				UpdatedAt:   j.UpdatedAt,
+				ID:                j.ID,
+				Title:             j.Title,
+				Description:       j.Description,
+				Budget:            budget,
+				Duration:          j.Duration.Int32,
+				CreatedAt:         j.CreatedAt,
+				CreatedBy:         j.CreatedBy,
+				UpdatedAt:         j.UpdatedAt,
+				ApplicationsCount: uint(j.ApplicationCount),
 			})
 		}
 		return nil

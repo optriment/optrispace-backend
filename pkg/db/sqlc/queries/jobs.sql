@@ -8,6 +8,7 @@ select
     ,j.created_at
     ,j.created_by
     ,j.updated_at
+    ,(select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
     order by created_at;
 

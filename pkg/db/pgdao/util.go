@@ -17,6 +17,10 @@ func NewID() string {
 func PurgeDB(ctx context.Context, db DBTX) error {
 	queries := New(db)
 
+	if e := queries.ContractsPurge(ctx); e != nil {
+		return e
+	}
+
 	if e := queries.ApplicationsPurge(ctx); e != nil {
 		return e
 	}

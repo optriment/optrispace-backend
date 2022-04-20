@@ -105,19 +105,21 @@ select
     ,j.created_at
     ,j.created_by
     ,j.updated_at
+    ,(select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
     order by created_at
 `
 
 type JobsListRow struct {
-	ID          string
-	Title       string
-	Description string
-	Budget      sql.NullString
-	Duration    sql.NullInt32
-	CreatedAt   time.Time
-	CreatedBy   string
-	UpdatedAt   time.Time
+	ID               string
+	Title            string
+	Description      string
+	Budget           sql.NullString
+	Duration         sql.NullInt32
+	CreatedAt        time.Time
+	CreatedBy        string
+	UpdatedAt        time.Time
+	ApplicationCount int64
 }
 
 func (q *Queries) JobsList(ctx context.Context) ([]JobsListRow, error) {
@@ -138,6 +140,7 @@ func (q *Queries) JobsList(ctx context.Context) ([]JobsListRow, error) {
 			&i.CreatedAt,
 			&i.CreatedBy,
 			&i.UpdatedAt,
+			&i.ApplicationCount,
 		); err != nil {
 			return nil, err
 		}

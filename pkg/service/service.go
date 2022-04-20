@@ -49,6 +49,12 @@ type (
 		// If jobID != "", method returns list of jobs
 		ListBy(ctx context.Context, jobID, applicantID string) ([]*model.Application, error)
 	}
+
+	// Contract is an agreement between a Customer and a Performer (Contractor)
+	Contract interface {
+		// Add saves the entity into storage
+		Add(ctx context.Context, c *model.Contract) (*model.Contract, error)
+	}
 )
 
 // NewSecurity creates job service
@@ -69,4 +75,9 @@ func NewPerson(db *sql.DB) Person {
 // NewApplication creates application service
 func NewApplication(db *sql.DB) Application {
 	return pgsvc.NewApplication(db)
+}
+
+// NewContract creates contract service
+func NewContract(db *sql.DB) Contract {
+	return pgsvc.NewContract(db)
 }
