@@ -14,13 +14,15 @@ import (
 type (
 	// Person controller
 	Person struct {
+		sm  service.Security
 		svc service.Person
 	}
 )
 
 // NewPerson create new service
-func NewPerson(svc service.Person) Registerer {
+func NewPerson(sm service.Security, svc service.Person) Registerer {
 	return &Person{
+		sm:  sm,
 		svc: svc,
 	}
 }
@@ -34,22 +36,22 @@ func (cont *Person) Register(e *echo.Echo) {
 	log.Debug().Str("controller", resourcePerson).Msg("Registered")
 }
 
+// add is NOT signup method. For signup please see /signup endpoint!
 func (cont *Person) add(c echo.Context) error {
-	person := new(model.Person)
+	input := new(model.Person)
 
-	if err := c.Bind(person); err != nil {
+	if err := c.Bind(input); err != nil {
 		return err
 	}
 
-	person.ID = ""
-
-	person, err := cont.svc.Add(c.Request().Context(), person)
+	input.ID = ""
+	o, err := cont.svc.Add(c.Request().Context(), input)
 	if err != nil {
 		return fmt.Errorf("unable to save job: %w", err)
 	}
 
-	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourcePerson, person.ID))
-	return c.JSON(http.StatusCreated, person)
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourcePerson, o.ID))
+	return c.JSON(http.StatusCreated, o)
 }
 
 func (cont *Person) get(c echo.Context) error {

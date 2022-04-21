@@ -1,21 +1,18 @@
 -- name: PersonAdd :one
 insert into persons (
-    id, address
+    id, realm, login, password_hash, display_name, email
 ) values (
-    $1, $2
+    $1, $2, $3, $4, $5, $6
 ) 
-on conflict (address)
-do 
-   update set address = $2
 returning *;
 
 -- name: PersonGet :one
 select * from persons
 	where id = @id::varchar;
 
--- name: PersonGetByAddress :one
-select * from persons
-	where address = @address::varchar;
+-- name: PersonGetByLogin :one
+select * from persons p
+	where p.login = @login::varchar and p.realm = @realm::varchar;
 
 -- name: PersonsList :many
 select * from persons;

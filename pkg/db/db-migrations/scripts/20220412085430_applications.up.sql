@@ -8,7 +8,7 @@ CREATE TABLE applications (
     applicant_id varchar not null references persons(id)
 );
 
-create unique index applications_job_id_applicant_id on public.applications (job_id,applicant_id);
+create unique index applications_job_id_applicant_id on applications (job_id,applicant_id);
 
 comment on table applications is 'Applications for job offers';
 

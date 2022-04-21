@@ -25,9 +25,13 @@ type (
 
 	// Person — customer, executor, seller, buyer etc.
 	Person struct {
-		ID        string    `json:"id,omitempty"`
-		CreatedAt time.Time `json:"created_at,omitempty"`
-		Address   string    `json:"address,omitempty"`
+		ID          string    `json:"id,omitempty"`
+		Realm       string    `json:"realm,omitempty"`
+		Login       string    `json:"login,omitempty"`
+		Password    string    `json:"password,omitempty"`
+		DisplayName string    `json:"display_name,omitempty"`
+		CreatedAt   time.Time `json:"created_at,omitempty"`
+		Email       string    `json:"email,omitempty"`
 	}
 
 	// Project is a sequence of contracts group
@@ -40,7 +44,7 @@ type (
 		Status string `json:"status,omitempty"`
 	}
 
-	// represents contract status
+	// ContractStatus represents a contract status
 	ContractStatus string
 
 	// Application is an application for a job
@@ -56,10 +60,10 @@ type (
 	}
 )
 
-const (
-	Sent     ContractStatus = "sent"
-	Signed   ContractStatus = "signed"
-	Accepted ContractStatus = "accepted"
-)
+// const (
+// 	Sent     ContractStatus = "sent"
+// 	Signed   ContractStatus = "signed"
+// 	Accepted ContractStatus = "accepted"
+// )
 
-var allContractStatus []ContractStatus = []ContractStatus{Sent, Signed, Accepted}
+// var allContractStatus []ContractStatus = []ContractStatus{Sent, Signed, Accepted}

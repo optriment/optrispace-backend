@@ -16,16 +16,16 @@ import (
 type (
 	// Application controller
 	Application struct {
-		svc service.Application
 		sm  service.Security
+		svc service.Application
 	}
 )
 
 // NewApplication create new service
-func NewApplication(svc service.Application, sm service.Security) Registerer {
+func NewApplication(sm service.Security, svc service.Application) Registerer {
 	return &Application{
-		svc: svc,
 		sm:  sm,
+		svc: svc,
 	}
 }
 
@@ -45,15 +45,15 @@ func (cont *Application) add(c echo.Context) error {
 		Price   decimal.Decimal `json:"price,omitempty"`
 	}
 
-	uc, err := cont.sm.FromContext(c)
+	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 
 	ie := new(incomingApplication)
 
-	if err := c.Bind(ie); err != nil {
-		return err
+	if e := c.Bind(ie); e != nil {
+		return e
 	}
 
 	if ie.Comment == "" {
@@ -96,15 +96,15 @@ func (cont *Application) list(c echo.Context) error {
 	ctx := c.Request().Context()
 	jobID := c.Param("job_id")
 
-	uc, err := cont.sm.FromContext(c)
+	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 
 	if jobID == "" { // full list for the current user
-		oo, err := cont.svc.ListBy(ctx, "", uc.Subject.ID)
-		if err != nil {
-			return err
+		oo, e := cont.svc.ListBy(ctx, "", uc.Subject.ID)
+		if e != nil {
+			return e
 		}
 		return c.JSON(http.StatusOK, oo)
 	}

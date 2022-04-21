@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jaswdr/faker"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
 )
@@ -26,20 +27,41 @@ func NewPerson(db *sql.DB) *PersonSvc {
 func (s *PersonSvc) Add(ctx context.Context, person *model.Person) (*model.Person, error) {
 	var result *model.Person
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		person.ID = pgdao.NewID()
+		input := pgdao.PersonAddParams{
+			ID:           pgdao.NewID(),
+			Realm:        person.Realm,
+			Login:        person.Login,
+			PasswordHash: CreateHashFromPassword(person.Password),
+			DisplayName:  person.DisplayName,
+			Email:        person.Email,
+		}
 
-		p, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:      person.ID,
-			Address: person.Address,
-		})
+		if input.Realm == "" {
+			input.Realm = model.InhouseRealm
+		}
+
+		f := faker.New()
+
+		if input.Login == "" {
+			input.Login = input.ID
+		}
+
+		if input.DisplayName == "" {
+			input.DisplayName = f.Person().Name()
+		}
+
+		p, err := queries.PersonAdd(ctx, input)
 		if err != nil {
 			return fmt.Errorf("unable to PersonAdd: %w", err)
 		}
 
 		result = &model.Person{
-			ID:        p.ID,
-			Address:   p.Address,
-			CreatedAt: p.CreatedAt,
+			ID:          p.ID,
+			Realm:       p.Realm,
+			Login:       p.Login,
+			DisplayName: p.DisplayName,
+			CreatedAt:   p.CreatedAt,
+			Email:       p.Email,
 		}
 
 		return nil
@@ -61,9 +83,12 @@ func (s *PersonSvc) Get(ctx context.Context, id string) (*model.Person, error) {
 		}
 
 		result = &model.Person{
-			ID:        p.ID,
-			CreatedAt: p.CreatedAt,
-			Address:   p.Address,
+			ID:          p.ID,
+			Realm:       p.Realm,
+			Login:       p.Login,
+			DisplayName: p.DisplayName,
+			CreatedAt:   p.CreatedAt,
+			Email:       p.Email,
 		}
 
 		return nil
@@ -81,9 +106,12 @@ func (s *PersonSvc) List(ctx context.Context) ([]*model.Person, error) {
 
 		for _, p := range pp {
 			result = append(result, &model.Person{
-				ID:        p.ID,
-				CreatedAt: p.CreatedAt,
-				Address:   p.Address,
+				ID:          p.ID,
+				Realm:       p.Realm,
+				Login:       p.Login,
+				DisplayName: p.DisplayName,
+				CreatedAt:   p.CreatedAt,
+				Email:       p.Email,
 			})
 		}
 

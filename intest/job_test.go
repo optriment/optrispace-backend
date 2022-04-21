@@ -12,9 +12,9 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
-	"optrispace.com/work/pkg/web"
 )
 
 func TestJob(t *testing.T) {
@@ -23,18 +23,17 @@ func TestJob(t *testing.T) {
 
 	var createdID string
 
-	require.NoError(t, pgdao.New(db).ApplicationsPurge(bgctx))
-	require.NoError(t, pgdao.New(db).JobsPurge(bgctx))
+	require.NoError(t, pgdao.PurgeDB(bgctx, db))
+
 	createdBy, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
-		ID:      pgdao.NewID(),
-		Address: pgdao.NewID() + pgdao.NewID(),
+		ID: pgdao.NewID(),
 	})
 	require.NoError(t, err)
 
 	t.Run("get•empty", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -56,7 +55,7 @@ func TestJob(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 
 		res, err := http.DefaultClient.Do(req)
@@ -81,7 +80,7 @@ func TestJob(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
 
@@ -116,7 +115,6 @@ func TestJob(t *testing.T) {
 				assert.Equal(t, e.UpdatedAt, d.UpdatedAt.UTC())
 
 				assert.Equal(t, createdBy.ID, d.CreatedBy)
-				assert.Equal(t, createdBy.Address, d.Address.String)
 			}
 		}
 	})
@@ -131,7 +129,7 @@ func TestJob(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
 
@@ -165,7 +163,6 @@ func TestJob(t *testing.T) {
 				assert.Equal(t, e.UpdatedAt, d.UpdatedAt.UTC())
 
 				assert.Equal(t, createdBy.ID, d.CreatedBy)
-				assert.Equal(t, createdBy.Address, d.Address.String)
 			}
 
 		}
@@ -177,7 +174,7 @@ func TestJob(t *testing.T) {
 
 		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
 
@@ -187,14 +184,14 @@ func TestJob(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, "^Error while processing request:.*$", e["message"])
+			assert.Regexp(t, "^Value is required:.*$", e["message"])
 		}
 	})
 
 	t.Run("get", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -220,7 +217,7 @@ func TestJob(t *testing.T) {
 	t.Run("get/:id", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/"+createdID, nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -246,7 +243,7 @@ func TestJob(t *testing.T) {
 	t.Run("get/:id•not-found", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/"+"invalid-id", nil)
 		require.NoError(t, err)
-		req.Header.Set(web.HeaderXHint, t.Name())
+		req.Header.Set(clog.HeaderXHint, t.Name())
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

@@ -24,9 +24,12 @@ type (
 
 	// Security creates user representation from echo.Context, if there is such data
 	Security interface {
-		// FromContext acquires user from echo and persisten storage
-		// It will return never nil
-		FromContext(c echo.Context) (*model.UserContext, error)
+		// FromEchoContext acquires user from echo and persisten storage
+		// It will construct *model.UserContext in the context too
+		FromEchoContext(c echo.Context) (*model.UserContext, error)
+
+		// FromLoginPassword creates UserContext from login and password in default realm
+		FromLoginPassword(ctx context.Context, login, password string) (*model.UserContext, error)
 	}
 
 	// Job handles job offers
