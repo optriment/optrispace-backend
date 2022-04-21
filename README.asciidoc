@@ -35,7 +35,7 @@ Prerequisites::
 Ensure the application started, and variables `DB_URL`, `APP_URL` point to the correct locations. Just issue commands:
 
 ----
-env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 make intest
+env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 make run-intest
 ----
 
 or if there were any troubles (not the preferred way though):
