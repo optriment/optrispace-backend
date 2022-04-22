@@ -24,12 +24,17 @@ var exceptions = [][2]string{
 
 func authSkip(c echo.Context) bool {
 	for _, exc := range exceptions {
+		method := c.Request().Method
+		if method == http.MethodOptions { // preflight always enabled
+			return true
+		}
+
 		match, err := path.Match(exc[1], c.Request().RequestURI)
 		if err != nil {
 			panic(fmt.Errorf("invalid pattern %s: %w", exc, err))
 		}
 
-		if match && (exc[0] == anyMethod || exc[0] == c.Request().Method) {
+		if match && (exc[0] == anyMethod || exc[0] == method) {
 			return true
 		}
 

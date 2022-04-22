@@ -6,6 +6,6 @@ pprof:
   hostport: :5005
 server:
   host: :8080
-  allow-origin: '*'
+  cors: true
 db:
   url: postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
