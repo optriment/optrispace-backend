@@ -17,6 +17,7 @@ var exceptions = [][2]string{
 	{anyMethod, "/login"},
 	{anyMethod, "/signup"},
 	{anyMethod, "/stop"},
+	{anyMethod, "/info"},
 	{http.MethodGet, "/jobs"},
 	{http.MethodGet, "/jobs/*"},
 }

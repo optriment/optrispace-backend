@@ -30,7 +30,7 @@ docker-compose-down:
 
 .phony: run
 run:
-	go run . run --config ./testdata/dev.yaml
+	go run . --config ./testdata/dev.yaml run
 
 .phony: run-intest
 run-intest:
