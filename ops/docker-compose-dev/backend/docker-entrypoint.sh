@@ -1,8 +1,8 @@
 #!/bin/sh -eu
 
-cd /app/pkg/internal/db/db-migrations
+cd /app/pkg/db/db-migrations
 
-make migrate-up
+env DB_URL=$DB_URL make migrate-up
 
 cd /app
 
@@ -13,7 +13,7 @@ _term() {
 
 trap _term TERM INT
 
-go run . run --config /app/app/docker-compose-dev/backend/dev.yaml -d $DB_URL &
+go run . run --config /app/ops/docker-compose-dev/backend/dev.yaml -d $DB_URL &
 
 child=$!
 wait "$child"

@@ -7,9 +7,9 @@ const (
 
 	settHideBanner = "hide-banner"
 
-	settServerHost  = "server.host"
-	settServerTrace = "server.trace"
-	settServerCors  = "server.cors"
+	settServerHost        = "server.host"
+	settServerTrace       = "server.trace"
+	settServerAllowOrigin = "server.allow-origin" // "Access-Control-Allow-Origin"
 
 	settDbURL = "db.url"
 )
