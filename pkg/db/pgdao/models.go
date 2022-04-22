@@ -27,20 +27,16 @@ type Application struct {
 	ApplicantID string
 }
 
-// Job offer table
+// Contracts table
 type Contract struct {
 	// PK
 	ID string
-	// Creation timestamp
-	CreatedAt time.Time
-	// When the contract was updated last time
-	UpdatedAt time.Time
-	// Application was created before the contract
-	ApplicationID sql.NullString
-	// Person who performing the job
-	PerformerID string
 	// Customer for the job. Who paying.
 	CustomerID string
+	// Person who performing the job
+	PerformerID string
+	// Application was created before the contract
+	ApplicationID string
 	// Contract title. Like "web site creation". Can be copied from the appropriate job.
 	Title string
 	// Details about the contract. May be long, long text. Also can be copied from the appropriate job.
@@ -49,6 +45,13 @@ type Contract struct {
 	Price string
 	// The contract duration
 	Duration sql.NullInt32
+	// Current status of the contract
+	Status    string
+	CreatedBy string
+	// Creation timestamp
+	CreatedAt time.Time
+	// When the contract was updated last time
+	UpdatedAt time.Time
 }
 
 // Job offer table

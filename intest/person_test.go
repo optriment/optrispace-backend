@@ -55,8 +55,6 @@ func TestPerson(t *testing.T) {
 
 			assert.True(t, strings.HasPrefix(res.Header.Get("location"), "/"+resourceName+"/"+e.ID))
 			assert.NotEmpty(t, e.ID)
-
-			assert.NotEmpty(t, e.ID)
 			assert.Equal(t, "user1", e.Login)
 			assert.Equal(t, "my-realm", e.Realm)
 			assert.Equal(t, "Breanne McGlynn", e.DisplayName)
@@ -73,7 +71,6 @@ func TestPerson(t *testing.T) {
 				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
 				assert.Equal(t, "predovic.macy@hotmail.com", d.Email)
 			}
-
 		}
 	})
 

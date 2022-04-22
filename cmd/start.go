@@ -129,6 +129,7 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 		controller.NewJob(sm, service.NewJob(db)),
 		controller.NewApplication(sm, service.NewApplication(db)),
 		controller.NewPerson(sm, service.NewPerson(db)),
+		controller.NewContract(service.NewContract(db), sm),
 	)
 
 	for _, r := range rr {

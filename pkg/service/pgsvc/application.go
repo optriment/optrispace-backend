@@ -56,7 +56,6 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			Comment:   appl.Comment,
 			Price:     decimal.RequireFromString(appl.Price),
 			Job:       &model.Job{ID: appl.JobID},
-			Contract:  nil,
 		}
 
 		return nil
@@ -76,11 +75,6 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 			return fmt.Errorf("unable to ApplicationGet with id=%s: %w", id, err)
 		}
 
-		var contract *model.Contract
-		if a.ContractID.Valid {
-			contract = &model.Contract{ID: a.ContractID.String}
-		}
-
 		result = &model.Application{
 			ID:        a.ID,
 			CreatedAt: a.CreatedAt,
@@ -89,7 +83,6 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 			Comment:   a.Comment,
 			Price:     decimal.RequireFromString(a.Price),
 			Job:       &model.Job{ID: a.JobID},
-			Contract:  contract,
 		}
 
 		return nil

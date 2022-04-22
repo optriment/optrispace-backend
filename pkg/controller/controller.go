@@ -21,6 +21,7 @@ const (
 	resourceJob         = "jobs"
 	resourcePerson      = "persons"
 	resourceApplication = "applications"
+	resourceContract    = "contracts"
 )
 
 // AddStop adds endpoint to stops application (with cancel function)
