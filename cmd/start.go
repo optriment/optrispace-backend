@@ -51,7 +51,7 @@ func init() {
 
 		cc.PersistentFlags().Bool(settHideBanner, false, "hide banner")
 
-		cc.PersistentFlags().String(settServerAllowOrigin, "", "enable CORS with allow specified origin")
+		cc.PersistentFlags().Bool(settServerCors, false, "enable CORS with allow any (*) origin")
 	})
 }
 
@@ -62,18 +62,17 @@ func doStart(ctx context.Context) error {
 
 	e := echo.New()
 
-	if allowOrigin := viper.GetString(settServerAllowOrigin); allowOrigin != "" {
-		e.Use(web.AllowOrigin(allowOrigin))
-	}
-
 	e.HideBanner = viper.GetBool(settHideBanner)
 
 	e.Pre(clog.PrepareContext)
-
 	e.Pre(middleware.RemoveTrailingSlash())
 
 	if viper.GetBool(settServerTrace) {
 		e.Use(middleware.Logger())
+	}
+
+	if viper.GetBool(settServerCors) {
+		e.Pre(middleware.CORS())
 	}
 
 	e.HTTPErrorHandler = web.GetErrorHandler(e.HTTPErrorHandler)

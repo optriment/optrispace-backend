@@ -6,4 +6,4 @@ pprof:
   hostport: :5005
 server:
   host: :8080
-  allow-origin: '*'
+  cors: true
