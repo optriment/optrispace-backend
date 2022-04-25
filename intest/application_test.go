@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"github.com/ryboe/q"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -129,7 +128,6 @@ func TestApplication(t *testing.T) {
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
-		q.Q(applicationsURL)
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 

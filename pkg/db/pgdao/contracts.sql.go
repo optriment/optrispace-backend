@@ -61,13 +61,88 @@ func (q *Queries) ContractAdd(ctx context.Context, arg ContractAddParams) (Contr
 	return i, err
 }
 
-const contractsPurge = `-- name: ContractsPurge :exec
+const contractGetByIDAndPersonID = `-- name: ContractGetByIDAndPersonID :one
 
-DELETE FROM contracts
+select c.id, c.customer_id, c.performer_id, c.application_id, c.title, c.description, c.price, c.duration, c.status, c.created_by, c.created_at, c.updated_at from contracts c
+join applications a on a.id = c.application_id and a.applicant_id = c.performer_id
+join jobs j on j.id = a.job_id
+join persons customer on customer.id = c.customer_id
+join persons performer on performer.id = c.performer_id
+where c.id = $1::varchar and (c.customer_id = $2::varchar or c.performer_id = $2::varchar)
 `
+
+type ContractGetByIDAndPersonIDParams struct {
+	ID       string
+	PersonID string
+}
 
 // on conflict
 // do nothing
+func (q *Queries) ContractGetByIDAndPersonID(ctx context.Context, arg ContractGetByIDAndPersonIDParams) (Contract, error) {
+	row := q.db.QueryRowContext(ctx, contractGetByIDAndPersonID, arg.ID, arg.PersonID)
+	var i Contract
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.PerformerID,
+		&i.ApplicationID,
+		&i.Title,
+		&i.Description,
+		&i.Price,
+		&i.Duration,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const contractsGetByPerson = `-- name: ContractsGetByPerson :many
+select id, customer_id, performer_id, application_id, title, description, price, duration, status, created_by, created_at, updated_at from contracts
+where customer_id = $1::varchar or performer_id = $1::varchar
+`
+
+func (q *Queries) ContractsGetByPerson(ctx context.Context, personID string) ([]Contract, error) {
+	rows, err := q.db.QueryContext(ctx, contractsGetByPerson, personID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Contract
+	for rows.Next() {
+		var i Contract
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerID,
+			&i.PerformerID,
+			&i.ApplicationID,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.Duration,
+			&i.Status,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const contractsPurge = `-- name: ContractsPurge :exec
+DELETE FROM contracts
+`
+
 // Handle with care!
 func (q *Queries) ContractsPurge(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, contractsPurge)
