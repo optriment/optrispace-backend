@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -31,6 +32,8 @@ func NewContract(svc service.Contract, sm service.Security) Registerer {
 // Register implements Registerer interface
 func (cont *Contract) Register(e *echo.Echo) {
 	e.POST(resourceContract, cont.add)
+	e.GET(resourceContract, cont.list)
+	e.GET(resourceContract+"/:id", cont.get)
 	log.Debug().Str("controller", resourceContract).Msg("Registered")
 }
 
@@ -97,4 +100,41 @@ func (cont *Contract) add(c echo.Context) error {
 
 	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceContract, newContract.ID))
 	return c.JSON(http.StatusCreated, newContract)
+}
+
+func (cont *Contract) get(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	ctx := c.Request().Context()
+
+	id := c.Param("id")
+	o, err := cont.svc.GetByIDForPerson(ctx, id, uc.Subject.ID)
+	if errors.Is(model.ErrEntityNotFound, err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
+}
+
+func (cont *Contract) list(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	oo, err := cont.svc.ListByPersonID(ctx, uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, oo)
 }

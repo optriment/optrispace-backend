@@ -54,6 +54,13 @@ type (
 	Contract interface {
 		// Add saves the entity into storage
 		Add(ctx context.Context, c *model.Contract) (*model.Contract, error)
+
+		// GetByIDForPerson reads specified entity from storage by specified id and related for person
+		// It can return model.ErrNotFound
+		GetByIDForPerson(ctx context.Context, id, personID string) (*model.Contract, error)
+
+		// ListByPersonID returns list of entities by specific Person
+		ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error)
 	}
 )
 
