@@ -74,39 +74,44 @@ func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model
 	})
 }
 
+func contractByIDPersonID(ctx context.Context, queries *pgdao.Queries, id, personID string) (*model.Contract, error) {
+	contractParams := pgdao.ContractGetByIDAndPersonIDParams{
+		ID:       id,
+		PersonID: personID,
+	}
+
+	a, err := queries.ContractGetByIDAndPersonID(ctx, contractParams)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, model.ErrEntityNotFound
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to ContractGet with id=%s: %w", id, err)
+	}
+
+	return &model.Contract{
+		ID:          a.ID,
+		Customer:    &model.Person{ID: a.CustomerID},
+		Performer:   &model.Person{ID: a.PerformerID},
+		Application: &model.Application{ID: a.ApplicationID},
+		Title:       a.Title,
+		Description: a.Description,
+		Price:       decimal.RequireFromString(a.Price),
+		Duration:    a.Duration.Int32,
+		Status:      a.Status,
+		CreatedAt:   a.CreatedAt,
+		UpdatedAt:   a.UpdatedAt,
+		CreatedBy:   a.CreatedBy,
+	}, nil
+}
+
 // GetByIDForPerson loads contract by ID related for specific person
 func (s *ContractSvc) GetByIDForPerson(ctx context.Context, id, personID string) (*model.Contract, error) {
 	var result *model.Contract
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		contractParams := pgdao.ContractGetByIDAndPersonIDParams{
-			ID:       id,
-			PersonID: personID,
-		}
-
-		a, err := queries.ContractGetByIDAndPersonID(ctx, contractParams)
-		if errors.Is(err, sql.ErrNoRows) {
-			return model.ErrEntityNotFound
-		}
-
-		if err != nil {
-			return fmt.Errorf("unable to ContractGet with id=%s: %w", id, err)
-		}
-
-		result = &model.Contract{
-			ID:          a.ID,
-			CreatedAt:   a.CreatedAt,
-			UpdatedAt:   a.UpdatedAt,
-			Customer:    &model.Person{ID: a.CustomerID},
-			Performer:   &model.Person{ID: a.PerformerID},
-			Title:       a.Title,
-			Description: a.Description,
-			Price:       decimal.RequireFromString(a.Price),
-			Duration:    a.Duration.Int32,
-			Application: &model.Application{ID: a.ApplicationID},
-			CreatedBy:   a.CreatedBy,
-		}
-
-		return nil
+		r, err := contractByIDPersonID(ctx, queries, id, personID)
+		result = r
+		return err
 	})
 }
 
@@ -123,17 +128,82 @@ func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*m
 		for _, a := range aa {
 			result = append(result, &model.Contract{
 				ID:          a.ID,
-				CreatedAt:   a.CreatedAt,
-				UpdatedAt:   a.UpdatedAt,
 				Customer:    &model.Person{ID: a.CustomerID},
 				Performer:   &model.Person{ID: a.PerformerID},
+				Application: &model.Application{},
 				Title:       a.Title,
 				Description: a.Description,
 				Price:       decimal.RequireFromString(a.Price),
 				Duration:    a.Duration.Int32,
+				Status:      a.Status,
+				CreatedAt:   a.CreatedAt,
+				UpdatedAt:   a.UpdatedAt,
 			})
 		}
 
+		return nil
+	})
+}
+
+func (s *ContractSvc) toStatus(ctx context.Context, id, actorID, targetStatus string, validator func(c *model.Contract) error) error {
+	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		c, err := contractByIDPersonID(ctx, queries, id, actorID)
+		if err != nil {
+			return err
+		}
+
+		if e := validator(c); e != nil {
+			return e
+		}
+
+		return queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
+			NewStatus: targetStatus,
+			ID:        id,
+		})
+	})
+}
+
+// Accept makes contract accepted if any
+func (s *ContractSvc) Accept(ctx context.Context, id, actorID string) error {
+	allowedSourceStatus := model.ContractCreated
+	targetStatus := model.ContractAccepted
+	return s.toStatus(ctx, id, actorID, model.ContractAccepted, func(c *model.Contract) error {
+		if c.Performer.ID != actorID {
+			return model.ErrInsufficientRights
+		}
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+		return nil
+	})
+}
+
+// Send makes contract sent if any
+func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
+	allowedSourceStatus := model.ContractAccepted
+	targetStatus := model.ContractSent
+	return s.toStatus(ctx, id, actorID, model.ContractAccepted, func(c *model.Contract) error {
+		if c.Performer.ID != actorID {
+			return model.ErrInsufficientRights
+		}
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+		return nil
+	})
+}
+
+// Approve makes contract approved if any
+func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) error {
+	allowedSourceStatus := model.ContractSent
+	targetStatus := model.ContractApproved
+	return s.toStatus(ctx, id, actorID, model.ContractAccepted, func(c *model.Contract) error {
+		if c.Customer.ID != actorID {
+			return model.ErrInsufficientRights
+		}
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
 		return nil
 	})
 }

@@ -19,14 +19,24 @@ func GetErrorHandler(oldHandler echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 		switch {
 		case errors.Is(err, model.ErrEntityNotFound):
 			err = echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
+
 		case errors.Is(err, model.ErrValueIsRequired):
 			err = echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Sprintf("Value is required: %s", err))
+
 		case errors.Is(err, model.ErrUnauthorized):
 			err = echo.NewHTTPError(http.StatusUnauthorized, "Authorization required")
+
 		case errors.Is(err, model.ErrDuplication):
 			err = echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Duplication: %s", err))
+
 		case errors.Is(err, model.ErrInvalidValue):
 			err = echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Sprintf("Invalid value: %s", err))
+
+		case errors.Is(err, model.ErrInappropriateAction):
+			err = echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Inappropriate action: %s", err))
+
+		case errors.Is(err, model.ErrInsufficientRights):
+			err = echo.NewHTTPError(http.StatusForbidden, "Insufficient rights")
 		}
 
 		oldHandler(err, c)

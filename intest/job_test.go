@@ -22,15 +22,15 @@ func TestJob(t *testing.T) {
 
 	var createdID string
 
-	require.NoError(t, pgdao.PurgeDB(bgctx, db))
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-	createdBy, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
+	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID: pgdao.NewID(),
 	})
 	require.NoError(t, err)
 
 	t.Run("get•empty", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 
@@ -52,7 +52,7 @@ func TestJob(t *testing.T) {
 			"duration": 30
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -75,7 +75,7 @@ func TestJob(t *testing.T) {
 			"duration": 30
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -100,7 +100,7 @@ func TestJob(t *testing.T) {
 			assert.Equal(t, createdBy.ID, e.CreatedBy)
 			assert.NotEmpty(t, e.UpdatedAt)
 
-			d, err := pgdao.New(db).JobGet(bgctx, e.ID)
+			d, err := pgdao.New(db).JobGet(ctx, e.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.ID, d.ID)
 				assert.Equal(t, e.Title, d.Title)
@@ -122,7 +122,7 @@ func TestJob(t *testing.T) {
 			"description": "There are words here. Very much words. Without optional fields."
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -146,7 +146,7 @@ func TestJob(t *testing.T) {
 			assert.Equal(t, createdBy.ID, e.CreatedBy)
 			assert.NotEmpty(t, e.UpdatedAt)
 
-			d, err := pgdao.New(db).JobGet(bgctx, e.ID)
+			d, err := pgdao.New(db).JobGet(ctx, e.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.ID, d.ID)
 				assert.Equal(t, e.Title, d.Title)
@@ -167,7 +167,7 @@ func TestJob(t *testing.T) {
 		body := `{
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -184,7 +184,7 @@ func TestJob(t *testing.T) {
 	})
 
 	t.Run("get", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 
@@ -210,7 +210,7 @@ func TestJob(t *testing.T) {
 	})
 
 	t.Run("get/:id", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/"+createdID, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL+"/"+createdID, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 
@@ -236,7 +236,7 @@ func TestJob(t *testing.T) {
 	})
 
 	t.Run("get/:id•not-found", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/"+"invalid-id", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL+"/"+"invalid-id", nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 

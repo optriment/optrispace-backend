@@ -6,8 +6,14 @@ insert into contracts (
 )
 returning *;
 
--- on conflict
--- do nothing
+-- name: ContractGet :one
+-- mostly in testing purposes
+select c.* from contracts c
+join applications a on a.id = c.application_id and a.applicant_id = c.performer_id
+join jobs j on j.id = a.job_id
+join persons customer on customer.id = c.customer_id
+join persons performer on performer.id = c.performer_id
+where c.id = @id::varchar;
 
 -- name: ContractGetByIDAndPersonID :one
 select c.* from contracts c
@@ -16,6 +22,10 @@ join jobs j on j.id = a.job_id
 join persons customer on customer.id = c.customer_id
 join persons performer on performer.id = c.performer_id
 where c.id = @id::varchar and (c.customer_id = @person_id::varchar or c.performer_id = @person_id::varchar);
+
+-- name: ContractSetStatus :exec
+update contracts c set status = @new_status::varchar
+where c.id = @id::varchar;
 
 -- name: ContractsGetByPerson :many
 select * from contracts

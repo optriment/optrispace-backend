@@ -61,8 +61,37 @@ func (q *Queries) ContractAdd(ctx context.Context, arg ContractAddParams) (Contr
 	return i, err
 }
 
-const contractGetByIDAndPersonID = `-- name: ContractGetByIDAndPersonID :one
+const contractGet = `-- name: ContractGet :one
+select c.id, c.customer_id, c.performer_id, c.application_id, c.title, c.description, c.price, c.duration, c.status, c.created_by, c.created_at, c.updated_at from contracts c
+join applications a on a.id = c.application_id and a.applicant_id = c.performer_id
+join jobs j on j.id = a.job_id
+join persons customer on customer.id = c.customer_id
+join persons performer on performer.id = c.performer_id
+where c.id = $1::varchar
+`
 
+// mostly in testing purposes
+func (q *Queries) ContractGet(ctx context.Context, id string) (Contract, error) {
+	row := q.db.QueryRowContext(ctx, contractGet, id)
+	var i Contract
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.PerformerID,
+		&i.ApplicationID,
+		&i.Title,
+		&i.Description,
+		&i.Price,
+		&i.Duration,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const contractGetByIDAndPersonID = `-- name: ContractGetByIDAndPersonID :one
 select c.id, c.customer_id, c.performer_id, c.application_id, c.title, c.description, c.price, c.duration, c.status, c.created_by, c.created_at, c.updated_at from contracts c
 join applications a on a.id = c.application_id and a.applicant_id = c.performer_id
 join jobs j on j.id = a.job_id
@@ -76,8 +105,6 @@ type ContractGetByIDAndPersonIDParams struct {
 	PersonID string
 }
 
-// on conflict
-// do nothing
 func (q *Queries) ContractGetByIDAndPersonID(ctx context.Context, arg ContractGetByIDAndPersonIDParams) (Contract, error) {
 	row := q.db.QueryRowContext(ctx, contractGetByIDAndPersonID, arg.ID, arg.PersonID)
 	var i Contract
@@ -96,6 +123,21 @@ func (q *Queries) ContractGetByIDAndPersonID(ctx context.Context, arg ContractGe
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const contractSetStatus = `-- name: ContractSetStatus :exec
+update contracts c set status = $1::varchar
+where c.id = $2::varchar
+`
+
+type ContractSetStatusParams struct {
+	NewStatus string
+	ID        string
+}
+
+func (q *Queries) ContractSetStatus(ctx context.Context, arg ContractSetStatusParams) error {
+	_, err := q.db.ExecContext(ctx, contractSetStatus, arg.NewStatus, arg.ID)
+	return err
 }
 
 const contractsGetByPerson = `-- name: ContractsGetByPerson :many

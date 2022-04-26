@@ -70,10 +70,12 @@ type (
 	}
 )
 
-// const (
-// 	Sent     ContractStatus = "sent"
-// 	Signed   ContractStatus = "signed"
-// 	Accepted ContractStatus = "accepted"
-// )
+// Contract statuses
+const (
+	ContractCreated  = "created"
+	ContractAccepted = "accepted"
+	ContractSent     = "sent"
+	ContractApproved = "approved"
+)
 
-// var allContractStatus []ContractStatus = []ContractStatus{Sent, Signed, Accepted}
+// var allContractStatus = []string{ContractCreated, ContractAccepted, ContractSent, ContractApproved}

@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-cd $(dirname $(realpath $0))/../..
+cd $(dirname $(realpath $0))/..
 echo -en "\033]0;⏱ Watching $(pwd)...\a"
 #⌚ 
 while inotifywait -e close_write -r . --exclude '(\.git)|(testdata)' ; 

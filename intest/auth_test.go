@@ -21,7 +21,7 @@ func TestAuth(t *testing.T) {
 	loginURL := appURL + "/login"
 	meURL := appURL + "/me"
 
-	require.NoError(t, pgdao.PurgeDB(bgctx, db))
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
 	var me *model.UserContext
 
@@ -32,7 +32,7 @@ func TestAuth(t *testing.T) {
 			"display_name": "John Smith"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -58,7 +58,7 @@ func TestAuth(t *testing.T) {
 				assert.NotEmpty(t, e.Subject.CreatedAt)
 			}
 
-			d, err := pgdao.New(db).PersonGet(bgctx, e.Subject.ID)
+			d, err := pgdao.New(db).PersonGet(ctx, e.Subject.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.Subject.ID, d.ID)
 				assert.Equal(t, "inhouse", d.Realm)
@@ -76,7 +76,7 @@ func TestAuth(t *testing.T) {
 			"password":"12345678"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -100,7 +100,7 @@ func TestAuth(t *testing.T) {
 				assert.NotEmpty(t, e.Subject.CreatedAt)
 			}
 
-			d, err := pgdao.New(db).PersonGet(bgctx, e.Subject.ID)
+			d, err := pgdao.New(db).PersonGet(ctx, e.Subject.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.Subject.ID, d.ID)
 				assert.Equal(t, "inhouse", d.Realm)
@@ -116,7 +116,7 @@ func TestAuth(t *testing.T) {
 		body := `{
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -135,7 +135,7 @@ func TestAuth(t *testing.T) {
 		body := `{
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, meURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, meURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -154,7 +154,7 @@ func TestAuth(t *testing.T) {
 		body := `{
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, meURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, meURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -177,7 +177,7 @@ func TestAuth(t *testing.T) {
 				assert.NotEmpty(t, e.Subject.CreatedAt)
 			}
 
-			d, err := pgdao.New(db).PersonGet(bgctx, e.Subject.ID)
+			d, err := pgdao.New(db).PersonGet(ctx, e.Subject.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.Subject.ID, d.ID)
 				assert.Equal(t, "inhouse", d.Realm)
@@ -196,7 +196,7 @@ func TestAuth(t *testing.T) {
 				"password":"12345678"
 			}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -218,7 +218,7 @@ func TestAuth(t *testing.T) {
 				assert.NotEmpty(t, e.Subject.CreatedAt)
 			}
 
-			d, err := pgdao.New(db).PersonGet(bgctx, e.Subject.ID)
+			d, err := pgdao.New(db).PersonGet(ctx, e.Subject.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.Subject.ID, d.ID)
 				assert.Equal(t, "inhouse", d.Realm)
@@ -237,7 +237,7 @@ func TestAuth(t *testing.T) {
 				"password":"------"
 			}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -261,7 +261,7 @@ func TestAuth(t *testing.T) {
 				"password": ""
 			}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")

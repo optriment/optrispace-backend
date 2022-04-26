@@ -61,6 +61,15 @@ type (
 
 		// ListByPersonID returns list of entities by specific Person
 		ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error)
+
+		// Accept makes contract accepted if any
+		Accept(ctx context.Context, id, actorID string) error
+
+		// Send makes contract sent if any
+		Send(ctx context.Context, id, actorID string) error
+
+		// Approve makes contract approved if any
+		Approve(ctx context.Context, id, actorID string) error
 	}
 )
 
