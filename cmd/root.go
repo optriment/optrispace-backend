@@ -51,6 +51,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	// context should be canceled while Int signal will be caught
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// main processing loop
 	retChan := make(chan error, 1)

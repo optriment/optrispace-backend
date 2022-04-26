@@ -20,33 +20,33 @@ import (
 func TestApplication(t *testing.T) {
 	resourceName := "applications"
 
-	require.NoError(t, pgdao.PurgeDB(bgctx, db))
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-	createdBy, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
+	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "created-by",
 	})
 	require.NoError(t, err)
 
-	applicant1, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
+	applicant1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "applicant1",
 	})
 	require.NoError(t, err)
 
-	applicant2, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
+	applicant2, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "applicant2",
 	})
 	require.NoError(t, err)
 
-	applicant3, err := pgdao.New(db).PersonAdd(bgctx, pgdao.PersonAddParams{
+	applicant3, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "applicant3",
 	})
 	require.NoError(t, err)
 
-	job, err := pgdao.New(db).JobAdd(bgctx, pgdao.JobAddParams{
+	job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
 		ID:          pgdao.NewID(),
 		Title:       "Applications testing",
 		Description: "Applications testing description",
@@ -56,7 +56,7 @@ func TestApplication(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	job2, err := pgdao.New(db).JobAdd(bgctx, pgdao.JobAddParams{
+	job2, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
 		ID:          pgdao.NewID(),
 		Title:       "Applications testing",
 		Description: "Applications testing description",
@@ -66,7 +66,7 @@ func TestApplication(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	application1, err := pgdao.New(db).ApplicationAdd(bgctx, pgdao.ApplicationAddParams{
+	application1, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
 		ID:          pgdao.NewID(),
 		Comment:     "Do it!",
 		Price:       "42.35",
@@ -80,7 +80,7 @@ func TestApplication(t *testing.T) {
 	applicationURL := appURL + "/" + resourceName + "/" + application1.ID
 
 	t.Run("get /applications/:id", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
@@ -104,7 +104,7 @@ func TestApplication(t *testing.T) {
 
 	// just the job without applications
 	t.Run("get•empty-job", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, jobURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -123,7 +123,7 @@ func TestApplication(t *testing.T) {
 	// just applications for the job without applications (empty list)
 	// Should return empty list NOT 404 yet
 	t.Run("get•empty-applications", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationsURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -142,7 +142,7 @@ func TestApplication(t *testing.T) {
 	t.Run("post•401", func(t *testing.T) {
 		body := `{
 		}`
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -163,7 +163,7 @@ func TestApplication(t *testing.T) {
 			"price": "123.670000009899232"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -187,7 +187,7 @@ func TestApplication(t *testing.T) {
 			assert.Equal(t, job.ID, e.Job.ID)
 			assert.Nil(t, e.Contract) // there is NO contract yet
 
-			d, err := pgdao.New(db).ApplicationGet(bgctx, e.ID)
+			d, err := pgdao.New(db).ApplicationGet(ctx, e.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.ID, d.ID)
 				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
@@ -205,7 +205,7 @@ func TestApplication(t *testing.T) {
 			"price": "123.670000009899232"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -226,7 +226,7 @@ func TestApplication(t *testing.T) {
 			"comment": "Beautiful life!"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -243,7 +243,7 @@ func TestApplication(t *testing.T) {
 	})
 
 	t.Run("job-get/:id", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, jobURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 
@@ -269,7 +269,7 @@ func TestApplication(t *testing.T) {
 			"price": "00003334.77776555"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -293,7 +293,7 @@ func TestApplication(t *testing.T) {
 			assert.Equal(t, job.ID, e.Job.ID)
 			assert.Nil(t, e.Contract) // there is NO contract yet
 
-			d, err := pgdao.New(db).ApplicationGet(bgctx, e.ID)
+			d, err := pgdao.New(db).ApplicationGet(ctx, e.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.ID, d.ID)
 				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
@@ -312,7 +312,7 @@ func TestApplication(t *testing.T) {
 			"price": "8887.00099990000000"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -336,7 +336,7 @@ func TestApplication(t *testing.T) {
 			assert.Equal(t, job.ID, e.Job.ID)
 			assert.Nil(t, e.Contract) // there is NO contract yet
 
-			d, err := pgdao.New(db).ApplicationGet(bgctx, e.ID)
+			d, err := pgdao.New(db).ApplicationGet(ctx, e.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.ID, d.ID)
 				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
@@ -355,7 +355,7 @@ func TestApplication(t *testing.T) {
 			"price": "00003334.77776555"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -374,7 +374,7 @@ func TestApplication(t *testing.T) {
 	t.Run("get/:job_id/applications•401", func(t *testing.T) {
 		body := ``
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -393,7 +393,7 @@ func TestApplication(t *testing.T) {
 	t.Run("get/:job_id/applications•successfully", func(t *testing.T) {
 		body := ``
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")

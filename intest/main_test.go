@@ -18,8 +18,8 @@ var (
 )
 
 var (
-	db    *sql.DB
-	bgctx = context.Background()
+	db  *sql.DB
+	ctx = context.Background()
 )
 
 // token of default user

@@ -10,4 +10,6 @@ var (
 	ErrConnectionAlreadyExists = errors.New("connection already exists")
 	ErrUnauthorized            = errors.New("user not authorized")
 	ErrDuplication             = errors.New("duplication")
+	ErrInsufficientRights      = errors.New("insufficient rights")
+	ErrInappropriateAction     = errors.New("inappropriate action")
 )

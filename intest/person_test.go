@@ -22,9 +22,9 @@ func TestPerson(t *testing.T) {
 
 	var createdID string
 
-	require.NoError(t, pgdao.PurgeDB(bgctx, db))
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-	creator, err := pgsvc.NewPerson(db).Add(bgctx, &model.Person{
+	creator, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
 		Password: "12345678",
 	})
 	require.NoError(t, err)
@@ -38,7 +38,7 @@ func TestPerson(t *testing.T) {
 			"email":"predovic.macy@hotmail.com"
 		}`
 
-		req, err := http.NewRequestWithContext(bgctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -61,7 +61,7 @@ func TestPerson(t *testing.T) {
 			assert.NotEmpty(t, e.CreatedAt)
 			assert.Equal(t, "predovic.macy@hotmail.com", e.Email)
 
-			d, err := pgdao.New(db).PersonGet(bgctx, e.ID)
+			d, err := pgdao.New(db).PersonGet(ctx, e.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, e.ID, d.ID)
 				assert.Equal(t, "my-realm", d.Realm)
@@ -75,7 +75,7 @@ func TestPerson(t *testing.T) {
 	})
 
 	t.Run("get", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -98,7 +98,7 @@ func TestPerson(t *testing.T) {
 	})
 
 	t.Run("get/:id", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/"+createdID, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL+"/"+createdID, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -124,7 +124,7 @@ func TestPerson(t *testing.T) {
 	})
 
 	t.Run("get/:id•404", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/not-existent-entity", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL+"/not-existent-entity", nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
@@ -137,7 +137,7 @@ func TestPerson(t *testing.T) {
 	})
 
 	t.Run("get/:id•401", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(bgctx, http.MethodGet, startURL+"/not-existent-entity", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL+"/not-existent-entity", nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")

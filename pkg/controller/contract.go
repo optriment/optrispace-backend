@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -34,6 +33,9 @@ func (cont *Contract) Register(e *echo.Echo) {
 	e.POST(resourceContract, cont.add)
 	e.GET(resourceContract, cont.list)
 	e.GET(resourceContract+"/:id", cont.get)
+	e.POST(resourceContract+"/:id/accept", cont.accept)
+	e.POST(resourceContract+"/:id/send", cont.send)
+	e.POST(resourceContract+"/:id/approve", cont.approve)
 	log.Debug().Str("controller", resourceContract).Msg("Registered")
 }
 
@@ -112,10 +114,6 @@ func (cont *Contract) get(c echo.Context) error {
 
 	id := c.Param("id")
 	o, err := cont.svc.GetByIDForPerson(ctx, id, uc.Subject.ID)
-	if errors.Is(model.ErrEntityNotFound, err) {
-		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
-	}
-
 	if err != nil {
 		return err
 	}
@@ -137,4 +135,31 @@ func (cont *Contract) list(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, oo)
+}
+
+func (cont *Contract) accept(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	return cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+}
+
+func (cont *Contract) send(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	return cont.svc.Send(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+}
+
+func (cont *Contract) approve(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	return cont.svc.Approve(c.Request().Context(), c.Param("id"), uc.Subject.ID)
 }
