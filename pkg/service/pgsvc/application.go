@@ -111,9 +111,31 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 		}
 
 		for _, a := range aa {
+			var job *model.Job
+
+			c, err := queries.JobGet(ctx, jobID)
+			if err != nil {
+				return fmt.Errorf("unable to JobGet: %w", err)
+			}
+
+			job = &model.Job{ID: jobID}
+
+			if c.Budget.Valid {
+				job.Budget = decimal.RequireFromString(c.Budget.String)
+			}
+
 			var contract *model.Contract
 			if a.ContractID.Valid {
-				contract = &model.Contract{ID: a.ContractID.String}
+				c, err := queries.ContractGet(ctx, a.ContractID.String)
+				if err != nil {
+					return fmt.Errorf("unable to ContractGet: %w", err)
+				}
+
+				contract = &model.Contract{
+					ID:     a.ContractID.String,
+					Price:  decimal.RequireFromString(c.Price),
+					Status: c.Status,
+				}
 			}
 
 			result = append(result, &model.Application{
@@ -123,7 +145,7 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 				Applicant: &model.Person{ID: a.ApplicantID},
 				Comment:   a.Comment,
 				Price:     decimal.RequireFromString(a.Price),
-				Job:       &model.Job{ID: a.JobID},
+				Job:       job,
 				Contract:  contract,
 			})
 		}
