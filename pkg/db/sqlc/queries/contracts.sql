@@ -24,7 +24,7 @@ join persons performer on performer.id = c.performer_id
 where c.id = @id::varchar and (c.customer_id = @person_id::varchar or c.performer_id = @person_id::varchar);
 
 -- name: ContractSetStatus :exec
-update contracts c set status = @new_status::varchar
+update contracts c set status = @new_status::varchar, updated_at = now()
 where c.id = @id::varchar;
 
 -- name: ContractsGetByPerson :many
