@@ -160,14 +160,17 @@ func (q *Queries) ApplicationsGetByJob(ctx context.Context, jobID string) ([]App
 const applicationsListBy = `-- name: ApplicationsListBy :many
 select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id, c.id as contract_id from applications a
 	left join contracts c on a.id = c.application_id
+	left join jobs j on a.job_id = j.id
 	where 
-	($1::varchar = '' or a.job_id = $1::varchar) and 
-	($2::varchar = '' or a.applicant_id = $2::varchar)
+	($1::varchar = '' or a.job_id = $1::varchar)
+	and ($2::varchar = ''
+		or a.applicant_id = $2::varchar
+		or j.created_by = $2::varchar)
 `
 
 type ApplicationsListByParams struct {
-	JobID       string
-	ApplicantID string
+	JobID   string
+	ActorID string
 }
 
 type ApplicationsListByRow struct {
@@ -182,7 +185,7 @@ type ApplicationsListByRow struct {
 }
 
 func (q *Queries) ApplicationsListBy(ctx context.Context, arg ApplicationsListByParams) ([]ApplicationsListByRow, error) {
-	rows, err := q.db.QueryContext(ctx, applicationsListBy, arg.JobID, arg.ApplicantID)
+	rows, err := q.db.QueryContext(ctx, applicationsListBy, arg.JobID, arg.ActorID)
 	if err != nil {
 		return nil, err
 	}

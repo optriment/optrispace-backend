@@ -22,6 +22,12 @@ func TestApplication(t *testing.T) {
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
+	stranger, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:    pgdao.NewID(),
+		Login: "stranger",
+	})
+	require.NoError(t, err)
+
 	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "created-by",
@@ -79,7 +85,7 @@ func TestApplication(t *testing.T) {
 	applicationsURL := jobURL + "/" + resourceName
 	applicationURL := appURL + "/" + resourceName + "/" + application1.ID
 
-	t.Run("get /applications/:id", func(t *testing.T) {
+	t.Run("get•applications•:id", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -242,7 +248,7 @@ func TestApplication(t *testing.T) {
 		}
 	})
 
-	t.Run("job-get/:id", func(t *testing.T) {
+	t.Run("job-get•:id", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -371,7 +377,7 @@ func TestApplication(t *testing.T) {
 		}
 	})
 
-	t.Run("get/:job_id/applications•401", func(t *testing.T) {
+	t.Run("get•:job_id•applications•401", func(t *testing.T) {
 		body := ``
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
@@ -390,7 +396,55 @@ func TestApplication(t *testing.T) {
 		}
 	})
 
-	t.Run("get/:job_id/applications•successfully", func(t *testing.T) {
+	t.Run("get•:job_id•applications•by-stranger", func(t *testing.T) {
+		body := ``
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			ee := make([]*model.Application, 0)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
+			assert.Empty(t, ee)
+		}
+	})
+
+	t.Run("get•:job_id•applications•by-author", func(t *testing.T) {
+		body := ``
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			ee := make([]*model.Application, 0)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
+			if assert.Len(t, ee, 3) {
+				for _, a := range ee {
+					assert.NotEmpty(t, a.CreatedAt)
+					assert.NotEmpty(t, a.UpdatedAt)
+					assert.NotEmpty(t, a.Applicant.ID)
+					assert.NotEmpty(t, a.Comment)
+					assert.NotEmpty(t, a.Price)
+					assert.NotEmpty(t, a.Job)
+					assert.Nil(t, a.Contract)
+				}
+			}
+		}
+	})
+
+	t.Run("get•:job_id•applications•by-applicant2", func(t *testing.T) {
 		body := ``
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, bytes.NewReader([]byte(body)))
@@ -405,7 +459,7 @@ func TestApplication(t *testing.T) {
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			ee := make([]*model.Application, 0)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
-			if assert.Len(t, ee, 3) {
+			if assert.Len(t, ee, 1) {
 				for _, a := range ee {
 					assert.NotEmpty(t, a.CreatedAt)
 					assert.NotEmpty(t, a.UpdatedAt)
