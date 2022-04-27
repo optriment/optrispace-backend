@@ -182,7 +182,7 @@ func (s *ContractSvc) Accept(ctx context.Context, id, actorID string) error {
 func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
 	allowedSourceStatus := model.ContractAccepted
 	targetStatus := model.ContractSent
-	return s.toStatus(ctx, id, actorID, model.ContractAccepted, func(c *model.Contract) error {
+	return s.toStatus(ctx, id, actorID, model.ContractSent, func(c *model.Contract) error {
 		if c.Performer.ID != actorID {
 			return model.ErrInsufficientRights
 		}
@@ -197,7 +197,7 @@ func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
 func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) error {
 	allowedSourceStatus := model.ContractSent
 	targetStatus := model.ContractApproved
-	return s.toStatus(ctx, id, actorID, model.ContractAccepted, func(c *model.Contract) error {
+	return s.toStatus(ctx, id, actorID, model.ContractApproved, func(c *model.Contract) error {
 		if c.Customer.ID != actorID {
 			return model.ErrInsufficientRights
 		}
