@@ -109,7 +109,7 @@ func (cont *Application) list(c echo.Context) error {
 		return c.JSON(http.StatusOK, oo)
 	}
 
-	oo, err := cont.svc.ListBy(ctx, jobID, "")
+	oo, err := cont.svc.ListBy(ctx, jobID, uc.Subject.ID)
 	if err != nil {
 		return err
 	}

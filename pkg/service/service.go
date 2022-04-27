@@ -47,7 +47,8 @@ type (
 		GenericCRUD[model.Application]
 		// ListBy returns list of entities by specified filters
 		// If jobID != "", method returns list of jobs
-		ListBy(ctx context.Context, jobID, applicantID string) ([]*model.Application, error)
+		// if actorID != "", method returns list of applications for job author or applications
+		ListBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error)
 	}
 
 	// Contract is an agreement between a Customer and a Performer (Contractor)

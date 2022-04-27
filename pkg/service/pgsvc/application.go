@@ -95,16 +95,16 @@ func (s *ApplicationSvc) List(ctx context.Context) ([]*model.Application, error)
 }
 
 // ListBy implements Application interface
-func (s *ApplicationSvc) ListBy(ctx context.Context, jobID, applicantID string) ([]*model.Application, error) {
-	return s.listBy(ctx, jobID, applicantID)
+func (s *ApplicationSvc) ListBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error) {
+	return s.listBy(ctx, jobID, actorID)
 }
 
-func (s *ApplicationSvc) listBy(ctx context.Context, jobID, applicantID string) ([]*model.Application, error) {
+func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error) {
 	var result []*model.Application = make([]*model.Application, 0)
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		aa, err := queries.ApplicationsListBy(ctx, pgdao.ApplicationsListByParams{
-			JobID:       jobID,
-			ApplicantID: applicantID,
+			JobID:   jobID,
+			ActorID: actorID,
 		})
 		if err != nil {
 			return fmt.Errorf("unable to ApplicationsListBy: %w", err)
