@@ -613,7 +613,7 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	okTest := func(action, startStatus, actorID string) func(t *testing.T) {
+	okTest := func(action, startStatus, targetStatus, actorID string) func(t *testing.T) {
 		return func(t *testing.T) {
 			require.NoError(t, queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
 				NewStatus: startStatus,
@@ -631,7 +631,7 @@ func TestContractStatuses(t *testing.T) {
 			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 				c, err := queries.ContractGet(ctx, contract.ID)
 				if assert.NoError(t, err) {
-					assert.Equal(t, "accepted", c.Status)
+					assert.Equal(t, targetStatus, c.Status)
 				}
 			}
 		}
@@ -666,7 +666,7 @@ func TestContractStatuses(t *testing.T) {
 		t.Run("not-found", notFoundTest(action))
 		t.Run("stranger", strangerTest(action, model.ContractCreated))
 		t.Run("customer", invalidActorTest(action, model.ContractCreated, customer.ID))
-		t.Run("performer", okTest(action, model.ContractCreated, performer.ID))
+		t.Run("performer", okTest(action, model.ContractCreated, model.ContractAccepted, performer.ID))
 		st := model.ContractAccepted
 		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
 		st = model.ContractSent
@@ -680,7 +680,7 @@ func TestContractStatuses(t *testing.T) {
 		t.Run("not-found", notFoundTest(action))
 		t.Run("stranger", strangerTest(action, model.ContractAccepted))
 		t.Run("customer", invalidActorTest(action, model.ContractAccepted, customer.ID))
-		t.Run("performer", okTest(action, model.ContractAccepted, performer.ID))
+		t.Run("performer", okTest(action, model.ContractAccepted, model.ContractSent, performer.ID))
 		st := model.ContractCreated
 		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
 		st = model.ContractSent
@@ -693,7 +693,7 @@ func TestContractStatuses(t *testing.T) {
 	t.Run(action, func(t *testing.T) {
 		t.Run("not-found", notFoundTest(action))
 		t.Run("stranger", strangerTest(action, model.ContractSent))
-		t.Run("customer", okTest(action, model.ContractSent, customer.ID))
+		t.Run("customer", okTest(action, model.ContractSent, model.ContractApproved, customer.ID))
 		t.Run("performer", invalidActorTest(action, model.ContractSent, performer.ID))
 		st := model.ContractCreated
 		t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID))
