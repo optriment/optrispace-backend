@@ -110,31 +110,70 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 			return fmt.Errorf("unable to ApplicationsListBy: %w", err)
 		}
 
-		for _, a := range aa {
-			var job *model.Job
-
-			c, err := queries.JobGet(ctx, jobID)
-			if err != nil {
-				return fmt.Errorf("unable to JobGet: %w", err)
+		for _, a := range aa { // nolint: dupl
+			job := &model.Job{
+				ID:          a.JobID,
+				Title:       a.JobTitle,
+				Description: a.JobDescription,
 			}
 
-			job = &model.Job{ID: jobID}
-
-			if c.Budget.Valid {
-				job.Budget = decimal.RequireFromString(c.Budget.String)
+			if a.JobBudget.Valid {
+				job.Budget = decimal.RequireFromString(a.JobBudget.String)
 			}
 
 			var contract *model.Contract
-			if a.ContractID.Valid {
-				c, err := queries.ContractGet(ctx, a.ContractID.String)
-				if err != nil {
-					return fmt.Errorf("unable to ContractGet: %w", err)
-				}
 
+			if a.ContractID.Valid {
 				contract = &model.Contract{
 					ID:     a.ContractID.String,
-					Price:  decimal.RequireFromString(c.Price),
-					Status: c.Status,
+					Status: a.ContractStatus.String,
+					Price:  decimal.RequireFromString(a.ContractPrice.String),
+				}
+			}
+
+			result = append(result, &model.Application{
+				ID:        a.ID,
+				CreatedAt: a.CreatedAt,
+				UpdatedAt: a.UpdatedAt,
+				Applicant: &model.Person{ID: a.ApplicantID},
+				Comment:   a.Comment,
+				Price:     decimal.RequireFromString(a.Price),
+				Job:       job,
+				Contract:  contract,
+			})
+		}
+
+		return nil
+	})
+}
+
+// ListByApplicant returns all applications for specific applicant
+func (s *ApplicationSvc) ListByApplicant(ctx context.Context, applicantID string) ([]*model.Application, error) {
+	var result []*model.Application = make([]*model.Application, 0)
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		aa, err := queries.ApplicationsGetByApplicant(ctx, applicantID)
+		if err != nil {
+			return fmt.Errorf("unable to ApplicationsGetByApplicant: %w", err)
+		}
+
+		for _, a := range aa { // nolint: dupl
+			job := &model.Job{
+				ID:          a.JobID,
+				Title:       a.JobTitle,
+				Description: a.JobDescription,
+			}
+
+			if a.JobBudget.Valid {
+				job.Budget = decimal.RequireFromString(a.JobBudget.String)
+			}
+
+			var contract *model.Contract
+
+			if a.ContractID.Valid {
+				contract = &model.Contract{
+					ID:     a.ContractID.String,
+					Status: a.ContractStatus.String,
+					Price:  decimal.RequireFromString(a.ContractPrice.String),
 				}
 			}
 

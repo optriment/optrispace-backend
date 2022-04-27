@@ -86,19 +86,39 @@ func (q *Queries) ApplicationGet(ctx context.Context, id string) (ApplicationGet
 }
 
 const applicationsGetByApplicant = `-- name: ApplicationsGetByApplicant :many
-select id, created_at, updated_at, comment, price, job_id, applicant_id from applications
-	where applicant_id = $1::varchar
+select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id, c.id as contract_id, c.status as contract_status, c.price as contract_price,
+	j.title as job_title, j.description as job_description, j.budget as job_budget
+	from applications a
+	join jobs j on a.job_id = j.id
+	left join contracts c on a.id = c.application_id
+	where a.applicant_id = $1::varchar
 `
 
-func (q *Queries) ApplicationsGetByApplicant(ctx context.Context, applicantID string) ([]Application, error) {
+type ApplicationsGetByApplicantRow struct {
+	ID             string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Comment        string
+	Price          string
+	JobID          string
+	ApplicantID    string
+	ContractID     sql.NullString
+	ContractStatus sql.NullString
+	ContractPrice  sql.NullString
+	JobTitle       string
+	JobDescription string
+	JobBudget      sql.NullString
+}
+
+func (q *Queries) ApplicationsGetByApplicant(ctx context.Context, applicantID string) ([]ApplicationsGetByApplicantRow, error) {
 	rows, err := q.db.QueryContext(ctx, applicationsGetByApplicant, applicantID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Application
+	var items []ApplicationsGetByApplicantRow
 	for rows.Next() {
-		var i Application
+		var i ApplicationsGetByApplicantRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
@@ -107,6 +127,12 @@ func (q *Queries) ApplicationsGetByApplicant(ctx context.Context, applicantID st
 			&i.Price,
 			&i.JobID,
 			&i.ApplicantID,
+			&i.ContractID,
+			&i.ContractStatus,
+			&i.ContractPrice,
+			&i.JobTitle,
+			&i.JobDescription,
+			&i.JobBudget,
 		); err != nil {
 			return nil, err
 		}
@@ -158,10 +184,12 @@ func (q *Queries) ApplicationsGetByJob(ctx context.Context, jobID string) ([]App
 }
 
 const applicationsListBy = `-- name: ApplicationsListBy :many
-select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id, c.id as contract_id from applications a
+select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id, c.id as contract_id, c.status as contract_status, c.price as contract_price,
+	j.title as job_title, j.description as job_description, j.budget as job_budget
+	from applications a
+	join jobs j on a.job_id = j.id
 	left join contracts c on a.id = c.application_id
-	left join jobs j on a.job_id = j.id
-	where 
+	where
 	($1::varchar = '' or a.job_id = $1::varchar)
 	and ($2::varchar = ''
 		or a.applicant_id = $2::varchar
@@ -174,14 +202,19 @@ type ApplicationsListByParams struct {
 }
 
 type ApplicationsListByRow struct {
-	ID          string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Comment     string
-	Price       string
-	JobID       string
-	ApplicantID string
-	ContractID  sql.NullString
+	ID             string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Comment        string
+	Price          string
+	JobID          string
+	ApplicantID    string
+	ContractID     sql.NullString
+	ContractStatus sql.NullString
+	ContractPrice  sql.NullString
+	JobTitle       string
+	JobDescription string
+	JobBudget      sql.NullString
 }
 
 func (q *Queries) ApplicationsListBy(ctx context.Context, arg ApplicationsListByParams) ([]ApplicationsListByRow, error) {
@@ -202,6 +235,11 @@ func (q *Queries) ApplicationsListBy(ctx context.Context, arg ApplicationsListBy
 			&i.JobID,
 			&i.ApplicantID,
 			&i.ContractID,
+			&i.ContractStatus,
+			&i.ContractPrice,
+			&i.JobTitle,
+			&i.JobDescription,
+			&i.JobBudget,
 		); err != nil {
 			return nil, err
 		}

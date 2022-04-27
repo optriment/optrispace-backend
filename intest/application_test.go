@@ -438,4 +438,38 @@ func TestApplication(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("get•my applications", func(t *testing.T) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, appURL+"/"+resourceName+"/my", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			ee := make([]*model.Application, 0)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
+			if assert.Len(t, ee, 1) {
+				for _, a := range ee {
+					assert.NotEmpty(t, a.CreatedAt)
+					assert.NotEmpty(t, a.UpdatedAt)
+					assert.NotEmpty(t, a.Applicant.ID)
+					assert.NotEmpty(t, a.Comment)
+					assert.NotEmpty(t, a.Price)
+
+					assert.NotNil(t, a.Job)
+					assert.Equal(t, job.ID, a.Job.ID)
+					assert.Equal(t, a.Job.Title, "Applications testing")
+					assert.Equal(t, a.Job.Description, "Applications testing description")
+
+					assert.NotNil(t, a.Contract)
+					assert.Equal(t, contract1.ID, a.Contract.ID)
+					assert.Equal(t, "created", a.Contract.Status)
+					assert.True(t, decimal.RequireFromString("99.1").Equal(a.Contract.Price))
+				}
+			}
+		}
+	})
 }

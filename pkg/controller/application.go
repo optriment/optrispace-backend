@@ -33,6 +33,7 @@ func NewApplication(sm service.Security, svc service.Application) Registerer {
 func (cont *Application) Register(e *echo.Echo) {
 	e.POST(resourceJob+"/:job_id/"+resourceApplication, cont.add)
 	e.GET(resourceApplication+"/:id", cont.get)
+	e.GET(resourceApplication+"/my", cont.listMy)
 	e.GET(resourceApplication, cont.list)
 	e.GET(resourceJob+"/:job_id/"+resourceApplication, cont.list)
 	// e.PUT(name+"/:id", cont.update)
@@ -110,6 +111,22 @@ func (cont *Application) list(c echo.Context) error {
 	}
 
 	oo, err := cont.svc.ListBy(ctx, jobID, uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, oo)
+}
+
+func (cont *Application) listMy(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	oo, err := cont.svc.ListByApplicant(ctx, uc.Subject.ID)
 	if err != nil {
 		return err
 	}
