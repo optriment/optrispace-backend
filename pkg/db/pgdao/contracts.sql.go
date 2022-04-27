@@ -126,7 +126,7 @@ func (q *Queries) ContractGetByIDAndPersonID(ctx context.Context, arg ContractGe
 }
 
 const contractSetStatus = `-- name: ContractSetStatus :exec
-update contracts c set status = $1::varchar
+update contracts c set status = $1::varchar, updated_at = now()
 where c.id = $2::varchar
 `
 
