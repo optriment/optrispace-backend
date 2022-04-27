@@ -49,6 +49,9 @@ type (
 		// If jobID != "", method returns list of jobs
 		// if actorID != "", method returns list of applications for job author or applications
 		ListBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error)
+
+		// ListByApplicant returns list of applications by specified applicant
+		ListByApplicant(ctx context.Context, applicantID string) ([]*model.Application, error)
 	}
 
 	// Contract is an agreement between a Customer and a Performer (Contractor)
