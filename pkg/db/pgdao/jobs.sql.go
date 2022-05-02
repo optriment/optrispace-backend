@@ -62,20 +62,23 @@ select
     ,j.created_by
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
+    , COALESCE(p.display_name, p.login) AS customer_display_name
     from jobs j
-	where j.id = $1::varchar
+    join persons p on p.id = j.created_by
+    where j.id = $1::varchar
 `
 
 type JobGetRow struct {
-	ID               string
-	Title            string
-	Description      string
-	Budget           sql.NullString
-	Duration         sql.NullInt32
-	CreatedAt        time.Time
-	CreatedBy        string
-	UpdatedAt        time.Time
-	ApplicationCount int64
+	ID                  string
+	Title               string
+	Description         string
+	Budget              sql.NullString
+	Duration            sql.NullInt32
+	CreatedAt           time.Time
+	CreatedBy           string
+	UpdatedAt           time.Time
+	ApplicationCount    int64
+	CustomerDisplayName string
 }
 
 func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
@@ -91,6 +94,7 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 		&i.CreatedBy,
 		&i.UpdatedAt,
 		&i.ApplicationCount,
+		&i.CustomerDisplayName,
 	)
 	return i, err
 }
@@ -107,7 +111,7 @@ select
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
-    order by created_at
+    order by created_at desc
 `
 
 type JobsListRow struct {

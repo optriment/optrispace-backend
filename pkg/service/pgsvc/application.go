@@ -110,7 +110,7 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 			return fmt.Errorf("unable to ApplicationsListBy: %w", err)
 		}
 
-		for _, a := range aa { // nolint: dupl
+		for _, a := range aa {
 			job := &model.Job{
 				ID:          a.JobID,
 				Title:       a.JobTitle,
@@ -135,7 +135,7 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 				ID:        a.ID,
 				CreatedAt: a.CreatedAt,
 				UpdatedAt: a.UpdatedAt,
-				Applicant: &model.Person{ID: a.ApplicantID},
+				Applicant: &model.Person{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName},
 				Comment:   a.Comment,
 				Price:     decimal.RequireFromString(a.Price),
 				Job:       job,
@@ -156,7 +156,7 @@ func (s *ApplicationSvc) ListByApplicant(ctx context.Context, applicantID string
 			return fmt.Errorf("unable to ApplicationsGetByApplicant: %w", err)
 		}
 
-		for _, a := range aa { // nolint: dupl
+		for _, a := range aa {
 			job := &model.Job{
 				ID:          a.JobID,
 				Title:       a.JobTitle,
