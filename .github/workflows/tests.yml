@@ -9,7 +9,7 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     env:
-      DB_URL: postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
+      DB_URL: postgres://postgres:postgres@localhost:65433/optrwork_test?sslmode=disable
       APP_URL: http://localhost:8080
 
     services:
@@ -18,8 +18,8 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: optrwork
-        ports: ['65432:5432']
+          POSTGRES_DB: optrwork_test
+        ports: ['65433:5432']
         options: >-
           --mount type=tmpfs,destination=/var/lib/postgresql/data
           --health-cmd pg_isready
@@ -41,11 +41,8 @@ jobs:
     - name: Lint
       run: make lint
 
-    - name: Apply migrations
-      run: make migrate-up
-
     - name: Run web server
-      run: make run &
+      run: make test-start-backend &
 
     - name: Tests
-      run: go test -count=1 -v ./intest/
+      run: make test-integration

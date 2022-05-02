@@ -1,0 +1,14 @@
+version: "3.7"
+services:
+  postgres_test:
+    image: $POSTGRES_IMG
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=optrwork_test
+    ports:
+      - 65433:5432
+
+volumes:
+    pgdata-optrwork-test:
