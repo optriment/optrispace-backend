@@ -29,7 +29,8 @@ where c.id = @id::varchar;
 
 -- name: ContractsGetByPerson :many
 select * from contracts
-where customer_id = @person_id::varchar or performer_id = @person_id::varchar;
+where customer_id = @person_id::varchar or performer_id = @person_id::varchar
+order by contracts.created_by desc;
 
 -- name: ContractsPurge :exec
 -- Handle with care!

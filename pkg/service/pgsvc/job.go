@@ -94,6 +94,10 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 			CreatedBy:         j.CreatedBy,
 			UpdatedAt:         j.UpdatedAt,
 			ApplicationsCount: uint(j.ApplicationCount),
+			Customer: &model.Person{
+				ID:          j.CreatedBy,
+				DisplayName: j.CustomerDisplayName,
+			},
 		}
 		return nil
 	})

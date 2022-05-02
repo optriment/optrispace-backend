@@ -10,7 +10,7 @@ select
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
-    order by created_at;
+    order by created_at desc;
 
 -- name: JobGet :one
 select
@@ -23,9 +23,10 @@ select
     ,j.created_by
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
+    , COALESCE(p.display_name, p.login) AS customer_display_name
     from jobs j
-	where j.id = @id::varchar
-    ;
+    join persons p on p.id = j.created_by
+    where j.id = @id::varchar;
 
 -- name: JobAdd :one
 insert into jobs (

@@ -12,15 +12,16 @@ import (
 type (
 	// Job is a job offer publication
 	Job struct {
-		ID                string          `json:"id,omitempty"`
-		Title             string          `json:"title,omitempty"`
-		Description       string          `json:"description,omitempty"`
-		Budget            decimal.Decimal `json:"budget,omitempty"`
-		Duration          int32           `json:"duration,omitempty"`
-		CreatedAt         time.Time       `json:"created_at,omitempty"`
-		UpdatedAt         time.Time       `json:"updated_at,omitempty"`
-		CreatedBy         string          `json:"created_by,omitempty"`
-		ApplicationsCount uint            `json:"applications_count,omitempty"`
+		ID                string          `json:"id"`
+		Title             string          `json:"title"`
+		Description       string          `json:"description"`
+		Budget            decimal.Decimal `json:"budget"`
+		Duration          int32           `json:"duration"`
+		CreatedAt         time.Time       `json:"created_at"`
+		UpdatedAt         time.Time       `json:"updated_at"`
+		CreatedBy         string          `json:"created_by"`
+		ApplicationsCount uint            `json:"applications_count"`
+		Customer          *Person         `json:"customer"`
 	}
 
 	// Person — customer, executor, seller, buyer etc.

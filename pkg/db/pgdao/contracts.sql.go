@@ -143,6 +143,7 @@ func (q *Queries) ContractSetStatus(ctx context.Context, arg ContractSetStatusPa
 const contractsGetByPerson = `-- name: ContractsGetByPerson :many
 select id, customer_id, performer_id, application_id, title, description, price, duration, status, created_by, created_at, updated_at from contracts
 where customer_id = $1::varchar or performer_id = $1::varchar
+order by contracts.created_by desc
 `
 
 func (q *Queries) ContractsGetByPerson(ctx context.Context, personID string) ([]Contract, error) {
