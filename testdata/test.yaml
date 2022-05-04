@@ -1,0 +1,11 @@
+hide-banner: false
+log:
+  level: trace
+  caller: false
+pprof:
+  hostport: :5005
+server:
+  host: :8081
+  cors: true
+db:
+  url: postgres://postgres:postgres@localhost:65433/optrwork_test?sslmode=disable
