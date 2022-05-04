@@ -32,6 +32,10 @@ docker-compose-down:
 run:
 	go run . --config ./testdata/dev.yaml run
 
+.phony: seed
+seed: # Populates database with sample data
+	@env DB_URL=$(DB_URL) go run ./testdata/seed.go
+
 .phony: run-intest
 run-intest:
 	env DB_URL=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable APP_URL=http://localhost:8080 go test -count=1 -v ./intest/
