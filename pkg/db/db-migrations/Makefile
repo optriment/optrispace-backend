@@ -20,6 +20,10 @@ $(MBIN):
 migrate-up: $(MBIN)
 	$(MBIN) -database $(DB_URL) -source $(SCRDIR) -verbose up
 
+.phony: migrate-down
+migrate-down: $(MBIN)
+	$(MBIN) -database $(DB_URL) -source $(SCRDIR) -verbose down 1
+
 .phony: migrate-drop
 migrate-drop: $(MBIN)
 	$(MBIN) -database $(DB_URL) -source $(SCRDIR) -verbose drop -f

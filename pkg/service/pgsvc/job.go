@@ -132,3 +132,8 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 		return nil
 	})
 }
+
+// Patch implements service.Job interface
+func (s *JobSvc) Patch(ctx context.Context, id string, patch map[string]any) (*model.Job, error) {
+	panic("Not implemented")
+}

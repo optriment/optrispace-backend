@@ -35,6 +35,9 @@ type (
 	// Job handles job offers
 	Job interface {
 		GenericCRUD[model.Job]
+
+		// Patch partially updates existing Job objects
+		Patch(ctx context.Context, id string, patch map[string]any) (*model.Job, error)
 	}
 
 	// Person is a person who pay or earn
@@ -67,7 +70,10 @@ type (
 		ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error)
 
 		// Accept makes contract accepted if any
-		Accept(ctx context.Context, id, actorID string) error
+		Accept(ctx context.Context, id, actorID, performerAddress string) error
+
+		// Deploy makes contract accepted if any
+		Deploy(ctx context.Context, id, actorID, contractAddress string) error
 
 		// Send makes contract sent if any
 		Send(ctx context.Context, id, actorID string) error
