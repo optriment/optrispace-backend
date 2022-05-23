@@ -137,7 +137,6 @@ func (q *Queries) ContractGetByIDAndPersonID(ctx context.Context, arg ContractGe
 }
 
 const contractPatch = `-- name: ContractPatch :exec
-
 update contracts
 set
     status = case when $1::boolean
@@ -163,10 +162,6 @@ type ContractPatchParams struct {
 	ID                     string
 }
 
-// -- name: ContractSetStatus :exec
-// update contracts c set status = @new_status::varchar, updated_at = now()
-// where c.id = @id::varchar;
-// Update a team.
 func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) error {
 	_, err := q.db.ExecContext(ctx, contractPatch,
 		arg.StatusChange,
