@@ -41,18 +41,21 @@ type (
 	// Contract is a contract for execution some a task and
 	// a payment obligation
 	Contract struct {
-		ID          string          `json:"id,omitempty"`
-		Customer    *Person         `json:"customer,omitempty"`
-		Performer   *Person         `json:"performer,omitempty"`
-		Application *Application    `json:"application,omitempty"`
-		Title       string          `json:"title,omitempty"`
-		Description string          `json:"description,omitempty"`
-		Price       decimal.Decimal `json:"price,omitempty"`
-		Duration    int32           `json:"duration,omitempty"`
-		Status      string          `json:"status,omitempty"`
-		CreatedAt   time.Time       `json:"created_at,omitempty"`
-		UpdatedAt   time.Time       `json:"updated_at,omitempty"`
-		CreatedBy   string          `json:"created_by,omitempty"`
+		ID               string          `json:"id,omitempty"`
+		Customer         *Person         `json:"customer,omitempty"`
+		Performer        *Person         `json:"performer,omitempty"`
+		Application      *Application    `json:"application,omitempty"`
+		Title            string          `json:"title,omitempty"`
+		Description      string          `json:"description,omitempty"`
+		Price            decimal.Decimal `json:"price,omitempty"`
+		Duration         int32           `json:"duration,omitempty"`
+		Status           string          `json:"status,omitempty"`
+		CreatedAt        time.Time       `json:"created_at,omitempty"`
+		UpdatedAt        time.Time       `json:"updated_at,omitempty"`
+		CreatedBy        string          `json:"created_by,omitempty"`
+		ContractAddress  string          `json:"contract_address,omitempty"`
+		CustomerAddress  string          `json:"customer_address,omitempty"`
+		PerformerAddress string          `json:"performer_address,omitempty"`
 	}
 
 	// ContractStatus represents a contract status
@@ -75,6 +78,7 @@ type (
 const (
 	ContractCreated  = "created"
 	ContractAccepted = "accepted"
+	ContractDeployed = "deployed"
 	ContractSent     = "sent"
 	ContractApproved = "approved"
 )

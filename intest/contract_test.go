@@ -287,7 +287,8 @@ func TestContract(t *testing.T) {
 			"price": "123.670000009899232",
 			"duration": 42,
 			"performer_id": "` + performer3.ID + `",
-			"application_id": "` + application3.ID + `"
+			"application_id": "` + application3.ID + `",
+			"customer_address":"0x1234567890customer"
 		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
@@ -315,6 +316,26 @@ func TestContract(t *testing.T) {
 			assert.Equal(t, "I believe in you!", e.Description)
 			assert.EqualValues(t, 42, e.Duration)
 			assert.True(t, decimal.RequireFromString("123.670000009899232").Equal(e.Price))
+			assert.Equal(t, "0x1234567890customer", e.CustomerAddress)
+
+			d, err := pgdao.New(db).ContractGet(ctx, e.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, e.ID, d.ID)
+				assert.Equal(t, e.Customer.ID, d.CustomerID)
+				assert.Equal(t, e.Performer.ID, d.PerformerID)
+				assert.Equal(t, e.Application.ID, d.ApplicationID)
+				assert.Equal(t, e.Title, d.Title)
+				assert.Equal(t, e.Description, d.Description)
+				assert.Equal(t, e.Price.String(), d.Price)
+				assert.EqualValues(t, e.Duration, d.Duration.Int32)
+				assert.Equal(t, e.Status, d.Status)
+				assert.Equal(t, e.CreatedBy, d.CreatedBy)
+				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
+				assert.Equal(t, e.UpdatedAt, d.UpdatedAt.UTC())
+				assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+				assert.Equal(t, e.PerformerAddress, d.PerformerAddress)
+				assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+			}
 		}
 	})
 
@@ -339,6 +360,31 @@ func TestContract(t *testing.T) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
 			assert.Contains(t, e["message"], "application_id required")
+		}
+	})
+
+	t.Run("post•customer_address required", func(t *testing.T) {
+		body := `{
+			"title":"I will make this easy!",
+			"description":"I believe in you!",
+			"price": "123.670000009899232",
+			"performer_id": "` + performer1.ID + `",
+			"application_id": "` + application3.ID + `"
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Contains(t, e["message"], "customer_address required")
 		}
 	})
 
@@ -545,9 +591,9 @@ func TestContractStatuses(t *testing.T) {
 	contractsURL := appURL + "/" + resourceName
 	theContractURL := contractsURL + "/" + contract.ID
 
-	notFoundTest := func(action string) func(t *testing.T) {
+	notFoundTest := func(action, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/non-existing-id/"+action, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/non-existing-id/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
@@ -565,13 +611,34 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	strangerTest := func(action, startStatus string) func(t *testing.T) {
+	badRequest := func(action, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
-				NewStatus: startStatus,
-				ID:        contract.ID,
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/non-existing-id/"+action, bytes.NewBufferString(body))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+
+				assert.Contains(t, e["message"], "Syntax error")
+			}
+		}
+	}
+
+	strangerTest := func(action, startStatus, body string) func(t *testing.T) {
+		return func(t *testing.T) {
+			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange: true,
+				Status:       startStatus,
+				ID:           contract.ID,
 			}))
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
@@ -589,13 +656,14 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	invalidActorTest := func(action, startStatus, actorID string) func(t *testing.T) {
+	invalidActorTest := func(action, startStatus, actorID, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
-				NewStatus: startStatus,
-				ID:        contract.ID,
+			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange: true,
+				Status:       startStatus,
+				ID:           contract.ID,
 			}))
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
@@ -613,13 +681,14 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	okTest := func(action, startStatus, targetStatus, actorID string) func(t *testing.T) {
+	okTest := func(action, startStatus, targetStatus, actorID, body string, verifier func(t *testing.T, c *pgdao.Contract)) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
-				NewStatus: startStatus,
-				ID:        contract.ID,
+			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange: true,
+				Status:       startStatus,
+				ID:           contract.ID,
 			}))
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
@@ -632,18 +701,22 @@ func TestContractStatuses(t *testing.T) {
 				c, err := queries.ContractGet(ctx, contract.ID)
 				if assert.NoError(t, err) {
 					assert.Equal(t, targetStatus, c.Status)
+					if verifier != nil {
+						verifier(t, &c)
+					}
 				}
 			}
 		}
 	}
 
-	invalidSourceStatusTest := func(action, startStatus, actorID string) func(t *testing.T) {
+	invalidSourceStatusTest := func(action, startStatus, actorID, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
-				NewStatus: startStatus,
-				ID:        contract.ID,
+			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange: true,
+				Status:       startStatus,
+				ID:           contract.ID,
 			}))
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
@@ -661,45 +734,103 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
+	missedField := func(action, startStatus, actorID, fieldName string) func(t *testing.T) {
+		return func(t *testing.T) {
+			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange: true,
+				Status:       startStatus,
+				ID:           contract.ID,
+			}))
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, nil)
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorID)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+
+				assert.Contains(t, e["message"], "Value is required: "+fieldName+" required: value is required")
+			}
+		}
+	}
+
 	action := "accept"
 	t.Run(action, func(t *testing.T) {
-		t.Run("not-found", notFoundTest(action))
-		t.Run("stranger", strangerTest(action, model.ContractCreated))
-		t.Run("customer", invalidActorTest(action, model.ContractCreated, customer.ID))
-		t.Run("performer", okTest(action, model.ContractCreated, model.ContractAccepted, performer.ID))
-		st := model.ContractAccepted
-		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
-		st = model.ContractSent
-		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
-		st = model.ContractApproved
-		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
+		t.Run("not-found", notFoundTest(action, `{"performer_address":"0x123456abcd"}`))
+		t.Run("bad-request", badRequest(action, `aaasdddddsssssd`))
+		t.Run("stranger", strangerTest(action, model.ContractCreated, `{"performer_address":"0x123456abcd"}`))
+		t.Run("customer", invalidActorTest(action, model.ContractCreated, customer.ID, `{"performer_address":"0x123456abcd"}`))
+		t.Run("missed performer_address", missedField(action, model.ContractCreated, customer.ID, "performer_address"))
+		t.Run("performer", okTest(action, model.ContractCreated, model.ContractAccepted, performer.ID, `{"performer_address":"0x123456abcd"}`, func(t *testing.T, c *pgdao.Contract) {
+			assert.Equal(t, "0x123456abcd", c.PerformerAddress)
+		}))
+		for _, st := range []string{
+			// model.ContractCreated,
+			model.ContractAccepted,
+			model.ContractDeployed,
+			model.ContractSent,
+			model.ContractApproved,
+		} {
+			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, `{"performer_address":"0x123456abcd"}`))
+		}
+	})
+
+	action = "deploy"
+	t.Run(action, func(t *testing.T) {
+		t.Run("not-found", notFoundTest(action, `{"contract_address":"0x0987654dsa"}`))
+		t.Run("stranger", strangerTest(action, model.ContractAccepted, `{"contract_address":"0x0987654dsa"}`))
+		t.Run("customer", okTest(action, model.ContractAccepted, model.ContractDeployed, customer.ID, `{"contract_address":"0x0987654dsa"}`, func(t *testing.T, c *pgdao.Contract) {
+			assert.Equal(t, "0x0987654dsa", c.ContractAddress)
+		}))
+		t.Run("performer", invalidActorTest(action, model.ContractAccepted, performer.ID, `{"contract_address":"0x0987654dsa"}`))
+		t.Run("missed contract_address", missedField(action, model.ContractAccepted, customer.ID, "contract_address"))
+		for _, st := range []string{
+			model.ContractCreated,
+			// model.ContractAccepted,
+			model.ContractDeployed,
+			model.ContractSent,
+			model.ContractApproved,
+		} {
+			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, `{"contract_address":"0x0987654dsa"}`))
+		}
 	})
 
 	action = "send"
 	t.Run(action, func(t *testing.T) {
-		t.Run("not-found", notFoundTest(action))
-		t.Run("stranger", strangerTest(action, model.ContractAccepted))
-		t.Run("customer", invalidActorTest(action, model.ContractAccepted, customer.ID))
-		t.Run("performer", okTest(action, model.ContractAccepted, model.ContractSent, performer.ID))
-		st := model.ContractCreated
-		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
-		st = model.ContractSent
-		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
-		st = model.ContractApproved
-		t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID))
+		t.Run("not-found", notFoundTest(action, ""))
+		t.Run("stranger", strangerTest(action, model.ContractDeployed, ""))
+		t.Run("customer", invalidActorTest(action, model.ContractDeployed, customer.ID, ""))
+		t.Run("performer", okTest(action, model.ContractDeployed, model.ContractSent, performer.ID, "", nil))
+		for _, st := range []string{
+			model.ContractCreated,
+			model.ContractAccepted,
+			// model.ContractDeployed,
+			model.ContractSent,
+			model.ContractApproved,
+		} {
+			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, ""))
+		}
 	})
 
 	action = "approve"
 	t.Run(action, func(t *testing.T) {
-		t.Run("not-found", notFoundTest(action))
-		t.Run("stranger", strangerTest(action, model.ContractSent))
-		t.Run("customer", okTest(action, model.ContractSent, model.ContractApproved, customer.ID))
-		t.Run("performer", invalidActorTest(action, model.ContractSent, performer.ID))
-		st := model.ContractCreated
-		t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID))
-		st = model.ContractAccepted
-		t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID))
-		st = model.ContractApproved
-		t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID))
+		t.Run("not-found", notFoundTest(action, ""))
+		t.Run("stranger", strangerTest(action, model.ContractSent, ""))
+		t.Run("customer", okTest(action, model.ContractSent, model.ContractApproved, customer.ID, "", nil))
+		t.Run("performer", invalidActorTest(action, model.ContractSent, performer.ID, ""))
+		for _, st := range []string{
+			model.ContractCreated,
+			model.ContractAccepted,
+			model.ContractDeployed,
+			// model.ContractSent,
+			model.ContractApproved,
+		} {
+			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, ""))
+		}
 	})
 }

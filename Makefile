@@ -16,6 +16,10 @@ sqlc:
 migrate-up: # Apply database migrations
 	cd pkg/db/db-migrations && make $@
 
+.phony: migrate-down
+migrate-down: # Downgrade DB one step down
+	cd pkg/db/db-migrations && make $@
+
 .phony: migrate-drop
 migrate-drop: # Drop database migrations
 	cd pkg/db/db-migrations && make $@

@@ -1,8 +1,8 @@
 -- name: ContractAdd :one
 insert into contracts (
-    id, customer_id, performer_id, application_id, title, description, price, duration, created_by
+    id, customer_id, performer_id, application_id, title, description, price, duration, created_by, customer_address
 ) values (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    @id, @customer_id, @performer_id, @application_id, @title, @description, @price, @duration, @created_by, @customer_address
 )
 returning *;
 
@@ -23,9 +23,21 @@ join persons customer on customer.id = c.customer_id
 join persons performer on performer.id = c.performer_id
 where c.id = @id::varchar and (c.customer_id = @person_id::varchar or c.performer_id = @person_id::varchar);
 
--- name: ContractSetStatus :exec
-update contracts c set status = @new_status::varchar, updated_at = now()
-where c.id = @id::varchar;
+-- Update a team.
+-- name: ContractPatch :exec
+update contracts
+set
+    status = case when @status_change::boolean
+        then @status::varchar else status end,
+
+    performer_address = case when @performer_address_change::boolean
+        then @performer_address::varchar else performer_address end,
+
+    contract_address = case when @contract_address_change::boolean
+        then @contract_address::varchar else contract_address end
+where
+    id = @id::varchar
+returning *;
 
 -- name: ContractsGetByPerson :many
 select * from contracts

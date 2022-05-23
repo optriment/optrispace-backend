@@ -34,6 +34,7 @@ func (cont *Contract) Register(e *echo.Echo) {
 	e.GET(resourceContract, cont.list)
 	e.GET(resourceContract+"/:id", cont.get)
 	e.POST(resourceContract+"/:id/accept", cont.accept)
+	e.POST(resourceContract+"/:id/deploy", cont.deploy)
 	e.POST(resourceContract+"/:id/send", cont.send)
 	e.POST(resourceContract+"/:id/approve", cont.approve)
 	log.Debug().Str("controller", resourceContract).Msg("Registered")
@@ -41,12 +42,13 @@ func (cont *Contract) Register(e *echo.Echo) {
 
 func (cont *Contract) add(c echo.Context) error {
 	type addingContract struct {
-		PerformerID   string          `json:"performer_id,omitempty"`
-		ApplicationID string          `json:"application_id,omitempty"`
-		Title         string          `json:"title,omitempty"`
-		Description   string          `json:"description,omitempty"`
-		Price         decimal.Decimal `json:"price,omitempty"`
-		Duration      int32           `json:"duration,omitempty"`
+		PerformerID     string          `json:"performer_id,omitempty"`
+		ApplicationID   string          `json:"application_id,omitempty"`
+		Title           string          `json:"title,omitempty"`
+		Description     string          `json:"description,omitempty"`
+		Price           decimal.Decimal `json:"price,omitempty"`
+		Duration        int32           `json:"duration,omitempty"`
+		CustomerAddress string          `json:"customer_address,omitempty"`
 	}
 
 	uc, err := cont.sm.FromEchoContext(c)
@@ -84,15 +86,20 @@ func (cont *Contract) add(c echo.Context) error {
 		return fmt.Errorf("price must be positive: %w", model.ErrInvalidValue)
 	}
 
+	if ie.CustomerAddress == "" {
+		return fmt.Errorf("customer_address required: %w", model.ErrValueIsRequired)
+	}
+
 	newContract := &model.Contract{
-		Customer:    &model.Person{ID: uc.Subject.ID},
-		Performer:   &model.Person{ID: ie.PerformerID},
-		Application: &model.Application{ID: ie.ApplicationID},
-		Title:       ie.Title,
-		Description: ie.Description,
-		Price:       ie.Price,
-		Duration:    ie.Duration,
-		CreatedBy:   uc.Subject.ID,
+		Customer:        &model.Person{ID: uc.Subject.ID},
+		Performer:       &model.Person{ID: ie.PerformerID},
+		Application:     &model.Application{ID: ie.ApplicationID},
+		Title:           ie.Title,
+		Description:     ie.Description,
+		Price:           ie.Price,
+		Duration:        ie.Duration,
+		CreatedBy:       uc.Subject.ID,
+		CustomerAddress: ie.CustomerAddress,
 	}
 
 	newContract, err = cont.svc.Add(c.Request().Context(), newContract)
@@ -138,12 +145,49 @@ func (cont *Contract) list(c echo.Context) error {
 }
 
 func (cont *Contract) accept(c echo.Context) error {
+	type inputParameters struct {
+		PerformerAddress string `json:"performer_address,omitempty"`
+	}
+
 	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 
-	return cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	ie := new(inputParameters)
+
+	if e := c.Bind(ie); e != nil {
+		return e
+	}
+
+	if ie.PerformerAddress == "" {
+		return fmt.Errorf("performer_address required: %w", model.ErrValueIsRequired)
+	}
+
+	return cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.PerformerAddress)
+}
+
+func (cont *Contract) deploy(c echo.Context) error {
+	type inputParameters struct {
+		ContractAddress string `json:"contract_address,omitempty"`
+	}
+
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	ie := new(inputParameters)
+
+	if e := c.Bind(ie); e != nil {
+		return e
+	}
+
+	if ie.ContractAddress == "" {
+		return fmt.Errorf("contract_address required: %w", model.ErrValueIsRequired)
+	}
+
+	return cont.svc.Deploy(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.ContractAddress)
 }
 
 func (cont *Contract) send(c echo.Context) error {

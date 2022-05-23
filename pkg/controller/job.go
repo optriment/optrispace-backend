@@ -34,7 +34,7 @@ func (cont *Job) Register(e *echo.Echo) {
 	e.POST(resourceJob, cont.add)
 	e.GET(resourceJob, cont.list)
 	e.GET(resourceJob+"/:id", cont.get)
-	// e.PUT(name+"/:id", cont.update)
+	e.PUT(resourceJob+"/:id", cont.update)
 	log.Debug().Str("controller", resourceJob).Msg("Registered")
 }
 
@@ -101,4 +101,13 @@ func (cont *Job) get(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, o)
+}
+
+func (cont *Job) update(c echo.Context) error {
+	panic("Not implemented")
+	// id := c.Param("id")
+
+	// map[string]any{}
+
+	// o, err := cont.svc.Put(c.Request().Context(), id)
 }

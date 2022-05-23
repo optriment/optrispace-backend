@@ -52,6 +52,12 @@ type Contract struct {
 	CreatedAt time.Time
 	// When the contract was updated last time
 	UpdatedAt time.Time
+	// Customer address in in block chain
+	CustomerAddress string
+	// Performer address in in block chain
+	PerformerAddress string
+	// Address in the block chain relevant smart contract
+	ContractAddress string
 }
 
 // Job offer table

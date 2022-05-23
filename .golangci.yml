@@ -132,7 +132,7 @@ linters:
     - gosec
     - gochecknoglobals
     - lll
-    # - dupl
+    - dupl
     # - nakedret
     - gochecknoinits
     - nlreturn

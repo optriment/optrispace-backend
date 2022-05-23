@@ -42,7 +42,8 @@ func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model
 				Int32: contract.Duration,
 				Valid: contract.Duration > 0,
 			},
-			CreatedBy: contract.CreatedBy,
+			CreatedBy:       contract.CreatedBy,
+			CustomerAddress: contract.CustomerAddress,
 		}
 
 		newContract, err := queries.ContractAdd(ctx, contractParams)
@@ -57,17 +58,22 @@ func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model
 			return fmt.Errorf("unable to ContractAdd: %w", err)
 		}
 
-		result = &model.Contract{
-			ID:          newContract.ID,
-			Customer:    &model.Person{ID: newContract.CustomerID},
-			Performer:   &model.Person{ID: newContract.PerformerID},
-			Application: &model.Application{ID: newContract.ApplicationID},
-			Title:       newContract.Title,
-			Description: newContract.Description,
-			Price:       decimal.RequireFromString(newContract.Price),
-			Duration:    newContract.Duration.Int32,
-			CreatedAt:   newContract.CreatedAt,
-			UpdatedAt:   newContract.UpdatedAt,
+		result = &model.Contract{ //nolint: dupl
+			ID:               newContract.ID,
+			Customer:         &model.Person{ID: newContract.CustomerID},
+			Performer:        &model.Person{ID: newContract.PerformerID},
+			Application:      &model.Application{ID: newContract.ApplicationID},
+			Title:            newContract.Title,
+			Description:      newContract.Description,
+			Price:            decimal.RequireFromString(newContract.Price),
+			Duration:         newContract.Duration.Int32,
+			Status:           newContract.Status,
+			CreatedAt:        newContract.CreatedAt,
+			UpdatedAt:        newContract.UpdatedAt,
+			CreatedBy:        newContract.CreatedBy,
+			ContractAddress:  newContract.ContractAddress,
+			CustomerAddress:  newContract.CustomerAddress,
+			PerformerAddress: newContract.PerformerAddress,
 		}
 
 		return nil
@@ -89,19 +95,22 @@ func contractByIDPersonID(ctx context.Context, queries *pgdao.Queries, id, perso
 		return nil, fmt.Errorf("unable to ContractGet with id=%s: %w", id, err)
 	}
 
-	return &model.Contract{
-		ID:          a.ID,
-		Customer:    &model.Person{ID: a.CustomerID},
-		Performer:   &model.Person{ID: a.PerformerID},
-		Application: &model.Application{ID: a.ApplicationID},
-		Title:       a.Title,
-		Description: a.Description,
-		Price:       decimal.RequireFromString(a.Price),
-		Duration:    a.Duration.Int32,
-		Status:      a.Status,
-		CreatedAt:   a.CreatedAt,
-		UpdatedAt:   a.UpdatedAt,
-		CreatedBy:   a.CreatedBy,
+	return &model.Contract{ //nolint: dupl
+		ID:               a.ID,
+		Customer:         &model.Person{ID: a.CustomerID},
+		Performer:        &model.Person{ID: a.PerformerID},
+		Application:      &model.Application{ID: a.ApplicationID},
+		Title:            a.Title,
+		Description:      a.Description,
+		Price:            decimal.RequireFromString(a.Price),
+		Duration:         a.Duration.Int32,
+		Status:           a.Status,
+		CreatedAt:        a.CreatedAt,
+		UpdatedAt:        a.UpdatedAt,
+		CreatedBy:        a.CreatedBy,
+		ContractAddress:  a.ContractAddress,
+		CustomerAddress:  a.CustomerAddress,
+		PerformerAddress: a.PerformerAddress,
 	}, nil
 }
 
@@ -145,9 +154,9 @@ func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*m
 	})
 }
 
-func (s *ContractSvc) toStatus(ctx context.Context, id, actorID, targetStatus string, validator func(c *model.Contract) error) error {
+func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams *pgdao.ContractPatchParams, validator func(c *model.Contract) error) error {
 	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		c, err := contractByIDPersonID(ctx, queries, id, actorID)
+		c, err := contractByIDPersonID(ctx, queries, patchParams.ID, actorID)
 		if err != nil {
 			return err
 		}
@@ -156,19 +165,43 @@ func (s *ContractSvc) toStatus(ctx context.Context, id, actorID, targetStatus st
 			return e
 		}
 
-		return queries.ContractSetStatus(ctx, pgdao.ContractSetStatusParams{
-			NewStatus: targetStatus,
-			ID:        id,
-		})
+		return queries.ContractPatch(ctx, *patchParams)
 	})
 }
 
 // Accept makes contract accepted if any
-func (s *ContractSvc) Accept(ctx context.Context, id, actorID string) error {
+func (s *ContractSvc) Accept(ctx context.Context, id, actorID, performerAddress string) error {
 	allowedSourceStatus := model.ContractCreated
 	targetStatus := model.ContractAccepted
-	return s.toStatus(ctx, id, actorID, model.ContractAccepted, func(c *model.Contract) error {
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange:           true,
+		Status:                 targetStatus,
+		PerformerAddressChange: true,
+		PerformerAddress:       performerAddress,
+		ID:                     id,
+	}, func(c *model.Contract) error {
 		if c.Performer.ID != actorID {
+			return model.ErrInsufficientRights
+		}
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+		return nil
+	})
+}
+
+// Deploy makes contract deployed (in the target blockchain) if any
+func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress string) error {
+	allowedSourceStatus := model.ContractAccepted
+	targetStatus := model.ContractDeployed
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange:          true,
+		Status:                targetStatus,
+		ContractAddressChange: true,
+		ContractAddress:       contractAddress,
+		ID:                    id,
+	}, func(c *model.Contract) error {
+		if c.Customer.ID != actorID {
 			return model.ErrInsufficientRights
 		}
 		if c.Status != allowedSourceStatus {
@@ -180,9 +213,13 @@ func (s *ContractSvc) Accept(ctx context.Context, id, actorID string) error {
 
 // Send makes contract sent if any
 func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
-	allowedSourceStatus := model.ContractAccepted
+	allowedSourceStatus := model.ContractDeployed
 	targetStatus := model.ContractSent
-	return s.toStatus(ctx, id, actorID, model.ContractSent, func(c *model.Contract) error {
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.Contract) error {
 		if c.Performer.ID != actorID {
 			return model.ErrInsufficientRights
 		}
@@ -197,7 +234,11 @@ func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
 func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) error {
 	allowedSourceStatus := model.ContractSent
 	targetStatus := model.ContractApproved
-	return s.toStatus(ctx, id, actorID, model.ContractApproved, func(c *model.Contract) error {
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.Contract) error {
 		if c.Customer.ID != actorID {
 			return model.ErrInsufficientRights
 		}
