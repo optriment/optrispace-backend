@@ -17,6 +17,25 @@ select * from persons p
 -- name: PersonsList :many
 select * from persons;
 
+-- name: PersonChangePassword :exec
+update persons
+set
+    password_hash = @new_password_hash::varchar
+where
+    id = @id::varchar
+;
+
+-- name: PersonPatch :one
+update persons
+set
+    ethereum_address = case when @ethereum_address_change::boolean
+        then @ethereum_address::varchar else ethereum_address end
+
+where
+    id = @id::varchar
+returning *;
+
+
 -- name: PersonsPurge :exec
 -- Handle with care!
 DELETE FROM persons;

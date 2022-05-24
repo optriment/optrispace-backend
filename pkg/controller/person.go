@@ -32,7 +32,7 @@ func (cont *Person) Register(e *echo.Echo) {
 	e.POST(resourcePerson, cont.add)
 	e.GET(resourcePerson, cont.list)
 	e.GET(resourcePerson+"/:id", cont.get)
-	// e.PUT(name+"/:id", cont.update)
+	e.PUT(resourcePerson+"/:id", cont.update)
 	log.Debug().Str("controller", resourcePerson).Msg("Registered")
 }
 
@@ -69,4 +69,20 @@ func (cont *Person) list(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, oo)
+}
+
+func (cont *Person) update(c echo.Context) error {
+	ie := make(map[string]any)
+
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+	id := c.Param("id")
+
+	if e := c.Bind(&ie); e != nil {
+		return e
+	}
+
+	return cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, ie)
 }

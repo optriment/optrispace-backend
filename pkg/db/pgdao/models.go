@@ -96,4 +96,6 @@ type Person struct {
 	CreatedAt time.Time
 	// User Email
 	Email string
+	// Person address in Ethereum-compatible block chains
+	EthereumAddress string
 }
