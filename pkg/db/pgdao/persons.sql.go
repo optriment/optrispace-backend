@@ -15,7 +15,7 @@ insert into persons (
 ) values (
     $1, $2, $3, $4, $5, $6
 ) 
-returning id, realm, login, password_hash, display_name, created_at, email
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address
 `
 
 type PersonAddParams struct {
@@ -45,12 +45,31 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		&i.DisplayName,
 		&i.CreatedAt,
 		&i.Email,
+		&i.EthereumAddress,
 	)
 	return i, err
 }
 
+const personChangePassword = `-- name: PersonChangePassword :exec
+update persons
+set
+    password_hash = $1::varchar
+where
+    id = $2::varchar
+`
+
+type PersonChangePasswordParams struct {
+	NewPasswordHash string
+	ID              string
+}
+
+func (q *Queries) PersonChangePassword(ctx context.Context, arg PersonChangePasswordParams) error {
+	_, err := q.db.ExecContext(ctx, personChangePassword, arg.NewPasswordHash, arg.ID)
+	return err
+}
+
 const personGet = `-- name: PersonGet :one
-select id, realm, login, password_hash, display_name, created_at, email from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address from persons
 	where id = $1::varchar
 `
 
@@ -65,12 +84,13 @@ func (q *Queries) PersonGet(ctx context.Context, id string) (Person, error) {
 		&i.DisplayName,
 		&i.CreatedAt,
 		&i.Email,
+		&i.EthereumAddress,
 	)
 	return i, err
 }
 
 const personGetByLogin = `-- name: PersonGetByLogin :one
-select id, realm, login, password_hash, display_name, created_at, email from persons p
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address from persons p
 	where p.login = $1::varchar and p.realm = $2::varchar
 `
 
@@ -90,12 +110,46 @@ func (q *Queries) PersonGetByLogin(ctx context.Context, arg PersonGetByLoginPara
 		&i.DisplayName,
 		&i.CreatedAt,
 		&i.Email,
+		&i.EthereumAddress,
+	)
+	return i, err
+}
+
+const personPatch = `-- name: PersonPatch :one
+update persons
+set
+    ethereum_address = case when $1::boolean
+        then $2::varchar else ethereum_address end
+
+where
+    id = $3::varchar
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address
+`
+
+type PersonPatchParams struct {
+	EthereumAddressChange bool
+	EthereumAddress       string
+	ID                    string
+}
+
+func (q *Queries) PersonPatch(ctx context.Context, arg PersonPatchParams) (Person, error) {
+	row := q.db.QueryRowContext(ctx, personPatch, arg.EthereumAddressChange, arg.EthereumAddress, arg.ID)
+	var i Person
+	err := row.Scan(
+		&i.ID,
+		&i.Realm,
+		&i.Login,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.Email,
+		&i.EthereumAddress,
 	)
 	return i, err
 }
 
 const personsList = `-- name: PersonsList :many
-select id, realm, login, password_hash, display_name, created_at, email from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address from persons
 `
 
 func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
@@ -115,6 +169,7 @@ func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
 			&i.DisplayName,
 			&i.CreatedAt,
 			&i.Email,
+			&i.EthereumAddress,
 		); err != nil {
 			return nil, err
 		}

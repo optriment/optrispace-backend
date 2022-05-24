@@ -259,16 +259,16 @@ func TestJobEdit(t *testing.T) {
 	startURL := appURL + "/jobs"
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
-	query := pgdao.New(db)
+	queries := pgdao.New(db)
 
-	createdBy, err := query.PersonAdd(ctx, pgdao.PersonAddParams{
+	createdBy, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Realm: "inhouse",
 		Login: "creator",
 	})
 	require.NoError(t, err)
 
-	stranger, err := query.PersonAdd(ctx, pgdao.PersonAddParams{
+	stranger, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Realm: "inhouse",
 		Login: "stranger",
@@ -276,7 +276,7 @@ func TestJobEdit(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("put•all fields", func(t *testing.T) {
-		theJob, err := query.JobAdd(ctx, pgdao.JobAddParams{
+		theJob, err := queries.JobAdd(ctx, pgdao.JobAddParams{
 			ID:          pgdao.NewID(),
 			Title:       "Title before change",
 			Description: "Description before change",
@@ -319,9 +319,8 @@ func TestJobEdit(t *testing.T) {
 				assert.True(t, decimal.RequireFromString("45").Equal(e.Budget))
 				assert.EqualValues(t, 42, e.Duration)
 
-				d, err := query.JobGet(ctx, theJob.ID)
+				d, err := queries.JobGet(ctx, theJob.ID)
 				if assert.NoError(t, err) {
-
 					assert.Equal(t, theJob.ID, d.ID)
 					assert.Equal(t, "Editing title", d.Title)
 					assert.Equal(t, "Editing description. There are words here.", d.Description)
@@ -333,7 +332,7 @@ func TestJobEdit(t *testing.T) {
 	})
 
 	t.Run("put•stranger", func(t *testing.T) {
-		theJob, err := query.JobAdd(ctx, pgdao.JobAddParams{
+		theJob, err := queries.JobAdd(ctx, pgdao.JobAddParams{
 			ID:          pgdao.NewID(),
 			Title:       "Title before change",
 			Description: "Description before change",
@@ -373,7 +372,7 @@ func TestJobEdit(t *testing.T) {
 	})
 
 	t.Run("put•not found", func(t *testing.T) {
-		theJob, err := query.JobAdd(ctx, pgdao.JobAddParams{
+		theJob, err := queries.JobAdd(ctx, pgdao.JobAddParams{
 			ID:          pgdao.NewID(),
 			Title:       "Title before change",
 			Description: "Description before change",

@@ -36,13 +36,19 @@ type (
 	Job interface {
 		GenericCRUD[model.Job]
 
-		// Patch partially updates existing Job objects
+		// Patch partially updates existing Job object
 		Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error)
 	}
 
 	// Person is a person who pay or earn
 	Person interface {
 		GenericCRUD[model.Person]
+
+		// Update password
+		UpdatePassword(ctx context.Context, subjectID, oldPassword, newPassword string) error
+
+		// Patch partially updates existing Person object
+		Patch(ctx context.Context, id, actorID string, patch map[string]any) error
 	}
 
 	// Application is application for a job offer

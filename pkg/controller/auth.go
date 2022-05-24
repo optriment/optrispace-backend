@@ -31,6 +31,7 @@ func NewAuth(sm service.Security, person service.Person) Registerer {
 func (cont *Auth) Register(e *echo.Echo) {
 	e.POST("/login", cont.login)
 	e.POST("/signup", cont.signup)
+	e.PUT("/password", cont.newPassword)
 	e.GET("/me", cont.me)
 	log.Debug().Str("controller", resourceAuth).Msg("Registered")
 }
@@ -88,4 +89,26 @@ func (cont *Auth) me(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, uctx)
+}
+
+func (cont *Auth) newPassword(c echo.Context) error {
+	type inputParameters struct {
+		OldPassword string `json:"old_password,omitempty"`
+		NewPassword string `json:"new_password,omitempty"`
+	}
+
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+	ie := new(inputParameters)
+	if e := c.Bind(ie); e != nil {
+		return e
+	}
+
+	if ie.NewPassword == "" {
+		return fmt.Errorf("new_password required: %w", model.ErrValueIsRequired)
+	}
+
+	return cont.person.UpdatePassword(c.Request().Context(), uc.Subject.ID, ie.OldPassword, ie.NewPassword)
 }
