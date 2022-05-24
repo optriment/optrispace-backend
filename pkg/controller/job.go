@@ -104,10 +104,21 @@ func (cont *Job) get(c echo.Context) error {
 }
 
 func (cont *Job) update(c echo.Context) error {
-	panic("Not implemented")
-	// id := c.Param("id")
+	ie := make(map[string]any)
 
-	// map[string]any{}
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+	id := c.Param("id")
 
-	// o, err := cont.svc.Put(c.Request().Context(), id)
+	if e := c.Bind(&ie); e != nil {
+		return e
+	}
+
+	o, err := cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, ie)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, o)
 }

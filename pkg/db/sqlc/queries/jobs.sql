@@ -35,6 +35,24 @@ insert into jobs (
     $1, $2, $3, $4, $5, $6
 ) returning *;
 
+-- name: JobPatch :one
+update jobs
+set
+    title = case when @title_change::boolean
+        then @title::varchar else title end,
+
+    description = case when @description_change::boolean
+        then @description::varchar else description end,
+
+    budget = case when @budget_change::boolean
+        then @budget::decimal else budget end,
+
+    duration = case when @duration_change::boolean
+        then @duration::int else duration end
+where
+    id = @id::varchar and @actor::varchar = created_by
+returning *;
+
 -- name: JobsPurge :exec
 -- Handle with care!
 DELETE FROM jobs;

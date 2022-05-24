@@ -99,6 +99,65 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 	return i, err
 }
 
+const jobPatch = `-- name: JobPatch :one
+update jobs
+set
+    title = case when $1::boolean
+        then $2::varchar else title end,
+
+    description = case when $3::boolean
+        then $4::varchar else description end,
+
+    budget = case when $5::boolean
+        then $6::decimal else budget end,
+
+    duration = case when $7::boolean
+        then $8::int else duration end
+where
+    id = $9::varchar and $10::varchar = created_by
+returning id, title, description, budget, duration, created_at, updated_at, created_by
+`
+
+type JobPatchParams struct {
+	TitleChange       bool
+	Title             string
+	DescriptionChange bool
+	Description       string
+	BudgetChange      bool
+	Budget            string
+	DurationChange    bool
+	Duration          int32
+	ID                string
+	Actor             string
+}
+
+func (q *Queries) JobPatch(ctx context.Context, arg JobPatchParams) (Job, error) {
+	row := q.db.QueryRowContext(ctx, jobPatch,
+		arg.TitleChange,
+		arg.Title,
+		arg.DescriptionChange,
+		arg.Description,
+		arg.BudgetChange,
+		arg.Budget,
+		arg.DurationChange,
+		arg.Duration,
+		arg.ID,
+		arg.Actor,
+	)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Budget,
+		&i.Duration,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
 const jobsList = `-- name: JobsList :many
 select
      j.id

@@ -2,6 +2,8 @@ package intest
 
 import (
 	"bytes"
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -239,6 +241,166 @@ func TestJob(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, startURL+"/"+"invalid-id", nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "Entity with specified id not found", e["message"])
+		}
+	})
+}
+
+func TestJobEdit(t *testing.T) {
+	ctx := context.Background()
+
+	startURL := appURL + "/jobs"
+
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
+	query := pgdao.New(db)
+
+	createdBy, err := query.PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:    pgdao.NewID(),
+		Realm: "inhouse",
+		Login: "creator",
+	})
+	require.NoError(t, err)
+
+	stranger, err := query.PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:    pgdao.NewID(),
+		Realm: "inhouse",
+		Login: "stranger",
+	})
+	require.NoError(t, err)
+
+	t.Run("put•all fields", func(t *testing.T) {
+		theJob, err := query.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title before change",
+			Description: "Description before change",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			Duration: sql.NullInt32{
+				Int32: 24,
+				Valid: true,
+			},
+			CreatedBy: createdBy.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"title":"Editing title",
+			"description": "Editing description. There are words here.",
+			"budget": "45.00",
+			"duration": 42
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, startURL+"/"+theJob.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.Job)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			if assert.NotEmpty(t, e) {
+				assert.NotEmpty(t, e.ID)
+				assert.Equal(t, "Editing title", e.Title)
+				assert.Equal(t, "Editing description. There are words here.", e.Description)
+				assert.True(t, decimal.RequireFromString("45").Equal(e.Budget))
+				assert.EqualValues(t, 42, e.Duration)
+
+				d, err := query.JobGet(ctx, theJob.ID)
+				if assert.NoError(t, err) {
+
+					assert.Equal(t, theJob.ID, d.ID)
+					assert.Equal(t, "Editing title", d.Title)
+					assert.Equal(t, "Editing description. There are words here.", d.Description)
+					assert.Equal(t, "45.00", d.Budget.String)
+					assert.EqualValues(t, 42, d.Duration.Int32)
+				}
+			}
+		}
+	})
+
+	t.Run("put•stranger", func(t *testing.T) {
+		theJob, err := query.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title before change",
+			Description: "Description before change",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			Duration: sql.NullInt32{
+				Int32: 24,
+				Valid: true,
+			},
+			CreatedBy: createdBy.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"title":"Editing title",
+			"description": "Editing description. There are words here.",
+			"budget": "45.0",
+			"duration": 42
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, startURL+"/"+theJob.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "Entity with specified id not found", e["message"])
+		}
+	})
+
+	t.Run("put•not found", func(t *testing.T) {
+		theJob, err := query.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title before change",
+			Description: "Description before change",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			Duration: sql.NullInt32{
+				Int32: 24,
+				Valid: true,
+			},
+			CreatedBy: createdBy.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"title":"Editing title",
+			"description": "Editing description. There are words here.",
+			"budget": "45.0",
+			"duration": 42
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, startURL+"/abcd"+theJob.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

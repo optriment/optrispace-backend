@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
@@ -27,7 +28,7 @@ func NewJob(db *sql.DB) *JobSvc {
 func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 	var result *model.Job
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		j, err := queries.JobAdd(ctx,
+		o, err := queries.JobAdd(ctx,
 			pgdao.JobAddParams{
 				ID:          pgdao.NewID(),
 				Title:       e.Title,
@@ -47,19 +48,19 @@ func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 		}
 
 		budget := decimal.Zero
-		if j.Budget.Valid {
-			budget = decimal.RequireFromString(j.Budget.String)
+		if o.Budget.Valid {
+			budget = decimal.RequireFromString(o.Budget.String)
 		}
 
 		result = &model.Job{
-			ID:          j.ID,
-			Title:       j.Title,
-			Description: j.Description,
+			ID:          o.ID,
+			Title:       o.Title,
+			Description: o.Description,
 			Budget:      budget,
-			Duration:    j.Duration.Int32,
-			CreatedAt:   j.CreatedAt,
-			CreatedBy:   j.CreatedBy,
-			UpdatedAt:   j.UpdatedAt,
+			Duration:    o.Duration.Int32,
+			CreatedAt:   o.CreatedAt,
+			CreatedBy:   o.CreatedBy,
+			UpdatedAt:   o.UpdatedAt,
 		}
 		return nil
 	})
@@ -69,34 +70,34 @@ func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 	var result *model.Job
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
-		j, err := queries.JobGet(ctx, id)
+		o, err := queries.JobGet(ctx, id)
 
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ErrEntityNotFound
 		}
 
 		if err != nil {
-			return fmt.Errorf("unable to JobGet jobs with id='%s': %w", id, err)
+			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
 		}
 
 		budget := decimal.Zero
-		if j.Budget.Valid {
-			budget = decimal.RequireFromString(j.Budget.String)
+		if o.Budget.Valid {
+			budget = decimal.RequireFromString(o.Budget.String)
 		}
 
 		result = &model.Job{
-			ID:                j.ID,
-			Title:             j.Title,
-			Description:       j.Description,
+			ID:                o.ID,
+			Title:             o.Title,
+			Description:       o.Description,
 			Budget:            budget,
-			Duration:          j.Duration.Int32,
-			CreatedAt:         j.CreatedAt,
-			CreatedBy:         j.CreatedBy,
-			UpdatedAt:         j.UpdatedAt,
-			ApplicationsCount: uint(j.ApplicationCount),
+			Duration:          o.Duration.Int32,
+			CreatedAt:         o.CreatedAt,
+			CreatedBy:         o.CreatedBy,
+			UpdatedAt:         o.UpdatedAt,
+			ApplicationsCount: uint(o.ApplicationCount),
 			Customer: &model.Person{
-				ID:          j.CreatedBy,
-				DisplayName: j.CustomerDisplayName,
+				ID:          o.CreatedBy,
+				DisplayName: o.CustomerDisplayName,
 			},
 		}
 		return nil
@@ -107,26 +108,26 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 	var result []*model.Job = make([]*model.Job, 0)
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
-		jj, err := queries.JobsList(ctx)
+		oo, err := queries.JobsList(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to JobReadAll job: %w", err)
 		}
-		for _, j := range jj {
+		for _, o := range oo {
 			budget := decimal.Zero
-			if j.Budget.Valid {
-				budget = decimal.RequireFromString(j.Budget.String)
+			if o.Budget.Valid {
+				budget = decimal.RequireFromString(o.Budget.String)
 			}
 
 			result = append(result, &model.Job{
-				ID:                j.ID,
-				Title:             j.Title,
-				Description:       j.Description,
+				ID:                o.ID,
+				Title:             o.Title,
+				Description:       o.Description,
 				Budget:            budget,
-				Duration:          j.Duration.Int32,
-				CreatedAt:         j.CreatedAt,
-				CreatedBy:         j.CreatedBy,
-				UpdatedAt:         j.UpdatedAt,
-				ApplicationsCount: uint(j.ApplicationCount),
+				Duration:          o.Duration.Int32,
+				CreatedAt:         o.CreatedAt,
+				CreatedBy:         o.CreatedBy,
+				UpdatedAt:         o.UpdatedAt,
+				ApplicationsCount: uint(o.ApplicationCount),
 			})
 		}
 		return nil
@@ -134,6 +135,51 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 }
 
 // Patch implements service.Job interface
-func (s *JobSvc) Patch(ctx context.Context, id string, patch map[string]any) (*model.Job, error) {
-	panic("Not implemented")
+func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error) {
+	var result *model.Job
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		params := &pgdao.JobPatchParams{
+			ID:    id,
+			Actor: actorID,
+		}
+		_, params.TitleChange = patch["title"]
+		_, params.DescriptionChange = patch["description"]
+		_, params.BudgetChange = patch["budget"]
+		_, params.DurationChange = patch["duration"]
+
+		err := mapstructure.Decode(patch, params)
+		if err != nil {
+			return fmt.Errorf("unable to decode patch from struct: %w", err)
+		}
+
+		o, err := queries.JobPatch(ctx, *params)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to JobPatch with id='%s': %w", id, err)
+		}
+
+		budget := decimal.Zero
+		if o.Budget.Valid {
+			budget = decimal.RequireFromString(o.Budget.String)
+		}
+
+		result = &model.Job{
+			ID:          o.ID,
+			Title:       o.Title,
+			Description: o.Description,
+			Budget:      budget,
+			Duration:    o.Duration.Int32,
+			CreatedAt:   o.CreatedAt,
+			CreatedBy:   o.CreatedBy,
+			UpdatedAt:   o.UpdatedAt,
+			Customer: &model.Person{
+				ID: o.CreatedBy,
+			},
+		}
+		return nil
+	})
 }

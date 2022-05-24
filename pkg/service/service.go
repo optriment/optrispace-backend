@@ -37,7 +37,7 @@ type (
 		GenericCRUD[model.Job]
 
 		// Patch partially updates existing Job objects
-		Patch(ctx context.Context, id string, patch map[string]any) (*model.Job, error)
+		Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error)
 	}
 
 	// Person is a person who pay or earn
