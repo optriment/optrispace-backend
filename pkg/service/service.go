@@ -76,16 +76,16 @@ type (
 		ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error)
 
 		// Accept makes contract accepted if any
-		Accept(ctx context.Context, id, actorID, performerAddress string) error
+		Accept(ctx context.Context, id, actorID, performerAddress string) (*model.Contract, error)
 
 		// Deploy makes contract accepted if any
-		Deploy(ctx context.Context, id, actorID, contractAddress string) error
+		Deploy(ctx context.Context, id, actorID, contractAddress string) (*model.Contract, error)
 
 		// Send makes contract sent if any
-		Send(ctx context.Context, id, actorID string) error
+		Send(ctx context.Context, id, actorID string) (*model.Contract, error)
 
 		// Approve makes contract approved if any
-		Approve(ctx context.Context, id, actorID string) error
+		Approve(ctx context.Context, id, actorID string) (*model.Contract, error)
 	}
 )
 

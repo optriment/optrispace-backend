@@ -633,11 +633,13 @@ func TestContractStatuses(t *testing.T) {
 
 	strangerTest := func(action, startStatus, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
 				Status:       startStatus,
 				ID:           contract.ID,
-			}))
+			})
+			require.NoError(t, err)
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
@@ -658,11 +660,13 @@ func TestContractStatuses(t *testing.T) {
 
 	invalidActorTest := func(action, startStatus, actorID, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
 				Status:       startStatus,
 				ID:           contract.ID,
-			}))
+			})
+			require.NoError(t, err)
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
@@ -683,11 +687,13 @@ func TestContractStatuses(t *testing.T) {
 
 	okTest := func(action, startStatus, targetStatus, actorID, body string, verifier func(t *testing.T, c *pgdao.Contract)) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
 				Status:       startStatus,
 				ID:           contract.ID,
-			}))
+			})
+			require.NoError(t, err)
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
@@ -711,11 +717,13 @@ func TestContractStatuses(t *testing.T) {
 
 	invalidSourceStatusTest := func(action, startStatus, actorID, body string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
 				Status:       startStatus,
 				ID:           contract.ID,
-			}))
+			})
+			require.NoError(t, err)
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
@@ -736,11 +744,13 @@ func TestContractStatuses(t *testing.T) {
 
 	missedField := func(action, startStatus, actorID, fieldName string) func(t *testing.T) {
 		return func(t *testing.T) {
-			require.NoError(t, queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
 				Status:       startStatus,
 				ID:           contract.ID,
-			}))
+			})
+			require.NoError(t, err)
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, nil)
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())

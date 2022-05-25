@@ -136,7 +136,7 @@ func (q *Queries) ContractGetByIDAndPersonID(ctx context.Context, arg ContractGe
 	return i, err
 }
 
-const contractPatch = `-- name: ContractPatch :exec
+const contractPatch = `-- name: ContractPatch :one
 update contracts
 set
     status = case when $1::boolean
@@ -162,8 +162,8 @@ type ContractPatchParams struct {
 	ID                     string
 }
 
-func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) error {
-	_, err := q.db.ExecContext(ctx, contractPatch,
+func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) (Contract, error) {
+	row := q.db.QueryRowContext(ctx, contractPatch,
 		arg.StatusChange,
 		arg.Status,
 		arg.PerformerAddressChange,
@@ -172,7 +172,25 @@ func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) er
 		arg.ContractAddress,
 		arg.ID,
 	)
-	return err
+	var i Contract
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.PerformerID,
+		&i.ApplicationID,
+		&i.Title,
+		&i.Description,
+		&i.Price,
+		&i.Duration,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CustomerAddress,
+		&i.PerformerAddress,
+		&i.ContractAddress,
+	)
+	return i, err
 }
 
 const contractsGetByPerson = `-- name: ContractsGetByPerson :many
