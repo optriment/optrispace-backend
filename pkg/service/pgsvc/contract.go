@@ -154,8 +154,10 @@ func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*m
 	})
 }
 
-func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams *pgdao.ContractPatchParams, validator func(c *model.Contract) error) error {
-	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams *pgdao.ContractPatchParams, validator func(c *model.Contract) error) (*model.Contract, error) {
+	var result *model.Contract
+
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		c, err := contractByIDPersonID(ctx, queries, patchParams.ID, actorID)
 		if err != nil {
 			return err
@@ -165,12 +167,33 @@ func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams 
 			return e
 		}
 
-		return queries.ContractPatch(ctx, *patchParams)
+		o, err := queries.ContractPatch(ctx, *patchParams)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		result = &model.Contract{ //nolint: dupl
+			ID:               o.ID,
+			Title:            o.Title,
+			Description:      o.Description,
+			Price:            decimal.RequireFromString(o.Price),
+			Duration:         o.Duration.Int32,
+			Status:           o.Status,
+			CreatedAt:        o.CreatedAt,
+			UpdatedAt:        o.UpdatedAt,
+			CreatedBy:        o.CreatedBy,
+			ContractAddress:  o.ContractAddress,
+			CustomerAddress:  o.CustomerAddress,
+			PerformerAddress: o.PerformerAddress,
+		}
+
+		return err
 	})
 }
 
 // Accept makes contract accepted if any
-func (s *ContractSvc) Accept(ctx context.Context, id, actorID, performerAddress string) error {
+func (s *ContractSvc) Accept(ctx context.Context, id, actorID, performerAddress string) (*model.Contract, error) {
 	allowedSourceStatus := model.ContractCreated
 	targetStatus := model.ContractAccepted
 	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
@@ -191,7 +214,7 @@ func (s *ContractSvc) Accept(ctx context.Context, id, actorID, performerAddress 
 }
 
 // Deploy makes contract deployed (in the target blockchain) if any
-func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress string) error {
+func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress string) (*model.Contract, error) {
 	allowedSourceStatus := model.ContractAccepted
 	targetStatus := model.ContractDeployed
 	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
@@ -212,7 +235,7 @@ func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress s
 }
 
 // Send makes contract sent if any
-func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
+func (s *ContractSvc) Send(ctx context.Context, id, actorID string) (*model.Contract, error) {
 	allowedSourceStatus := model.ContractDeployed
 	targetStatus := model.ContractSent
 	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
@@ -231,7 +254,7 @@ func (s *ContractSvc) Send(ctx context.Context, id, actorID string) error {
 }
 
 // Approve makes contract approved if any
-func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) error {
+func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) (*model.Contract, error) {
 	allowedSourceStatus := model.ContractSent
 	targetStatus := model.ContractApproved
 	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{

@@ -164,7 +164,12 @@ func (cont *Contract) accept(c echo.Context) error {
 		return fmt.Errorf("performer_address required: %w", model.ErrValueIsRequired)
 	}
 
-	return cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.PerformerAddress)
+	o, err := cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.PerformerAddress)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
 }
 
 func (cont *Contract) deploy(c echo.Context) error {
@@ -187,7 +192,12 @@ func (cont *Contract) deploy(c echo.Context) error {
 		return fmt.Errorf("contract_address required: %w", model.ErrValueIsRequired)
 	}
 
-	return cont.svc.Deploy(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.ContractAddress)
+	o, err := cont.svc.Deploy(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.ContractAddress)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
 }
 
 func (cont *Contract) send(c echo.Context) error {
@@ -196,7 +206,12 @@ func (cont *Contract) send(c echo.Context) error {
 		return err
 	}
 
-	return cont.svc.Send(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	o, err := cont.svc.Send(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
 }
 
 func (cont *Contract) approve(c echo.Context) error {
@@ -205,5 +220,10 @@ func (cont *Contract) approve(c echo.Context) error {
 		return err
 	}
 
-	return cont.svc.Approve(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	o, err := cont.svc.Approve(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
 }

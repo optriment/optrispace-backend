@@ -23,7 +23,7 @@ join persons customer on customer.id = c.customer_id
 join persons performer on performer.id = c.performer_id
 where c.id = @id::varchar and (c.customer_id = @person_id::varchar or c.performer_id = @person_id::varchar);
 
--- name: ContractPatch :exec
+-- name: ContractPatch :one
 update contracts
 set
     status = case when @status_change::boolean
