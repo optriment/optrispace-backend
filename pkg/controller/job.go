@@ -58,11 +58,17 @@ func (cont *Job) add(c echo.Context) error {
 	}
 
 	if ie.Title == "" {
-		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("title"),
+		}
 	}
 
 	if ie.Description == "" {
-		return fmt.Errorf("description required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("description"),
+		}
 	}
 
 	o := &model.Job{

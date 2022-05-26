@@ -107,7 +107,10 @@ func (cont *Auth) newPassword(c echo.Context) error {
 	}
 
 	if ie.NewPassword == "" {
-		return fmt.Errorf("new_password required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("new_password"),
+		}
 	}
 
 	return cont.person.UpdatePassword(c.Request().Context(), uc.Subject.ID, ie.OldPassword, ie.NewPassword)

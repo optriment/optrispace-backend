@@ -235,9 +235,9 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Insufficient rights", e["message"])
+			assert.EqualValues(t, "insufficient rights", e.Message)
 		}
 	})
 
@@ -296,9 +296,9 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Insufficient rights", e["message"])
+			assert.EqualValues(t, "insufficient rights", e.Message)
 		}
 	})
 }

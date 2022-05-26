@@ -2,7 +2,6 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -16,30 +15,63 @@ func GetErrorHandler(oldHandler echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 		clog.Ectx(c).Error().Err(err).Stringer("url", c.Request().URL).Str("method", c.Request().Method).
 			Msg("Processing error (see above)")
 
+		var (
+			be     *model.BackendError
+			status = 0
+			cause  error
+		)
+
 		switch {
 		case errors.Is(err, model.ErrEntityNotFound):
-			err = echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
+			status = http.StatusNotFound
+			cause = model.ErrEntityNotFound
 
-		case errors.Is(err, model.ErrValueIsRequired):
-			err = echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Sprintf("Value is required: %s", err))
+		case errors.Is(err, model.ErrValidationFailed):
+			status = http.StatusUnprocessableEntity
+			cause = model.ErrValidationFailed
 
 		case errors.Is(err, model.ErrUnauthorized):
-			err = echo.NewHTTPError(http.StatusUnauthorized, "Authorization required")
+			status = http.StatusUnauthorized
+			cause = model.ErrUnauthorized
 
 		case errors.Is(err, model.ErrDuplication):
-			err = echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Duplication: %s", err))
+			status = http.StatusConflict
+			cause = model.ErrDuplication
 
-		case errors.Is(err, model.ErrInvalidValue):
-			err = echo.NewHTTPError(http.StatusUnprocessableEntity, fmt.Sprintf("Invalid value: %s", err))
+		case errors.Is(err, model.ErrApplicationAlreadyExists):
+			status = http.StatusConflict
+			cause = model.ErrApplicationAlreadyExists
+
+		case errors.Is(err, model.ErrUnableToLogin):
+			status = http.StatusUnprocessableEntity
+			cause = model.ErrUnableToLogin
 
 		case errors.Is(err, model.ErrInappropriateAction):
-			err = echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Inappropriate action: %s", err))
+			status = http.StatusBadRequest
+			cause = model.ErrInappropriateAction
 
 		case errors.Is(err, model.ErrInsufficientRights):
-			err = echo.NewHTTPError(http.StatusForbidden, "Insufficient rights")
+			status = http.StatusForbidden
+			cause = model.ErrInsufficientRights
+
+		default:
+			oldHandler(err, c)
 		}
 
-		oldHandler(err, c)
+		if status != 0 {
+			if !errors.As(err, &be) {
+				be = &model.BackendError{
+					Cause:    cause,
+					Message:  cause.Error(),
+					TechInfo: err.Error(),
+				}
+			}
+			e := c.JSON(status, be)
+			if e != nil {
+				clog.Ectx(c).Warn().Err(e).Msg("Unable to create JSON response for an incoming error")
+			}
+		}
+
 		clog.Ectx(c).Error().Err(err).Int("status", c.Response().Status).Stringer("url", c.Request().URL).Str("method", c.Request().Method).
 			Msg("Failed to process request")
 	}

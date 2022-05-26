@@ -63,31 +63,52 @@ func (cont *Contract) add(c echo.Context) error {
 	}
 
 	if ie.ApplicationID == "" {
-		return fmt.Errorf("application_id required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("application_id"),
+		}
 	}
 
 	if ie.PerformerID == "" {
-		return fmt.Errorf("performer_id required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("performer_id"),
+		}
 	}
 
 	if ie.Title == "" {
-		return fmt.Errorf("title required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("title"),
+		}
 	}
 
 	if ie.Description == "" {
-		return fmt.Errorf("description required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("description"),
+		}
 	}
 
 	if decimal.Zero.Equal(ie.Price) {
-		return fmt.Errorf("price required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("price"),
+		}
 	}
 
 	if ie.Price.IsNegative() {
-		return fmt.Errorf("price must be positive: %w", model.ErrInvalidValue)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustBePositive("price"),
+		}
 	}
 
 	if ie.CustomerAddress == "" {
-		return fmt.Errorf("customer_address required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("customer_address"),
+		}
 	}
 
 	newContract := &model.Contract{
@@ -161,7 +182,10 @@ func (cont *Contract) accept(c echo.Context) error {
 	}
 
 	if ie.PerformerAddress == "" {
-		return fmt.Errorf("performer_address required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("performer_address"),
+		}
 	}
 
 	o, err := cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.PerformerAddress)
@@ -189,7 +213,10 @@ func (cont *Contract) deploy(c echo.Context) error {
 	}
 
 	if ie.ContractAddress == "" {
-		return fmt.Errorf("contract_address required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("contract_address"),
+		}
 	}
 
 	o, err := cont.svc.Deploy(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.ContractAddress)
