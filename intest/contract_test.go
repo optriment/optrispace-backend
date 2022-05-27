@@ -357,9 +357,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Contains(t, e["message"], "application_id required")
+			assert.EqualValues(t, "application_id: is required", e.Message)
 		}
 	})
 
@@ -382,9 +382,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Contains(t, e["message"], "customer_address required")
+			assert.EqualValues(t, "customer_address: is required", e.Message)
 		}
 	})
 
@@ -406,9 +406,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Contains(t, e["message"], "performer_id required")
+			assert.EqualValues(t, "performer_id: is required", e.Message)
 		}
 	})
 
@@ -430,9 +430,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Contains(t, e["message"], "title required")
+			assert.EqualValues(t, "title: is required", e.Message)
 		}
 	})
 
@@ -454,9 +454,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Contains(t, e["message"], "description required")
+			assert.EqualValues(t, "description: is required", e.Message)
 		}
 	})
 
@@ -479,10 +479,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-			assert.Contains(t, e["message"], "price required")
+			assert.EqualValues(t, "price: is required", e.Message)
 		}
 	})
 
@@ -505,10 +504,9 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-			assert.Contains(t, e["message"], "price must be positive")
+			assert.EqualValues(t, "price: must be positive", e.Message)
 		}
 	})
 
@@ -603,10 +601,9 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 
 			if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-				e := map[string]any{}
+				e := model.BackendError{}
 				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-				assert.Contains(t, e["message"], "Entity with specified id not found")
+				assert.EqualValues(t, "entity not found", e.Message)
 			}
 		}
 	}
@@ -650,10 +647,9 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 
 			if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-				e := map[string]any{}
+				e := model.BackendError{}
 				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-				assert.Contains(t, e["message"], "Entity with specified id not found")
+				assert.EqualValues(t, "entity not found", e.Message)
 			}
 		}
 	}
@@ -677,10 +673,9 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 
 			if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-				e := map[string]any{}
+				e := model.BackendError{}
 				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-				assert.Contains(t, e["message"], "Insufficient rights")
+				assert.EqualValues(t, "insufficient rights", e.Message)
 			}
 		}
 	}
@@ -734,10 +729,9 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 
 			if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-				e := map[string]any{}
+				e := model.BackendError{}
 				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-				assert.Contains(t, e["message"], "Inappropriate action")
+				assert.EqualValues(t, "inappropriate action", e.Message)
 			}
 		}
 	}
@@ -761,10 +755,9 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 
 			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-				e := map[string]any{}
+				e := model.BackendError{}
 				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-
-				assert.Contains(t, e["message"], "Value is required: "+fieldName+" required: value is required")
+				assert.EqualValues(t, fieldName+": is required", e.Message)
 			}
 		}
 	}

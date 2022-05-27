@@ -40,7 +40,7 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 
 		if pqe, ok := err.(*pq.Error); ok { //nolint: errorlint
 			if pqe.Code == "23505" {
-				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrDuplication)
+				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrApplicationAlreadyExists)
 			}
 		}
 

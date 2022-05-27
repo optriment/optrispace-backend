@@ -169,9 +169,9 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, "^Value is required:.*$", e["message"])
+			assert.EqualValues(t, "comment: is required", e.Message)
 		}
 	})
 
@@ -190,9 +190,9 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, "^Value is required:.*$", e["message"])
+			assert.EqualValues(t, "price: is required", e.Message)
 		}
 	})
 
@@ -319,9 +319,9 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusConflict, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, `^Duplication: unable to create application &{Comment:Repeat Price:3334.77776555}: Key \(job_id, applicant_id\)=\(\w+, \w+\) already exists\.: duplication$`, e["message"])
+			assert.EqualValues(t, "application already exists", e.Message)
 		}
 	})
 

@@ -52,7 +52,6 @@ func (s *PersonSvc) Add(ctx context.Context, person *model.Person) (*model.Perso
 		}
 
 		o, err := queries.PersonAdd(ctx, input)
-
 		if pqe, ok := err.(*pq.Error); ok { //nolint: errorlint
 			if pqe.Code == "23505" {
 				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrDuplication)

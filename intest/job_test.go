@@ -179,9 +179,9 @@ func TestJob(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Regexp(t, "^Value is required:.*$", e["message"])
+			assert.EqualValues(t, "title: is required", e.Message)
 		}
 	})
 
@@ -365,9 +365,9 @@ func TestJobEdit(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Entity with specified id not found", e["message"])
+			assert.EqualValues(t, "entity not found", e.Message)
 		}
 	})
 
@@ -405,9 +405,9 @@ func TestJobEdit(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Entity with specified id not found", e["message"])
+			assert.EqualValues(t, "entity not found", e.Message)
 		}
 	})
 }

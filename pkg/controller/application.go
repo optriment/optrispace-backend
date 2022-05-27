@@ -58,11 +58,17 @@ func (cont *Application) add(c echo.Context) error {
 	}
 
 	if ie.Comment == "" {
-		return fmt.Errorf("comment required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("comment"),
+		}
 	}
 
 	if decimal.Zero.Equal(ie.Price) {
-		return fmt.Errorf("price required: %w", model.ErrValueIsRequired)
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("price"),
+		}
 	}
 
 	createdAppl, err := cont.svc.Add(c.Request().Context(), &model.Application{

@@ -83,7 +83,7 @@ func (s *SecuritySvc) FromLoginPassword(ctx context.Context, login, password str
 
 		if errors.Is(err, sql.ErrNoRows) {
 			clog.Ctx(ctx).Warn().Str("login", login).Msg("No such login")
-			return model.ErrInvalidValue
+			return model.ErrUnableToLogin
 		}
 
 		if err != nil {
@@ -92,7 +92,7 @@ func (s *SecuritySvc) FromLoginPassword(ctx context.Context, login, password str
 
 		if CompareHashAndPassword(u.PasswordHash, password) != nil {
 			clog.Ctx(ctx).Warn().Str("login", login).Msg("Invalid password")
-			return model.ErrInvalidValue
+			return model.ErrUnableToLogin
 		}
 
 		newUctx.Authenticated = true

@@ -90,9 +90,9 @@ func TestAuth(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusConflict, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Duplication: Key (realm, login)=(inhouse, mylogin) already exists.: duplication", e["message"])
+			assert.EqualValues(t, "duplication", e.Message)
 		}
 	})
 
@@ -375,9 +375,9 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnauthorized, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Authorization required", e["message"])
+			assert.EqualValues(t, "user not authorized", e.Message)
 		}
 	})
 
@@ -438,9 +438,9 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
+			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Value is required: new_password required: value is required", e["message"])
+			assert.EqualValues(t, "new_password: is required", e.Message)
 		}
 	})
 }
