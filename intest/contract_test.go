@@ -778,6 +778,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractDeployed,
 			model.ContractSent,
 			model.ContractApproved,
+			model.ContractCompleted,
 		} {
 			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, `{"performer_address":"0x123456abcd"}`))
 		}
@@ -798,6 +799,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractDeployed,
 			model.ContractSent,
 			model.ContractApproved,
+			model.ContractCompleted,
 		} {
 			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, `{"contract_address":"0x0987654dsa"}`))
 		}
@@ -815,6 +817,7 @@ func TestContractStatuses(t *testing.T) {
 			// model.ContractDeployed,
 			model.ContractSent,
 			model.ContractApproved,
+			model.ContractCompleted,
 		} {
 			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, ""))
 		}
@@ -832,6 +835,25 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractDeployed,
 			// model.ContractSent,
 			model.ContractApproved,
+			model.ContractCompleted,
+		} {
+			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, ""))
+		}
+	})
+
+	action = "complete"
+	t.Run(action, func(t *testing.T) {
+		t.Run("not-found", notFoundTest(action, ""))
+		t.Run("stranger", strangerTest(action, model.ContractApproved, ""))
+		t.Run("customer", okTest(action, model.ContractApproved, model.ContractCompleted, customer.ID, "", nil))
+		t.Run("performer", invalidActorTest(action, model.ContractApproved, performer.ID, ""))
+		for _, st := range []string{
+			model.ContractCreated,
+			model.ContractAccepted,
+			model.ContractDeployed,
+			model.ContractSent,
+			// model.ContractApproved,
+			model.ContractCompleted,
 		} {
 			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, ""))
 		}

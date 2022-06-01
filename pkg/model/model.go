@@ -77,11 +77,12 @@ type (
 
 // Contract statuses
 const (
-	ContractCreated  = "created"
-	ContractAccepted = "accepted"
-	ContractDeployed = "deployed"
-	ContractSent     = "sent"
-	ContractApproved = "approved"
+	ContractCreated   = "created"
+	ContractAccepted  = "accepted"
+	ContractDeployed  = "deployed"
+	ContractSent      = "sent"
+	ContractApproved  = "approved"
+	ContractCompleted = "completed"
 )
 
-// var allContractStatus = []string{ContractCreated, ContractAccepted, ContractSent, ContractApproved}
+// var allContractStatus = []string{ContractCreated, ContractAccepted, ContractSent, ContractApproved, ContractCompleted}

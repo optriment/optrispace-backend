@@ -37,6 +37,7 @@ func (cont *Contract) Register(e *echo.Echo) {
 	e.POST(resourceContract+"/:id/deploy", cont.deploy)
 	e.POST(resourceContract+"/:id/send", cont.send)
 	e.POST(resourceContract+"/:id/approve", cont.approve)
+	e.POST(resourceContract+"/:id/complete", cont.complete)
 	log.Debug().Str("controller", resourceContract).Msg("Registered")
 }
 
@@ -248,6 +249,20 @@ func (cont *Contract) approve(c echo.Context) error {
 	}
 
 	o, err := cont.svc.Approve(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
+}
+
+func (cont *Contract) complete(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	o, err := cont.svc.Complete(c.Request().Context(), c.Param("id"), uc.Subject.ID)
 	if err != nil {
 		return err
 	}

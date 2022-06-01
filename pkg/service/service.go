@@ -86,6 +86,9 @@ type (
 
 		// Approve makes contract approved if any
 		Approve(ctx context.Context, id, actorID string) (*model.Contract, error)
+
+		// Complete makes contract completed if any
+		Complete(ctx context.Context, id, actorID string) (*model.Contract, error)
 	}
 )
 

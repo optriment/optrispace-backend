@@ -271,3 +271,22 @@ func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) (*model.C
 		return nil
 	})
 }
+
+// Complete makes contract completed if any
+func (s *ContractSvc) Complete(ctx context.Context, id, actorID string) (*model.Contract, error) {
+	allowedSourceStatus := model.ContractApproved
+	targetStatus := model.ContractCompleted
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.Contract) error {
+		if c.Customer.ID != actorID {
+			return model.ErrInsufficientRights
+		}
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+		return nil
+	})
+}
