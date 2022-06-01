@@ -845,8 +845,8 @@ func TestContractStatuses(t *testing.T) {
 	t.Run(action, func(t *testing.T) {
 		t.Run("not-found", notFoundTest(action, ""))
 		t.Run("stranger", strangerTest(action, model.ContractApproved, ""))
-		t.Run("customer", okTest(action, model.ContractApproved, model.ContractCompleted, customer.ID, "", nil))
-		t.Run("performer", invalidActorTest(action, model.ContractApproved, performer.ID, ""))
+		t.Run("customer", okTest(action, model.ContractApproved, model.ContractCompleted, performer.ID, "", nil))
+		t.Run("performer", invalidActorTest(action, model.ContractApproved, customer.ID, ""))
 		for _, st := range []string{
 			model.ContractCreated,
 			model.ContractAccepted,
@@ -855,7 +855,7 @@ func TestContractStatuses(t *testing.T) {
 			// model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, ""))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, ""))
 		}
 	})
 }
