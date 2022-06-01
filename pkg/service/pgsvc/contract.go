@@ -281,7 +281,7 @@ func (s *ContractSvc) Complete(ctx context.Context, id, actorID string) (*model.
 		Status:       targetStatus,
 		ID:           id,
 	}, func(c *model.Contract) error {
-		if c.Customer.ID != actorID {
+		if c.Performer.ID != actorID {
 			return model.ErrInsufficientRights
 		}
 		if c.Status != allowedSourceStatus {
