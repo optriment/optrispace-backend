@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -339,9 +338,10 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			bb, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			assert.Empty(t, bb)
+			j := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&j))
+			assert.NotEmpty(t, j)
+
 			p, err := queries.PersonGet(ctx, smith.ID)
 			if assert.NoError(t, err) {
 				assert.NoError(t, pgsvc.CompareHashAndPassword(p.PasswordHash, "abcd"), "Password has to be changed")
