@@ -113,5 +113,11 @@ func (cont *Auth) newPassword(c echo.Context) error {
 		}
 	}
 
-	return cont.person.UpdatePassword(c.Request().Context(), uc.Subject.ID, ie.OldPassword, ie.NewPassword)
+	err = cont.person.UpdatePassword(c.Request().Context(), uc.Subject.ID, ie.OldPassword, ie.NewPassword)
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, uc)
 }
