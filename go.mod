@@ -3,7 +3,7 @@ module optrispace.com/work
 go 1.18
 
 require (
-	github.com/jaswdr/faker v1.10.2
+	github.com/jaswdr/faker v1.11.1
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/lib/pq v1.10.6
 	github.com/lithammer/shortuuid/v4 v4.0.0
