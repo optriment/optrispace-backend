@@ -47,11 +47,14 @@ func init() {
 		cc.PersistentFlags().StringP(settServerHost, "s", ":8080", "server:host for listen incoming HTTP requests")
 		cc.PersistentFlags().Bool(settServerTrace, false, "trace all requests to server")
 
-		cc.PersistentFlags().StringP(settDbURL, "d", "postgres://postgres:postgres@localhost:5432/optrwork?sslmode=disable", "database connection URL")
+		cc.PersistentFlags().StringP(settDBURL, "d", "postgres://postgres:postgres@localhost:5432/optrwork?sslmode=disable", "database connection URL")
 
 		cc.PersistentFlags().Bool(settHideBanner, false, "hide banner")
 
 		cc.PersistentFlags().Bool(settServerCors, false, "enable CORS with allow any (*) origin")
+
+		cc.PersistentFlags().StringP(settNotificationTgToken, "T", "", "telegram bot token for send notifications")
+		cc.PersistentFlags().Int64SliceP(settNotificationTgChats, "C", nil, "telegram chat list for send notifications")
 	})
 }
 
@@ -110,7 +113,7 @@ func doStart(ctx context.Context) error {
 func addControllers(ctx context.Context, e *echo.Echo) error {
 	var rr []controller.Registerer
 
-	db, err := sql.Open("postgres", viper.GetString(settDbURL))
+	db, err := sql.Open("postgres", viper.GetString(settDBURL))
 	if err != nil {
 		return fmt.Errorf("unable to open DB: %w", err)
 	}
@@ -124,12 +127,20 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 
 	e.Pre(web.Auth(sm))
 
+	token := viper.GetString(settNotificationTgToken)
+	chats := make([]int64, 0)
+
+	for _, n := range viper.GetIntSlice(settNotificationTgChats) {
+		chats = append(chats, int64(n))
+	}
+
 	rr = append(rr,
 		controller.NewAuth(sm, service.NewPerson(db)),
 		controller.NewJob(sm, service.NewJob(db)),
 		controller.NewApplication(sm, service.NewApplication(db)),
 		controller.NewPerson(sm, service.NewPerson(db)),
 		controller.NewContract(service.NewContract(db), sm),
+		controller.NewNotification(service.NewNotification(token, chats...)),
 	)
 
 	for _, r := range rr {

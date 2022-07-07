@@ -9,3 +9,8 @@ server:
   cors: true
 db:
   url: postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
+notification:
+  tg:
+    chat:
+      - 180727105 #@mkovrov
+#      - -649825910

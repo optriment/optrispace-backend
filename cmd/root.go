@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/rs/zerolog"
@@ -89,7 +90,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	registerFlags(rootCmd, func(cc *cobra.Command) {
-		cc.PersistentFlags().StringVarP(&cfgFile, "config", "F", "", "config file (default is $HOME/.work.yaml)")
+		cc.PersistentFlags().StringVarP(&cfgFile, "config", "F", "", "config file (default is $HOME/.optrispace.yaml)")
 
 		cc.PersistentFlags().StringP(settLogLevel, "L", "info", "log level (trace, debug, info, warn, error, fatal, panic)")
 		cc.PersistentFlags().Bool(settLogCaller, false, "output caller function name in log (may impact performance if using)")
@@ -111,12 +112,14 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".work" (without extension).
+		// Search config in home directory with name ".optrispace" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".work")
+		viper.SetConfigName(".optrispace")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
+	viper.SetEnvPrefix("optr")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

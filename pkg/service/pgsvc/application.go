@@ -100,7 +100,7 @@ func (s *ApplicationSvc) ListBy(ctx context.Context, jobID, actorID string) ([]*
 }
 
 func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error) {
-	var result []*model.Application = make([]*model.Application, 0)
+	result := make([]*model.Application, 0)
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		aa, err := queries.ApplicationsListBy(ctx, pgdao.ApplicationsListByParams{
 			JobID:   jobID,
@@ -149,7 +149,7 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 
 // ListByApplicant returns all applications for specific applicant
 func (s *ApplicationSvc) ListByApplicant(ctx context.Context, applicantID string) ([]*model.Application, error) {
-	var result []*model.Application = make([]*model.Application, 0)
+	result := make([]*model.Application, 0)
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		aa, err := queries.ApplicationsGetByApplicant(ctx, applicantID)
 		if err != nil {

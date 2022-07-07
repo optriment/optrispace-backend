@@ -17,11 +17,12 @@ type (
 )
 
 const (
-	resourceAuth        = "auth"
-	resourceJob         = "jobs"
-	resourcePerson      = "persons"
-	resourceApplication = "applications"
-	resourceContract    = "contracts"
+	resourceAuth         = "auth"
+	resourceJob          = "jobs"
+	resourcePerson       = "persons"
+	resourceApplication  = "applications"
+	resourceContract     = "contracts"
+	resourceNotification = "notifications"
 )
 
 // AddStop adds endpoint to stops application (with cancel function)

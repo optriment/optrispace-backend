@@ -90,6 +90,12 @@ type (
 		// Complete makes contract completed if any
 		Complete(ctx context.Context, id, actorID string) (*model.Contract, error)
 	}
+
+	// Notification service manipulates with notifications
+	Notification interface {
+		// Push sends a data message to the configured channels (chats in Telegram messenger)
+		Push(ctx context.Context, data string) error
+	}
 )
 
 // NewSecurity creates job service
@@ -115,4 +121,9 @@ func NewApplication(db *sql.DB) Application {
 // NewContract creates contract service
 func NewContract(db *sql.DB) Contract {
 	return pgsvc.NewContract(db)
+}
+
+// NewNotification creates contract service
+func NewNotification(tgToken string, chatIDs ...int64) Notification {
+	return pgsvc.NewNotification(tgToken, chatIDs...)
 }

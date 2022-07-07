@@ -11,5 +11,8 @@ const (
 	settServerTrace = "server.trace"
 	settServerCors  = "server.cors"
 
-	settDbURL = "db.url"
+	settDBURL = "db.url"
+
+	settNotificationTgToken = "notification.tg.token"
+	settNotificationTgChats = "notification.tg.chat"
 )
