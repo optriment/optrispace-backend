@@ -126,7 +126,7 @@ func (s *ContractSvc) GetByIDForPerson(ctx context.Context, id, personID string)
 
 // ListByPersonID loads all related contracts for specific person
 func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error) {
-	var result []*model.Contract = make([]*model.Contract, 0)
+	result := make([]*model.Contract, 0)
 
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		aa, err := queries.ContractsGetByPerson(ctx, personID)

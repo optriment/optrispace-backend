@@ -146,6 +146,7 @@ linters:
     - funlen
     - forbidigo
     - exhaustivestruct
+    - exhaustruct
     - wrapcheck
     - gci # conflicts with gofumpt
     - varnamelen
@@ -175,6 +176,7 @@ issues:
   exclude:
     - "package comment should be of the form"
     - "a blank import should be only in a main or test package, or have a comment justifying it"
+    - "ST1000: at least one file in a package should have a package comment"
 
 
 # golangci.com configuration

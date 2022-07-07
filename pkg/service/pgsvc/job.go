@@ -106,7 +106,7 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 
 // List implements service.Job interface
 func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
-	var result []*model.Job = make([]*model.Job, 0)
+	result := make([]*model.Job, 0)
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
 		oo, err := queries.JobsList(ctx)
 		if err != nil {

@@ -2,6 +2,7 @@
 
 LINTBIN = ./.bin/golangci-lint
 STRINGER = ./.bin/stringer
+SHELL := bash
 
 DB_URL	?=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
 APP_URL	?=http://localhost:8080
@@ -39,7 +40,7 @@ docker-compose-down: # Stop application
 
 .PHONY: run
 run: # Run application in development mode
-	go run . --config ./testdata/dev.yaml run
+	source ./testdata/.env && go run . --config ./testdata/dev.yaml run
 
 .PHONY: seed
 seed: # Populates database with sample data
@@ -48,7 +49,7 @@ seed: # Populates database with sample data
 $(LINTBIN):
 	@echo "Getting $@"
 	@mkdir -p $(@D)
-	GOBIN=$(abspath $(@D)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	GOBIN=$(abspath $(@D)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
 
 .PHONY: lint
 lint: $(LINTBIN) # Run linter
