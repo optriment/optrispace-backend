@@ -7,6 +7,7 @@ package pgdao
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const personAdd = `-- name: PersonAdd :one
@@ -15,7 +16,7 @@ insert into persons (
 ) values (
     $1, $2, $3, $4, $5, $6
 ) 
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources
 `
 
 type PersonAddParams struct {
@@ -46,30 +47,13 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		&i.CreatedAt,
 		&i.Email,
 		&i.EthereumAddress,
+		&i.Resources,
 	)
 	return i, err
 }
 
-const personChangePassword = `-- name: PersonChangePassword :exec
-update persons
-set
-    password_hash = $1::varchar
-where
-    id = $2::varchar
-`
-
-type PersonChangePasswordParams struct {
-	NewPasswordHash string
-	ID              string
-}
-
-func (q *Queries) PersonChangePassword(ctx context.Context, arg PersonChangePasswordParams) error {
-	_, err := q.db.ExecContext(ctx, personChangePassword, arg.NewPasswordHash, arg.ID)
-	return err
-}
-
 const personGet = `-- name: PersonGet :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources from persons
 	where id = $1::varchar
 `
 
@@ -85,12 +69,13 @@ func (q *Queries) PersonGet(ctx context.Context, id string) (Person, error) {
 		&i.CreatedAt,
 		&i.Email,
 		&i.EthereumAddress,
+		&i.Resources,
 	)
 	return i, err
 }
 
 const personGetByLogin = `-- name: PersonGetByLogin :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address from persons p
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources from persons p
 	where p.login = $1::varchar and p.realm = $2::varchar
 `
 
@@ -111,6 +96,7 @@ func (q *Queries) PersonGetByLogin(ctx context.Context, arg PersonGetByLoginPara
 		&i.CreatedAt,
 		&i.Email,
 		&i.EthereumAddress,
+		&i.Resources,
 	)
 	return i, err
 }
@@ -121,19 +107,30 @@ set
     ethereum_address = case when $1::boolean
         then $2::varchar else ethereum_address end
 
+    , display_name = case when $3::boolean
+        then $4::varchar else display_name end
+
 where
-    id = $3::varchar
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address
+    id = $5::varchar
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources
 `
 
 type PersonPatchParams struct {
 	EthereumAddressChange bool
 	EthereumAddress       string
+	DisplayNameChange     bool
+	DisplayName           string
 	ID                    string
 }
 
 func (q *Queries) PersonPatch(ctx context.Context, arg PersonPatchParams) (Person, error) {
-	row := q.db.QueryRowContext(ctx, personPatch, arg.EthereumAddressChange, arg.EthereumAddress, arg.ID)
+	row := q.db.QueryRowContext(ctx, personPatch,
+		arg.EthereumAddressChange,
+		arg.EthereumAddress,
+		arg.DisplayNameChange,
+		arg.DisplayName,
+		arg.ID,
+	)
 	var i Person
 	err := row.Scan(
 		&i.ID,
@@ -144,12 +141,49 @@ func (q *Queries) PersonPatch(ctx context.Context, arg PersonPatchParams) (Perso
 		&i.CreatedAt,
 		&i.Email,
 		&i.EthereumAddress,
+		&i.Resources,
 	)
 	return i, err
 }
 
+const personSetPassword = `-- name: PersonSetPassword :exec
+update persons
+set
+    password_hash = $1::varchar
+where
+    id = $2::varchar
+`
+
+type PersonSetPasswordParams struct {
+	NewPasswordHash string
+	ID              string
+}
+
+func (q *Queries) PersonSetPassword(ctx context.Context, arg PersonSetPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, personSetPassword, arg.NewPasswordHash, arg.ID)
+	return err
+}
+
+const personSetResources = `-- name: PersonSetResources :exec
+update persons
+set
+    resources = $1::json
+where
+    id = $2::varchar
+`
+
+type PersonSetResourcesParams struct {
+	Resources json.RawMessage
+	ID        string
+}
+
+func (q *Queries) PersonSetResources(ctx context.Context, arg PersonSetResourcesParams) error {
+	_, err := q.db.ExecContext(ctx, personSetResources, arg.Resources, arg.ID)
+	return err
+}
+
 const personsList = `-- name: PersonsList :many
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources from persons
 `
 
 func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
@@ -170,6 +204,7 @@ func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
 			&i.CreatedAt,
 			&i.Email,
 			&i.EthereumAddress,
+			&i.Resources,
 		); err != nil {
 			return nil, err
 		}

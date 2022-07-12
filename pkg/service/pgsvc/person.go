@@ -96,6 +96,7 @@ func (s *PersonSvc) Get(ctx context.Context, id string) (*model.Person, error) {
 			DisplayName: o.DisplayName,
 			CreatedAt:   o.CreatedAt,
 			Email:       o.Email,
+			Resources:   string(o.Resources),
 		}
 
 		return nil
@@ -138,7 +139,7 @@ func (s *PersonSvc) UpdatePassword(ctx context.Context, subjectID, oldPassword, 
 			return model.ErrUnauthorized // for security reasons, we do not provide an exact reason of failure
 		}
 
-		return queries.PersonChangePassword(ctx, pgdao.PersonChangePasswordParams{
+		return queries.PersonSetPassword(ctx, pgdao.PersonSetPasswordParams{
 			NewPasswordHash: CreateHashFromPassword(newPassword),
 			ID:              subjectID,
 		})
@@ -155,11 +156,16 @@ func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[str
 		params := pgdao.PersonPatchParams{
 			EthereumAddressChange: false,
 			EthereumAddress:       "",
+			DisplayNameChange:     false,
+			DisplayName:           "",
 			ID:                    id,
 		}
 
 		v, c := patch["ethereum_address"]
 		params.EthereumAddress, params.EthereumAddressChange = fmt.Sprint(v), c
+
+		v, c = patch["display_name"]
+		params.DisplayName, params.DisplayNameChange = fmt.Sprint(v), c
 
 		_, err := queries.PersonPatch(ctx, params)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -167,5 +173,19 @@ func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[str
 		}
 
 		return err
+	})
+}
+
+// SetResources implements service.Person
+func (s *PersonSvc) SetResources(ctx context.Context, id, actorID string, resources []byte) error {
+	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		if id != actorID {
+			return model.ErrInsufficientRights
+		}
+
+		return queries.PersonSetResources(ctx, pgdao.PersonSetResourcesParams{
+			Resources: resources,
+			ID:        id,
+		})
 	})
 }

@@ -49,6 +49,9 @@ type (
 
 		// Patch partially updates existing Person object
 		Patch(ctx context.Context, id, actorID string, patch map[string]any) error
+
+		// SetResources fully replace resources for the person
+		SetResources(ctx context.Context, id, actorID string, resources []byte) error
 	}
 
 	// Application is application for a job offer

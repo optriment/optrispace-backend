@@ -6,6 +6,7 @@ package pgdao
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
@@ -98,4 +99,6 @@ type Person struct {
 	Email string
 	// Person address in Ethereum-compatible block chains
 	EthereumAddress string
+	// Person's resources list. They may be links to social networks, portfolio, messenger IDs etc
+	Resources json.RawMessage
 }
