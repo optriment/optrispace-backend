@@ -35,7 +35,7 @@ func (cont *Notification) Register(e *echo.Echo) {
 func (cont *Notification) add(c echo.Context) error {
 	bb, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		return fmt.Errorf("unable to read request body: %w", model.ErrValidationFailed)
+		return fmt.Errorf("unable to read request body: %w", model.ErrInvalidFormat)
 	}
 
 	err = cont.svc.Push(c.Request().Context(), string(bb))

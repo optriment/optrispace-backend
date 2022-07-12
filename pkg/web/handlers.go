@@ -30,6 +30,10 @@ func GetErrorHandler(oldHandler echo.HTTPErrorHandler) echo.HTTPErrorHandler {
 			status = http.StatusUnprocessableEntity
 			cause = model.ErrValidationFailed
 
+		case errors.Is(err, model.ErrInvalidFormat):
+			status = http.StatusBadRequest
+			cause = model.ErrInvalidFormat
+
 		case errors.Is(err, model.ErrUnauthorized):
 			status = http.StatusUnauthorized
 			cause = model.ErrUnauthorized

@@ -36,6 +36,7 @@ var (
 	ErrDuplication              = errors.New("duplication")
 	ErrInappropriateAction      = errors.New("inappropriate action")
 	ErrValidationFailed         = errors.New("validation failed")
+	ErrInvalidFormat            = errors.New("invalid format")
 )
 
 // Validation errors

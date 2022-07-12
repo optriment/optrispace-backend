@@ -17,10 +17,18 @@ select * from persons p
 -- name: PersonsList :many
 select * from persons;
 
--- name: PersonChangePassword :exec
+-- name: PersonSetPassword :exec
 update persons
 set
     password_hash = @new_password_hash::varchar
+where
+    id = @id::varchar
+;
+
+-- name: PersonSetResources :exec
+update persons
+set
+    resources = @resources::json
 where
     id = @id::varchar
 ;
@@ -30,6 +38,9 @@ update persons
 set
     ethereum_address = case when @ethereum_address_change::boolean
         then @ethereum_address::varchar else ethereum_address end
+
+    , display_name = case when @display_name_change::boolean
+        then @display_name::varchar else display_name end
 
 where
     id = @id::varchar

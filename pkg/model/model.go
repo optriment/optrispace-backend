@@ -34,6 +34,7 @@ type (
 		CreatedAt       time.Time `json:"created_at,omitempty"`
 		Email           string    `json:"email,omitempty"`
 		EthereumAddress string    `json:"ethereum_address,omitempty"`
+		Resources       string    `json:"resources,omitempty"`
 	}
 
 	// Project is a sequence of contracts group
