@@ -25,7 +25,11 @@ func NewNotification(tgToken string, chatIDs ...int64) *NotificationSvc {
 	}
 }
 
-var markdownV2Replacer = strings.NewReplacer("\\", "\\\\", "`", "\\`")
+var messageReplacer = strings.NewReplacer(
+	`<`, `&lt;`,
+	`>`, `&gt;`,
+	`&`, `&amp;`,
+)
 
 type errs struct {
 	errs []error
@@ -58,8 +62,9 @@ func (s *NotificationSvc) Push(ctx context.Context, data string) error {
 
 	var ee errs
 	for _, c := range s.chatIDs {
-		m := tgbotapi.NewMessage(c, "```"+markdownV2Replacer.Replace(data)+"```")
-		m.ParseMode = "MarkdownV2" // https://core.telegram.org/bots/api#markdownv2-style
+		m := tgbotapi.NewMessage(c, `<pre><code class="language-json">`+messageReplacer.Replace(data)+`</code></pre>`)
+		// here we use more reliable HTML parser
+		m.ParseMode = "HTML" // https://core.telegram.org/bots/api#html-style
 		if _, err := s.botAPI.Send(m); err != nil {
 			ee.errs = append(ee.errs, err)
 		}
