@@ -10,19 +10,25 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/getsentry/sentry-go"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
 var (
 	cfgFile string
 	cmdName = os.Args[0]
+	release = "n/a"
+	env     = "developer-env"
+	built   = "now"
 )
+
+const sentryFlushTimeout = 10 * time.Second
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -34,6 +40,23 @@ var rootCmd = &cobra.Command{
 			zerolog.SetGlobalLevel(level)
 		} else {
 			log.Warn().Err(e).Msgf("Unable to parse log level '%s'", viper.GetString(settLogLevel))
+		}
+
+		viper.SetDefault(settCfgRelease, release)
+		viper.SetDefault(settCfgEnv, env)
+		viper.SetDefault(settBuilt, built)
+
+		err := sentry.Init(sentry.ClientOptions{
+			Dsn:              viper.GetString(settCfgSentryDSN),
+			Environment:      viper.GetString(settCfgEnv),
+			Release:          viper.GetString(settCfgRelease),
+			Debug:            true,
+			TracesSampleRate: 1.0,
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("Failed sentry.Init")
+		} else {
+			log.Info().Msg("Sentry was successfully initialized")
 		}
 
 		log.Logger = log.Hook(&goroutineID{Name: "GID"})
@@ -50,6 +73,14 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	defer func() {
+		if sentry.Flush(sentryFlushTimeout) {
+			log.Debug().Msg("Sentry successfully flushed")
+		} else {
+			log.Warn().Msg("Sentry failed to flush")
+		}
+	}()
+
 	// context should be canceled while Int signal will be caught
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -96,6 +127,8 @@ func init() {
 		cc.PersistentFlags().Bool(settLogCaller, false, "output caller function name in log (may impact performance if using)")
 
 		cc.PersistentFlags().String(settPprofHostport, "", "host:port for start and exposing diagnostic info; not exposing, if unset; example — localhost:6060, and use http://localhost:6060/debug/pprof/ after start")
+
+		cc.PersistentFlags().String(settCfgSentryDSN, "", "Sentry.io DSN. Sentry will be not available, of this value is not specified. The better way to specify this value, use appropriate environment variable.")
 	})
 }
 

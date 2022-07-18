@@ -12,11 +12,13 @@ import (
 	"strings"
 	"time"
 
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
 	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/controller"
 	"optrispace.com/work/pkg/service"
@@ -68,6 +70,11 @@ func doStart(ctx context.Context) error {
 	e.HideBanner = viper.GetBool(settHideBanner)
 
 	e.Pre(clog.PrepareContext)
+	e.Use(sentryecho.New(sentryecho.Options{
+		Repanic:         false,
+		WaitForDelivery: false,
+		Timeout:         2 * time.Second,
+	}))
 	e.Pre(middleware.RemoveTrailingSlash())
 
 	if viper.GetBool(settServerTrace) {

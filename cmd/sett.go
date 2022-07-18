@@ -15,4 +15,10 @@ const (
 
 	settNotificationTgToken = "notification.tg.token"
 	settNotificationTgChats = "notification.tg.chat"
+
+	settCfgSentryDSN = "sentry.dsn"
+
+	settCfgRelease = "release"
+	settCfgEnv     = "env"
+	settBuilt      = "built"
 )
