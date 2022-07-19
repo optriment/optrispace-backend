@@ -24,9 +24,12 @@ type (
 
 	// Security creates user representation from echo.Context, if there is such data
 	Security interface {
-		// FromEchoContext acquires user from echo and persisten storage
+		// FromEchoContext acquires user from echo and persistent storage
 		// It will construct *model.UserContext in the context too
 		FromEchoContext(c echo.Context) (*model.UserContext, error)
+
+		// FromEchoContextByBasicAuth extracts user creds from basic auth header for specified realm
+		FromEchoContextByBasicAuth(c echo.Context, realm string) (*model.UserContext, error)
 
 		// FromLoginPassword creates UserContext from login and password in default realm
 		FromLoginPassword(ctx context.Context, login, password string) (*model.UserContext, error)
@@ -99,6 +102,11 @@ type (
 		// Push sends a data message to the configured channels (chats in Telegram messenger)
 		Push(ctx context.Context, data string) error
 	}
+
+	// Stats service for statistic information
+	Stats interface {
+		Stats(ctx context.Context) (*model.Stats, error)
+	}
 )
 
 // NewSecurity creates job service
@@ -126,7 +134,12 @@ func NewContract(db *sql.DB) Contract {
 	return pgsvc.NewContract(db)
 }
 
-// NewNotification creates contract service
+// NewNotification creates notification service
 func NewNotification(tgToken string, chatIDs ...int64) Notification {
 	return pgsvc.NewNotification(tgToken, chatIDs...)
+}
+
+// NewStats create stats service
+func NewStats(db *sql.DB) Stats {
+	return pgsvc.NewStats(db)
 }

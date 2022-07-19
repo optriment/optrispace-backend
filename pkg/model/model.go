@@ -74,6 +74,11 @@ type (
 		Job       *Job            `json:"job,omitempty"`
 		Contract  *Contract       `json:"contract,omitempty"`
 	}
+
+	// Stats for statistics
+	Stats struct {
+		Registrations map[string]int `json:"registrations,omitempty"`
+	}
 )
 
 // Contract statuses

@@ -15,16 +15,16 @@ import (
 type (
 	// Contract controller
 	Contract struct {
-		svc service.Contract
 		sm  service.Security
+		svc service.Contract
 	}
 )
 
 // NewContract create new service
-func NewContract(svc service.Contract, sm service.Security) Registerer {
+func NewContract(sm service.Security, svc service.Contract) Registerer {
 	return &Contract{
-		svc: svc,
 		sm:  sm,
+		svc: svc,
 	}
 }
 
