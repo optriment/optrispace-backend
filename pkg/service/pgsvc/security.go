@@ -61,7 +61,7 @@ func (s *SecuritySvc) FromEchoContext(c echo.Context) (*model.UserContext, error
 
 	// here is token used as is
 	personSvc := NewPerson(s.db)
-	p, err := personSvc.Get(c.Request().Context(), token)
+	p, err := personSvc.GetByAccessToken(c.Request().Context(), token)
 	if err != nil {
 		clog.Ectx(c).Warn().Err(err).Msg("Unable to authorize")
 		err = model.ErrUnauthorized
@@ -134,8 +134,21 @@ func (s *SecuritySvc) FromLoginPassword(ctx context.Context, login, password str
 			return model.ErrUnableToLogin
 		}
 
+		token := pgdao.NewID()
+		if e := queries.PersonSetAccessToken(ctx, pgdao.PersonSetAccessTokenParams{
+			AccessToken: token,
+			ID:          u.ID,
+		}); e != nil {
+			clog.Ctx(ctx).Warn().
+				Str("login", login).
+				Str("id", u.ID).
+				Str("token", token).
+				Msg("Unable to set access token for user")
+			return e
+		}
+
 		newUctx.Authenticated = true
-		newUctx.Token = u.ID
+		newUctx.Token = token
 		newUctx.Subject = &model.Person{
 			ID:          u.ID,
 			Realm:       u.Realm,

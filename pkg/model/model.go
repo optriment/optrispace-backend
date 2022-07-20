@@ -35,6 +35,7 @@ type (
 		Email           string    `json:"email,omitempty"`
 		EthereumAddress string    `json:"ethereum_address,omitempty"`
 		Resources       string    `json:"resources,omitempty"`
+		AccessToken     string    `json:"-"`
 	}
 
 	// Project is a sequence of contracts group

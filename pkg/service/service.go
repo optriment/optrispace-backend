@@ -47,6 +47,9 @@ type (
 	Person interface {
 		GenericCRUD[model.Person]
 
+		// GetByAccessToken returns person by access token supplied
+		GetByAccessToken(ctx context.Context, accessToken string) (*model.Person, error)
+
 		// Update password
 		UpdatePassword(ctx context.Context, subjectID, oldPassword, newPassword string) error
 

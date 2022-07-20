@@ -2,6 +2,7 @@ package intest
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -43,7 +44,7 @@ func TestPerson(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.AccessToken)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -80,7 +81,7 @@ func TestPerson(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.AccessToken)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -103,7 +104,7 @@ func TestPerson(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.AccessToken)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -129,7 +130,7 @@ func TestPerson(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+creator.AccessToken)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -164,6 +165,10 @@ func TestPersonPatch(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -175,7 +180,7 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -205,6 +210,10 @@ func TestPersonPatch(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -216,7 +225,7 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -255,7 +264,10 @@ func TestPersonPatch(t *testing.T) {
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("1234"),
 			DisplayName:  "Stranger",
-			Email:        "s@sample.com",
+			Email:        "s@sample.com", AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -267,7 +279,7 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+theStranger.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+theStranger.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -317,6 +329,10 @@ func TestPersonPatch(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -328,7 +344,7 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -355,6 +371,10 @@ func TestPersonResources(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -369,7 +389,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -395,7 +415,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err = http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -420,6 +440,10 @@ func TestPersonResources(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -440,7 +464,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -466,7 +490,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err = http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -501,6 +525,10 @@ func TestPersonResources(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("1234"),
 			DisplayName:  "Stranger",
 			Email:        "s@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -513,7 +541,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+theStranger.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+theStranger.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -533,6 +561,10 @@ func TestPersonResources(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -545,7 +577,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -596,6 +628,10 @@ func TestPersonResources(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
 			DisplayName:  "John Smith",
 			Email:        "js@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -607,7 +643,7 @@ func TestPersonResources(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

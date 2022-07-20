@@ -77,7 +77,7 @@ func (cont *Auth) signup(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, model.UserContext{
 		Authenticated: true,
-		Token:         o.ID,
+		Token:         o.AccessToken,
 		Subject:       o,
 	})
 }
