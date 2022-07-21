@@ -28,6 +28,10 @@ func TestJob(t *testing.T) {
 
 	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID: pgdao.NewID(),
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -81,7 +85,7 @@ func TestJob(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -128,7 +132,7 @@ func TestJob(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -173,7 +177,7 @@ func TestJob(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -265,6 +269,10 @@ func TestJobEdit(t *testing.T) {
 		ID:    pgdao.NewID(),
 		Realm: "inhouse",
 		Login: "creator",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -272,6 +280,10 @@ func TestJobEdit(t *testing.T) {
 		ID:    pgdao.NewID(),
 		Realm: "inhouse",
 		Login: "stranger",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -303,7 +315,7 @@ func TestJobEdit(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -359,7 +371,7 @@ func TestJobEdit(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -399,7 +411,7 @@ func TestJobEdit(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

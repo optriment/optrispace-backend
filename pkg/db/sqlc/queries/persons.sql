@@ -1,8 +1,8 @@
 -- name: PersonAdd :one
 insert into persons (
-    id, realm, login, password_hash, display_name, email
+    id, realm, login, password_hash, display_name, email, access_token
 ) values (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6, $7
 ) 
 returning *;
 
@@ -46,6 +46,18 @@ where
     id = @id::varchar
 returning *;
 
+-- name: PersonSetAccessToken :exec
+-- Sets the person's access token
+update persons
+set
+    access_token = @access_token::varchar
+where
+    id = @id::varchar
+returning *;
+
+-- name: PersonGetByAccessToken :one
+select * from persons
+	where access_token = @access_token::varchar;
 
 -- name: PersonsPurge :exec
 -- Handle with care!

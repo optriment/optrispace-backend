@@ -7,16 +7,17 @@ package pgdao
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 )
 
 const personAdd = `-- name: PersonAdd :one
 insert into persons (
-    id, realm, login, password_hash, display_name, email
+    id, realm, login, password_hash, display_name, email, access_token
 ) values (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6, $7
 ) 
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token
 `
 
 type PersonAddParams struct {
@@ -26,6 +27,7 @@ type PersonAddParams struct {
 	PasswordHash string
 	DisplayName  string
 	Email        string
+	AccessToken  sql.NullString
 }
 
 func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, error) {
@@ -36,6 +38,7 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		arg.PasswordHash,
 		arg.DisplayName,
 		arg.Email,
+		arg.AccessToken,
 	)
 	var i Person
 	err := row.Scan(
@@ -48,12 +51,13 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		&i.Email,
 		&i.EthereumAddress,
 		&i.Resources,
+		&i.AccessToken,
 	)
 	return i, err
 }
 
 const personGet = `-- name: PersonGet :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons
 	where id = $1::varchar
 `
 
@@ -70,12 +74,36 @@ func (q *Queries) PersonGet(ctx context.Context, id string) (Person, error) {
 		&i.Email,
 		&i.EthereumAddress,
 		&i.Resources,
+		&i.AccessToken,
+	)
+	return i, err
+}
+
+const personGetByAccessToken = `-- name: PersonGetByAccessToken :one
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons
+	where access_token = $1::varchar
+`
+
+func (q *Queries) PersonGetByAccessToken(ctx context.Context, accessToken string) (Person, error) {
+	row := q.db.QueryRowContext(ctx, personGetByAccessToken, accessToken)
+	var i Person
+	err := row.Scan(
+		&i.ID,
+		&i.Realm,
+		&i.Login,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.Email,
+		&i.EthereumAddress,
+		&i.Resources,
+		&i.AccessToken,
 	)
 	return i, err
 }
 
 const personGetByLogin = `-- name: PersonGetByLogin :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources from persons p
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons p
 	where p.login = $1::varchar and p.realm = $2::varchar
 `
 
@@ -97,6 +125,7 @@ func (q *Queries) PersonGetByLogin(ctx context.Context, arg PersonGetByLoginPara
 		&i.Email,
 		&i.EthereumAddress,
 		&i.Resources,
+		&i.AccessToken,
 	)
 	return i, err
 }
@@ -112,7 +141,7 @@ set
 
 where
     id = $5::varchar
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token
 `
 
 type PersonPatchParams struct {
@@ -142,8 +171,29 @@ func (q *Queries) PersonPatch(ctx context.Context, arg PersonPatchParams) (Perso
 		&i.Email,
 		&i.EthereumAddress,
 		&i.Resources,
+		&i.AccessToken,
 	)
 	return i, err
+}
+
+const personSetAccessToken = `-- name: PersonSetAccessToken :exec
+update persons
+set
+    access_token = $1::varchar
+where
+    id = $2::varchar
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token
+`
+
+type PersonSetAccessTokenParams struct {
+	AccessToken string
+	ID          string
+}
+
+// Sets the person's access token
+func (q *Queries) PersonSetAccessToken(ctx context.Context, arg PersonSetAccessTokenParams) error {
+	_, err := q.db.ExecContext(ctx, personSetAccessToken, arg.AccessToken, arg.ID)
+	return err
 }
 
 const personSetPassword = `-- name: PersonSetPassword :exec
@@ -183,7 +233,7 @@ func (q *Queries) PersonSetResources(ctx context.Context, arg PersonSetResources
 }
 
 const personsList = `-- name: PersonsList :many
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons
 `
 
 func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
@@ -205,6 +255,7 @@ func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
 			&i.Email,
 			&i.EthereumAddress,
 			&i.Resources,
+			&i.AccessToken,
 		); err != nil {
 			return nil, err
 		}

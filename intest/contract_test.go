@@ -43,6 +43,10 @@ func TestContract(t *testing.T) {
 	customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "customer1",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -51,7 +55,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -66,6 +70,10 @@ func TestContract(t *testing.T) {
 	performer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "performer1",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -102,6 +110,10 @@ func TestContract(t *testing.T) {
 	customer2, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "customer2",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -116,6 +128,10 @@ func TestContract(t *testing.T) {
 	performer2, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "performer2",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -147,7 +163,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -169,7 +185,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -197,7 +213,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -225,7 +241,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer2.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer2.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -238,7 +254,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer2.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer2.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -295,7 +311,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -351,7 +367,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -376,7 +392,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -400,7 +416,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -424,7 +440,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -448,7 +464,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -473,7 +489,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -498,7 +514,7 @@ func TestContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -525,6 +541,10 @@ func TestContractStatuses(t *testing.T) {
 		PasswordHash: "123456",
 		DisplayName:  "stranger",
 		Email:        "stranger@sample.com",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -535,6 +555,10 @@ func TestContractStatuses(t *testing.T) {
 		PasswordHash: "123456",
 		DisplayName:  "customer",
 		Email:        "customer@sample.com",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -545,6 +569,10 @@ func TestContractStatuses(t *testing.T) {
 		PasswordHash: "123456",
 		DisplayName:  "performer",
 		Email:        "performer@sample.com",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -595,7 +623,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.AccessToken.String)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -614,7 +642,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.AccessToken.String)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -641,7 +669,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.AccessToken.String)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -654,7 +682,7 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	invalidActorTest := func(action, startStatus, actorID, body string) func(t *testing.T) {
+	invalidActorTest := func(action, startStatus, actorToken, body string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
@@ -667,7 +695,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorToken)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -680,7 +708,7 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	okTest := func(action, startStatus, targetStatus, actorID, body string, verifier func(t *testing.T, c *pgdao.Contract)) func(t *testing.T) {
+	okTest := func(action, startStatus, targetStatus, actorToken, body string, verifier func(t *testing.T, c *pgdao.Contract)) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
@@ -693,7 +721,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorToken)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -710,7 +738,7 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	invalidSourceStatusTest := func(action, startStatus, actorID, body string) func(t *testing.T) {
+	invalidSourceStatusTest := func(action, startStatus, actorToken, body string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
@@ -723,7 +751,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorToken)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -736,7 +764,7 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
-	missedField := func(action, startStatus, actorID, fieldName string) func(t *testing.T) {
+	missedField := func(action, startStatus, actorToken, fieldName string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange: true,
@@ -749,7 +777,7 @@ func TestContractStatuses(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Set(clog.HeaderXHint, t.Name())
 			req.Header.Set(echo.HeaderContentType, "application/json")
-			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorID)
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorToken)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -767,9 +795,9 @@ func TestContractStatuses(t *testing.T) {
 		t.Run("not-found", notFoundTest(action, `{"performer_address":"0x123456abcd"}`))
 		t.Run("bad-request", badRequest(action, `aaasdddddsssssd`))
 		t.Run("stranger", strangerTest(action, model.ContractCreated, `{"performer_address":"0x123456abcd"}`))
-		t.Run("customer", invalidActorTest(action, model.ContractCreated, customer.ID, `{"performer_address":"0x123456abcd"}`))
-		t.Run("missed performer_address", missedField(action, model.ContractCreated, customer.ID, "performer_address"))
-		t.Run("performer", okTest(action, model.ContractCreated, model.ContractAccepted, performer.ID, `{"performer_address":"0x123456abcd"}`, func(t *testing.T, c *pgdao.Contract) {
+		t.Run("customer", invalidActorTest(action, model.ContractCreated, customer.AccessToken.String, `{"performer_address":"0x123456abcd"}`))
+		t.Run("missed performer_address", missedField(action, model.ContractCreated, customer.AccessToken.String, "performer_address"))
+		t.Run("performer", okTest(action, model.ContractCreated, model.ContractAccepted, performer.AccessToken.String, `{"performer_address":"0x123456abcd"}`, func(t *testing.T, c *pgdao.Contract) {
 			assert.Equal(t, "0x123456abcd", c.PerformerAddress)
 		}))
 		for _, st := range []string{
@@ -780,7 +808,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, `{"performer_address":"0x123456abcd"}`))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.AccessToken.String, `{"performer_address":"0x123456abcd"}`))
 		}
 	})
 
@@ -788,11 +816,11 @@ func TestContractStatuses(t *testing.T) {
 	t.Run(action, func(t *testing.T) {
 		t.Run("not-found", notFoundTest(action, `{"contract_address":"0x0987654dsa"}`))
 		t.Run("stranger", strangerTest(action, model.ContractAccepted, `{"contract_address":"0x0987654dsa"}`))
-		t.Run("customer", okTest(action, model.ContractAccepted, model.ContractDeployed, customer.ID, `{"contract_address":"0x0987654dsa"}`, func(t *testing.T, c *pgdao.Contract) {
+		t.Run("customer", okTest(action, model.ContractAccepted, model.ContractDeployed, customer.AccessToken.String, `{"contract_address":"0x0987654dsa"}`, func(t *testing.T, c *pgdao.Contract) {
 			assert.Equal(t, "0x0987654dsa", c.ContractAddress)
 		}))
-		t.Run("performer", invalidActorTest(action, model.ContractAccepted, performer.ID, `{"contract_address":"0x0987654dsa"}`))
-		t.Run("missed contract_address", missedField(action, model.ContractAccepted, customer.ID, "contract_address"))
+		t.Run("performer", invalidActorTest(action, model.ContractAccepted, performer.AccessToken.String, `{"contract_address":"0x0987654dsa"}`))
+		t.Run("missed contract_address", missedField(action, model.ContractAccepted, customer.AccessToken.String, "contract_address"))
 		for _, st := range []string{
 			model.ContractCreated,
 			// model.ContractAccepted,
@@ -801,7 +829,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, `{"contract_address":"0x0987654dsa"}`))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.AccessToken.String, `{"contract_address":"0x0987654dsa"}`))
 		}
 	})
 
@@ -809,8 +837,8 @@ func TestContractStatuses(t *testing.T) {
 	t.Run(action, func(t *testing.T) {
 		t.Run("not-found", notFoundTest(action, ""))
 		t.Run("stranger", strangerTest(action, model.ContractDeployed, ""))
-		t.Run("customer", invalidActorTest(action, model.ContractDeployed, customer.ID, ""))
-		t.Run("performer", okTest(action, model.ContractDeployed, model.ContractSent, performer.ID, "", nil))
+		t.Run("customer", invalidActorTest(action, model.ContractDeployed, customer.AccessToken.String, ""))
+		t.Run("performer", okTest(action, model.ContractDeployed, model.ContractSent, performer.AccessToken.String, "", nil))
 		for _, st := range []string{
 			model.ContractCreated,
 			model.ContractAccepted,
@@ -819,7 +847,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, ""))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.AccessToken.String, ""))
 		}
 	})
 
@@ -827,8 +855,8 @@ func TestContractStatuses(t *testing.T) {
 	t.Run(action, func(t *testing.T) {
 		t.Run("not-found", notFoundTest(action, ""))
 		t.Run("stranger", strangerTest(action, model.ContractSent, ""))
-		t.Run("customer", okTest(action, model.ContractSent, model.ContractApproved, customer.ID, "", nil))
-		t.Run("performer", invalidActorTest(action, model.ContractSent, performer.ID, ""))
+		t.Run("customer", okTest(action, model.ContractSent, model.ContractApproved, customer.AccessToken.String, "", nil))
+		t.Run("performer", invalidActorTest(action, model.ContractSent, performer.AccessToken.String, ""))
 		for _, st := range []string{
 			model.ContractCreated,
 			model.ContractAccepted,
@@ -837,7 +865,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.ID, ""))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.AccessToken.String, ""))
 		}
 	})
 
@@ -845,8 +873,8 @@ func TestContractStatuses(t *testing.T) {
 	t.Run(action, func(t *testing.T) {
 		t.Run("not-found", notFoundTest(action, ""))
 		t.Run("stranger", strangerTest(action, model.ContractApproved, ""))
-		t.Run("customer", okTest(action, model.ContractApproved, model.ContractCompleted, performer.ID, "", nil))
-		t.Run("performer", invalidActorTest(action, model.ContractApproved, customer.ID, ""))
+		t.Run("customer", okTest(action, model.ContractApproved, model.ContractCompleted, performer.AccessToken.String, "", nil))
+		t.Run("performer", invalidActorTest(action, model.ContractApproved, customer.AccessToken.String, ""))
 		for _, st := range []string{
 			model.ContractCreated,
 			model.ContractAccepted,
@@ -855,7 +883,7 @@ func TestContractStatuses(t *testing.T) {
 			// model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.ID, ""))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, performer.AccessToken.String, ""))
 		}
 	})
 }

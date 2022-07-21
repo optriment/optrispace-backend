@@ -35,6 +35,10 @@ func (s *PersonSvc) Add(ctx context.Context, person *model.Person) (*model.Perso
 			PasswordHash: CreateHashFromPassword(person.Password),
 			DisplayName:  person.DisplayName,
 			Email:        person.Email,
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		}
 
 		if input.Realm == "" {
@@ -62,14 +66,7 @@ func (s *PersonSvc) Add(ctx context.Context, person *model.Person) (*model.Perso
 			return fmt.Errorf("unable to PersonAdd: %w", err)
 		}
 
-		result = &model.Person{
-			ID:          o.ID,
-			Realm:       o.Realm,
-			Login:       o.Login,
-			DisplayName: o.DisplayName,
-			CreatedAt:   o.CreatedAt,
-			Email:       o.Email,
-		}
+		result = personDBtoModel(o)
 
 		return nil
 	})
@@ -89,15 +86,40 @@ func (s *PersonSvc) Get(ctx context.Context, id string) (*model.Person, error) {
 			return fmt.Errorf("unable to PersonGet: %w", err)
 		}
 
-		result = &model.Person{
-			ID:          o.ID,
-			Realm:       o.Realm,
-			Login:       o.Login,
-			DisplayName: o.DisplayName,
-			CreatedAt:   o.CreatedAt,
-			Email:       o.Email,
-			Resources:   string(o.Resources),
+		result = personDBtoModel(o)
+
+		return nil
+	})
+}
+
+func personDBtoModel(o pgdao.Person) *model.Person {
+	return &model.Person{
+		ID:          o.ID,
+		Realm:       o.Realm,
+		Login:       o.Login,
+		DisplayName: o.DisplayName,
+		CreatedAt:   o.CreatedAt,
+		Email:       o.Email,
+		Resources:   string(o.Resources),
+		AccessToken: o.AccessToken.String,
+	}
+}
+
+// GetByAccessToken implements service.Person
+func (s *PersonSvc) GetByAccessToken(ctx context.Context, accessToken string) (*model.Person, error) {
+	var result *model.Person
+	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
+		o, err := queries.PersonGetByAccessToken(ctx, accessToken)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
 		}
+
+		if err != nil {
+			return fmt.Errorf("unable to PersonGet: %w", err)
+		}
+
+		result = personDBtoModel(o)
 
 		return nil
 	})

@@ -3,6 +3,7 @@ package intest
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -51,7 +52,7 @@ func TestAuth(t *testing.T) {
 			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/persons/"+e.Subject.ID))
 
 			assert.True(t, e.Authenticated)
-			assert.Equal(t, e.Token, e.Subject.ID)
+			assert.NotEqual(t, e.Token, e.Subject.ID)
 			if assert.NotNil(t, e.Subject) {
 				assert.NotEmpty(t, e.Subject.ID)
 				assert.Equal(t, "mylogin", e.Subject.Login)
@@ -69,6 +70,7 @@ func TestAuth(t *testing.T) {
 				assert.Equal(t, "John Smith", d.DisplayName)
 				assert.Equal(t, e.Subject.CreatedAt, d.CreatedAt.UTC())
 				assert.Equal(t, "", d.Email)
+				assert.Equal(t, e.Token, d.AccessToken.String)
 			}
 		}
 	})
@@ -115,7 +117,7 @@ func TestAuth(t *testing.T) {
 			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/persons/"+e.Subject.ID))
 
 			assert.True(t, e.Authenticated)
-			assert.Equal(t, e.Token, e.Subject.ID)
+			assert.NotEqual(t, e.Token, e.Subject.ID)
 			if assert.NotNil(t, e.Subject) {
 				assert.NotEmpty(t, e.Subject.ID)
 				assert.Equal(t, e.Subject.ID, e.Subject.Login)
@@ -133,6 +135,7 @@ func TestAuth(t *testing.T) {
 				assert.Equal(t, e.Subject.DisplayName, d.DisplayName)
 				assert.Equal(t, e.Subject.CreatedAt, d.CreatedAt.UTC())
 				assert.Equal(t, "", d.Email)
+				assert.Equal(t, e.Token, d.AccessToken.String)
 			}
 		}
 	})
@@ -182,7 +185,7 @@ func TestAuth(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+me.Subject.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+me.Token)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -192,7 +195,7 @@ func TestAuth(t *testing.T) {
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
 			assert.True(t, e.Authenticated)
-			assert.Equal(t, e.Token, e.Subject.ID)
+			assert.NotEqual(t, e.Token, e.Subject.ID)
 			if assert.NotNil(t, e.Subject) {
 				assert.NotEmpty(t, e.Subject.ID)
 				assert.Equal(t, "mylogin", e.Subject.Login)
@@ -210,6 +213,7 @@ func TestAuth(t *testing.T) {
 				assert.Equal(t, "John Smith", d.DisplayName)
 				assert.Equal(t, e.Subject.CreatedAt, d.CreatedAt.UTC())
 				assert.Equal(t, "", d.Email)
+				assert.Equal(t, e.Token, d.AccessToken.String)
 			}
 		}
 	})
@@ -233,7 +237,7 @@ func TestAuth(t *testing.T) {
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
 			assert.True(t, e.Authenticated)
-			assert.Equal(t, e.Token, e.Subject.ID)
+			assert.NotEqual(t, e.Token, e.Subject.ID)
 			if assert.NotNil(t, e.Subject) {
 				assert.NotEmpty(t, e.Subject.ID)
 				assert.Equal(t, "mylogin", e.Subject.Login)
@@ -251,6 +255,7 @@ func TestAuth(t *testing.T) {
 				assert.Equal(t, "John Smith", d.DisplayName)
 				assert.Equal(t, e.Subject.CreatedAt, d.CreatedAt.UTC())
 				assert.Equal(t, "", d.Email)
+				assert.Equal(t, e.Token, d.AccessToken.String)
 			}
 		}
 	})
@@ -320,6 +325,10 @@ func TestChangePassword(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("1234"),
 			DisplayName:  "Smith 1234",
 			Email:        "smith@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -332,7 +341,7 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+smith.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+smith.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -357,6 +366,10 @@ func TestChangePassword(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("1234"),
 			DisplayName:  "Smith 1234",
 			Email:        "smith@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -369,7 +382,7 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+smith.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+smith.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -421,6 +434,10 @@ func TestChangePassword(t *testing.T) {
 			PasswordHash: pgsvc.CreateHashFromPassword("1234"),
 			DisplayName:  "Smith 1234",
 			Email:        "smith@sample.com",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
 		})
 		require.NoError(t, err)
 
@@ -432,7 +449,7 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+smith.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+smith.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

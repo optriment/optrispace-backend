@@ -101,4 +101,6 @@ type Person struct {
 	EthereumAddress string
 	// Person's resources list. They may be links to social networks, portfolio, messenger IDs etc
 	Resources json.RawMessage
+	// Person's personal access token for Bearer authentication schema
+	AccessToken sql.NullString
 }

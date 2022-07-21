@@ -25,30 +25,50 @@ func TestApplication(t *testing.T) {
 	stranger, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "stranger",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
 	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "created-by",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
 	applicant1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "applicant1",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
 	applicant2, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "applicant2",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
 	applicant3, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:    pgdao.NewID(),
 		Login: "applicant3",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
 	})
 	require.NoError(t, err)
 
@@ -90,7 +110,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
@@ -116,7 +136,7 @@ func TestApplication(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -163,7 +183,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -184,7 +204,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -227,7 +247,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -270,7 +290,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant3.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant3.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -313,7 +333,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -353,14 +373,13 @@ func TestApplication(t *testing.T) {
 		CreatedBy:     createdBy.ID,
 	})
 	require.NoError(t, err)
-	_ = contract1
 
 	t.Run("get•:job_id•applications•by-stranger", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, applicationsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -379,7 +398,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -417,7 +436,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant2.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -444,7 +463,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.ID)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
