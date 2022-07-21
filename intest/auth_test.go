@@ -461,3 +461,118 @@ func TestChangePassword(t *testing.T) {
 		}
 	})
 }
+
+func TestLoginTransmutation(t *testing.T) {
+	signupURL := appURL + "/signup"
+	loginURL := appURL + "/login"
+
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+	t.Run("signup with spaces in login", func(t *testing.T) {
+		body := `{
+			"login":"   \t\tMyLogin   \t   \t",
+			"password":"12345678",
+			"display_name": "John Smith"
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusCreated, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.UserContext)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/persons/"+e.Subject.ID))
+
+			assert.True(t, e.Authenticated)
+			assert.NotEqual(t, e.Token, e.Subject.ID)
+			if assert.NotNil(t, e.Subject) {
+				assert.NotEmpty(t, e.Subject.ID)
+				assert.Equal(t, "mylogin", e.Subject.Login)
+				assert.Equal(t, "inhouse", e.Subject.Realm)
+				assert.Equal(t, "John Smith", e.Subject.DisplayName)
+				assert.NotEmpty(t, e.Subject.CreatedAt)
+			}
+
+			d, err := pgdao.New(db).PersonGet(ctx, e.Subject.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, e.Subject.ID, d.ID)
+				assert.Equal(t, "inhouse", d.Realm)
+				assert.Equal(t, "mylogin", d.Login)
+				assert.NoError(t, pgsvc.CompareHashAndPassword(d.PasswordHash, "12345678"))
+				assert.Equal(t, "John Smith", d.DisplayName)
+				assert.Equal(t, e.Subject.CreatedAt, d.CreatedAt.UTC())
+				assert.Equal(t, "", d.Email)
+				assert.Equal(t, e.Token, d.AccessToken.String)
+			}
+		}
+	})
+	t.Run("signup•duplication login", func(t *testing.T) {
+		body := `{
+			"login":" \t\tmYlOgIn  \t",
+			"password":"abcde",
+			"display_name": "` + faker.New().Person().Name() + `"
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, signupURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusConflict, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := model.BackendError{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.EqualValues(t, "duplication", e.Message)
+		}
+	})
+
+	t.Run("login•ok", func(t *testing.T) {
+		body := `{
+				"login":"\t   \t  \rMyLogiN   \t   \t",
+				"password":"12345678"
+			}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.UserContext)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.True(t, e.Authenticated)
+			assert.NotEqual(t, e.Token, e.Subject.ID)
+			if assert.NotNil(t, e.Subject) {
+				assert.NotEmpty(t, e.Subject.ID)
+				assert.Equal(t, "mylogin", e.Subject.Login)
+				assert.Equal(t, "inhouse", e.Subject.Realm)
+				assert.Equal(t, "John Smith", e.Subject.DisplayName)
+				assert.NotEmpty(t, e.Subject.CreatedAt)
+			}
+
+			d, err := pgdao.New(db).PersonGet(ctx, e.Subject.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, e.Subject.ID, d.ID)
+				assert.Equal(t, "inhouse", d.Realm)
+				assert.Equal(t, "mylogin", d.Login)
+				assert.NoError(t, pgsvc.CompareHashAndPassword(d.PasswordHash, "12345678"))
+				assert.Equal(t, "John Smith", d.DisplayName)
+				assert.Equal(t, e.Subject.CreatedAt, d.CreatedAt.UTC())
+				assert.Equal(t, "", d.Email)
+				assert.Equal(t, e.Token, d.AccessToken.String)
+			}
+		}
+	})
+}

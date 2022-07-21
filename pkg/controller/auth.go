@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -47,6 +48,8 @@ func (cont *Auth) login(c echo.Context) error {
 		return err
 	}
 
+	ie.Login = strings.ToLower(strings.TrimSpace(ie.Login))
+
 	p, err := cont.sm.FromLoginPassword(c.Request().Context(), ie.Login, ie.Password)
 	if err != nil {
 		return err
@@ -67,6 +70,8 @@ func (cont *Auth) signup(c echo.Context) error {
 	if ie.Password == "" {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "Password required")
 	}
+
+	ie.Login = strings.ToLower(strings.TrimSpace(ie.Login))
 
 	o, err := cont.person.Add(c.Request().Context(), ie)
 	if err != nil {
