@@ -28,6 +28,13 @@ func NewJob(db *sql.DB) *JobSvc {
 func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 	var result *model.Job
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		if e.Budget.IsNegative() {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: model.ValidationErrorMustBePositive("budget"),
+			}
+		}
+
 		o, err := queries.JobAdd(ctx,
 			pgdao.JobAddParams{
 				ID:          pgdao.NewID(),
@@ -150,6 +157,20 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string
 		err := mapstructure.Decode(patch, params)
 		if err != nil {
 			return fmt.Errorf("unable to decode patch from struct: %w", err)
+		}
+
+		if params.BudgetChange {
+			if d, e := decimal.NewFromString(params.Budget); e != nil {
+				return &model.BackendError{
+					Cause:   model.ErrValidationFailed,
+					Message: model.ValidationErrorInvalidFormat("budget"),
+				}
+			} else if d.IsNegative() {
+				return &model.BackendError{
+					Cause:   model.ErrValidationFailed,
+					Message: model.ValidationErrorMustBePositive("budget"),
+				}
+			}
 		}
 
 		o, err := queries.JobPatch(ctx, *params)

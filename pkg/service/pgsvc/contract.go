@@ -30,6 +30,13 @@ func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		id := pgdao.NewID()
 
+		if contract.Price.IsNegative() {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: model.ValidationErrorMustBePositive("price"),
+			}
+		}
+
 		contractParams := pgdao.ContractAddParams{
 			ID:            id,
 			CustomerID:    contract.Customer.ID,
