@@ -30,6 +30,13 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		id := pgdao.NewID()
 
+		if application.Price.IsNegative() {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: model.ValidationErrorMustBePositive("price"),
+			}
+		}
+
 		appl, err := queries.ApplicationAdd(ctx, pgdao.ApplicationAddParams{
 			ID:          id,
 			Comment:     application.Comment,

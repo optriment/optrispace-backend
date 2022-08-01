@@ -50,6 +50,30 @@ func TestJob(t *testing.T) {
 		}
 	})
 
+	t.Run("post•budget negative", func(t *testing.T) {
+		body := `{
+			"title":"Create awesome site",
+			"description": "There are words here. Very much words.",
+			"budget": -100.2,
+			"duration": 30
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "budget: must be positive", e["message"])
+		}
+	})
+
 	t.Run("post•401", func(t *testing.T) {
 		body := `{
 			"title":"Create awesome site",
@@ -340,6 +364,46 @@ func TestJobEdit(t *testing.T) {
 					assert.EqualValues(t, 42, d.Duration.Int32)
 				}
 			}
+		}
+	})
+
+	t.Run("put•budget negative", func(t *testing.T) {
+		theJob, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title before change",
+			Description: "Description before change",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			Duration: sql.NullInt32{
+				Int32: 24,
+				Valid: true,
+			},
+			CreatedBy: createdBy.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"title":"Editing title",
+			"description": "Editing description. There are words here.",
+			"budget": "-45.00",
+			"duration": 42
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, startURL+"/"+theJob.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "budget: must be positive", e["message"])
 		}
 	})
 

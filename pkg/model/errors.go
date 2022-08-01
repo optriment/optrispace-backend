@@ -43,4 +43,5 @@ var (
 var (
 	ValidationErrorRequired       = func(field string) string { return fmt.Sprintf("%s: is required", field) }
 	ValidationErrorMustBePositive = func(field string) string { return fmt.Sprintf("%s: must be positive", field) }
+	ValidationErrorInvalidFormat  = func(field string) string { return fmt.Sprintf("%s: invalid format", field) }
 )
