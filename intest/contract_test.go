@@ -534,6 +534,11 @@ func TestContractStatuses(t *testing.T) {
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
+	var (
+		normalAddress = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
+		emptyAddress  = "0x8Ca2702c5bcc50D79d9a059D58607028aa36Aa6c"
+	)
+
 	stranger, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:           pgdao.NewID(),
 		Realm:        "inhouse",
@@ -581,7 +586,7 @@ func TestContractStatuses(t *testing.T) {
 		Title:       "Some job",
 		Description: faker.New().Letter(),
 		Budget: sql.NullString{
-			String: "20.00",
+			String: "0.11",
 			Valid:  true,
 		},
 		Duration:  sql.NullInt32{},
@@ -592,7 +597,7 @@ func TestContractStatuses(t *testing.T) {
 	application, err := queries.ApplicationAdd(ctx, pgdao.ApplicationAddParams{
 		ID:          pgdao.NewID(),
 		Comment:     faker.New().Letter(),
-		Price:       "18.9",
+		Price:       "0.9",
 		JobID:       job.ID,
 		ApplicantID: performer.ID,
 	})
@@ -605,7 +610,7 @@ func TestContractStatuses(t *testing.T) {
 		ApplicationID: application.ID,
 		Title:         "Some awesome job",
 		Description:   faker.New().Letter(),
-		Price:         "19.0",
+		Price:         "0.10",
 		Duration: sql.NullInt32{
 			Int32: 9,
 			Valid: true,
@@ -659,9 +664,12 @@ func TestContractStatuses(t *testing.T) {
 	strangerTest := func(action, startStatus, body string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
-				StatusChange: true,
-				Status:       startStatus,
-				ID:           contract.ID,
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       normalAddress,
+
+				ID: contract.ID,
 			})
 			require.NoError(t, err)
 
@@ -685,9 +693,12 @@ func TestContractStatuses(t *testing.T) {
 	invalidActorTest := func(action, startStatus, actorToken, body string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
-				StatusChange: true,
-				Status:       startStatus,
-				ID:           contract.ID,
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       normalAddress,
+
+				ID: contract.ID,
 			})
 			require.NoError(t, err)
 
@@ -711,9 +722,12 @@ func TestContractStatuses(t *testing.T) {
 	okTest := func(action, startStatus, targetStatus, actorToken, body string, verifier func(t *testing.T, c *pgdao.Contract)) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
-				StatusChange: true,
-				Status:       startStatus,
-				ID:           contract.ID,
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       normalAddress,
+
+				ID: contract.ID,
 			})
 			require.NoError(t, err)
 
@@ -741,9 +755,12 @@ func TestContractStatuses(t *testing.T) {
 	invalidSourceStatusTest := func(action, startStatus, actorToken, body string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
-				StatusChange: true,
-				Status:       startStatus,
-				ID:           contract.ID,
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       normalAddress,
+
+				ID: contract.ID,
 			})
 			require.NoError(t, err)
 
@@ -767,9 +784,11 @@ func TestContractStatuses(t *testing.T) {
 	missedField := func(action, startStatus, actorToken, fieldName string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
-				StatusChange: true,
-				Status:       startStatus,
-				ID:           contract.ID,
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       normalAddress,
+				ID:                    contract.ID,
 			})
 			require.NoError(t, err)
 
@@ -786,6 +805,34 @@ func TestContractStatuses(t *testing.T) {
 				e := model.BackendError{}
 				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
 				assert.EqualValues(t, fieldName+": is required", e.Message)
+			}
+		}
+	}
+
+	insufficientFunds := func(action, startStatus, actorToken, contractAddress string) func(t *testing.T) {
+		return func(t *testing.T) {
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       contractAddress,
+				ID:                    contract.ID,
+			})
+			require.NoError(t, err)
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(`{"contract_address":"`+contractAddress+`"}`))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorToken)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := model.BackendError{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.EqualValues(t, "the contract does not have sufficient funds", e.Message)
 			}
 		}
 	}
@@ -814,13 +861,14 @@ func TestContractStatuses(t *testing.T) {
 
 	action = "deploy"
 	t.Run(action, func(t *testing.T) {
-		t.Run("not-found", notFoundTest(action, `{"contract_address":"0x0987654dsa"}`))
-		t.Run("stranger", strangerTest(action, model.ContractAccepted, `{"contract_address":"0x0987654dsa"}`))
-		t.Run("customer", okTest(action, model.ContractAccepted, model.ContractDeployed, customer.AccessToken.String, `{"contract_address":"0x0987654dsa"}`, func(t *testing.T, c *pgdao.Contract) {
-			assert.Equal(t, "0x0987654dsa", c.ContractAddress)
+		t.Run("not-found", notFoundTest(action, `{"contract_address":"`+normalAddress+`"}`))
+		t.Run("stranger", strangerTest(action, model.ContractAccepted, `{"contract_address":"`+normalAddress+`"}`))
+		t.Run("customer", okTest(action, model.ContractAccepted, model.ContractDeployed, customer.AccessToken.String, `{"contract_address":"`+normalAddress+`"}`, func(t *testing.T, c *pgdao.Contract) {
+			assert.Equal(t, normalAddress, c.ContractAddress)
 		}))
-		t.Run("performer", invalidActorTest(action, model.ContractAccepted, performer.AccessToken.String, `{"contract_address":"0x0987654dsa"}`))
+		t.Run("performer", invalidActorTest(action, model.ContractAccepted, performer.AccessToken.String, `{"contract_address":"`+normalAddress+`"}`))
 		t.Run("missed contract_address", missedField(action, model.ContractAccepted, customer.AccessToken.String, "contract_address"))
+		t.Run("insufficient funds", insufficientFunds(action, model.ContractAccepted, customer.AccessToken.String, emptyAddress))
 		for _, st := range []string{
 			model.ContractCreated,
 			// model.ContractAccepted,
@@ -829,7 +877,7 @@ func TestContractStatuses(t *testing.T) {
 			model.ContractApproved,
 			model.ContractCompleted,
 		} {
-			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.AccessToken.String, `{"contract_address":"0x0987654dsa"}`))
+			t.Run("status "+st, invalidSourceStatusTest(action, st, customer.AccessToken.String, `{"contract_address":"`+normalAddress+`"}`))
 		}
 	})
 
@@ -857,6 +905,7 @@ func TestContractStatuses(t *testing.T) {
 		t.Run("stranger", strangerTest(action, model.ContractSent, ""))
 		t.Run("customer", okTest(action, model.ContractSent, model.ContractApproved, customer.AccessToken.String, "", nil))
 		t.Run("performer", invalidActorTest(action, model.ContractSent, performer.AccessToken.String, ""))
+		t.Run("insufficient funds", insufficientFunds(action, model.ContractSent, customer.AccessToken.String, emptyAddress))
 		for _, st := range []string{
 			model.ContractCreated,
 			model.ContractAccepted,

@@ -31,7 +31,8 @@ func Ectx(c echo.Context) *zerolog.Logger {
 func Ctx(ctx context.Context) *zerolog.Logger {
 	logger, ok := ctx.Value(loggerBeacon).(*zerolog.Logger)
 	if !ok {
-		panic("inappropriate using logger from context.Context")
+		l := log.With().Str("WARN", "Context have no logger, but was requested from it").Logger() // If this message appears in the application log, there are some troubles with application workflow
+		return &l
 	}
 	return logger
 }

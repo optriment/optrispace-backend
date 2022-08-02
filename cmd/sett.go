@@ -18,6 +18,8 @@ const (
 
 	settCfgSentryDSN = "sentry.dsn"
 
+	settEthereumURL = "ethereum.url"
+
 	settCfgRelease = "release"
 	settCfgEnv     = "env"
 	settBuilt      = "built"

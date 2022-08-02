@@ -18,10 +18,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
 	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/controller"
 	"optrispace.com/work/pkg/service"
+	"optrispace.com/work/pkg/service/ethsvc"
 	"optrispace.com/work/pkg/web"
 )
 
@@ -141,12 +141,14 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 		chats = append(chats, int64(n))
 	}
 
+	eth := ethsvc.NewEthereum(viper.GetString(settEthereumURL))
+
 	rr = append(rr,
 		controller.NewAuth(sm, service.NewPerson(db)),
 		controller.NewJob(sm, service.NewJob(db)),
 		controller.NewApplication(sm, service.NewApplication(db)),
 		controller.NewPerson(sm, service.NewPerson(db)),
-		controller.NewContract(sm, service.NewContract(db)),
+		controller.NewContract(sm, service.NewContract(db, eth)),
 		controller.NewNotification(service.NewNotification(token, chats...)),
 		controller.NewStats(sm, service.NewStats(db)),
 	)
