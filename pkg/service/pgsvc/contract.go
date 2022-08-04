@@ -10,18 +10,23 @@ import (
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
+	"optrispace.com/work/pkg/service/ethsvc"
 )
 
 type (
 	// ContractSvc is a contract service
 	ContractSvc struct {
-		db *sql.DB
+		db  *sql.DB
+		eth ethsvc.Ethereum
 	}
 )
 
 // NewContract creates service
-func NewContract(db *sql.DB) *ContractSvc {
-	return &ContractSvc{db: db}
+func NewContract(db *sql.DB, eth ethsvc.Ethereum) *ContractSvc {
+	return &ContractSvc{
+		db:  db,
+		eth: eth,
+	}
 }
 
 // Add implements Contract interface
@@ -237,7 +242,7 @@ func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress s
 		if c.Status != allowedSourceStatus {
 			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
 		}
-		return nil
+		return s.checkAddressBalance(ctx, c.Price, c.ContractAddress)
 	})
 }
 
@@ -256,6 +261,7 @@ func (s *ContractSvc) Send(ctx context.Context, id, actorID string) (*model.Cont
 		if c.Status != allowedSourceStatus {
 			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
 		}
+
 		return nil
 	})
 }
@@ -275,7 +281,7 @@ func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) (*model.C
 		if c.Status != allowedSourceStatus {
 			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
 		}
-		return nil
+		return s.checkAddressBalance(ctx, c.Price, c.ContractAddress)
 	})
 }
 
@@ -296,4 +302,23 @@ func (s *ContractSvc) Complete(ctx context.Context, id, actorID string) (*model.
 		}
 		return nil
 	})
+}
+
+// checkAddressBalance checks that contract have enough coins to supply contract entity
+// It should return nil if there are enough money at the contract address in the chain
+func (s *ContractSvc) checkAddressBalance(ctx context.Context, requiredBalance decimal.Decimal, contractAddress string) error {
+	balance, err := s.eth.Balance(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+
+	if balance.LessThan(requiredBalance) {
+		return &model.BackendError{
+			Cause:    model.ErrInsufficientFunds,
+			Message:  "the contract does not have sufficient funds",
+			TechInfo: contractAddress,
+		}
+	}
+
+	return nil
 }

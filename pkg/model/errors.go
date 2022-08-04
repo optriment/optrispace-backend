@@ -36,12 +36,13 @@ var (
 	ErrDuplication              = errors.New("duplication")
 	ErrInappropriateAction      = errors.New("inappropriate action")
 	ErrValidationFailed         = errors.New("validation failed")
-	ErrInvalidFormat            = errors.New("invalid format")
+	ErrInvalidFormat            = errors.New("invalid format")     // entire request body has invalid format
+	ErrInsufficientFunds        = errors.New("insufficient funds") // insufficient funds on some address in a blockchain network
 )
 
 // Validation errors
 var (
 	ValidationErrorRequired       = func(field string) string { return fmt.Sprintf("%s: is required", field) }
 	ValidationErrorMustBePositive = func(field string) string { return fmt.Sprintf("%s: must be positive", field) }
-	ValidationErrorInvalidFormat  = func(field string) string { return fmt.Sprintf("%s: invalid format", field) }
+	ValidationErrorInvalidFormat  = func(field string) string { return fmt.Sprintf("%s: invalid format", field) } // only ONE field has invalid format, not entire request body!
 )

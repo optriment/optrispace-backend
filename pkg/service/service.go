@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"optrispace.com/work/pkg/model"
+	"optrispace.com/work/pkg/service/ethsvc"
 	"optrispace.com/work/pkg/service/pgsvc"
 )
 
@@ -133,8 +134,8 @@ func NewApplication(db *sql.DB) Application {
 }
 
 // NewContract creates contract service
-func NewContract(db *sql.DB) Contract {
-	return pgsvc.NewContract(db)
+func NewContract(db *sql.DB, eth ethsvc.Ethereum) Contract {
+	return pgsvc.NewContract(db, eth)
 }
 
 // NewNotification creates notification service
