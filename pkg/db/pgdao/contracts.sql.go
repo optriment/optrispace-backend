@@ -8,6 +8,7 @@ package pgdao
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const contractAdd = `-- name: ContractAdd :one
@@ -194,20 +195,46 @@ func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) (C
 }
 
 const contractsGetByPerson = `-- name: ContractsGetByPerson :many
-select id, customer_id, performer_id, application_id, title, description, price, duration, status, created_by, created_at, updated_at, customer_address, performer_address, contract_address from contracts
-where customer_id = $1::varchar or performer_id = $1::varchar
-order by contracts.created_by desc
+select 
+    c.id, c.customer_id, c.performer_id, c.application_id, c.title, c.description, c.price, c.duration, c.status, c.created_by, c.created_at, c.updated_at, c.customer_address, c.performer_address, c.contract_address
+    , pc.display_name as customer_name
+    , pp.display_name as performer_name
+from contracts c
+left join persons pc on c.customer_id = pc.id
+left join persons pp on c.performer_id = pp.id
+where c.customer_id = $1::varchar or c.performer_id = $1::varchar
+order by c.created_at desc
 `
 
-func (q *Queries) ContractsGetByPerson(ctx context.Context, personID string) ([]Contract, error) {
+type ContractsGetByPersonRow struct {
+	ID               string
+	CustomerID       string
+	PerformerID      string
+	ApplicationID    string
+	Title            string
+	Description      string
+	Price            string
+	Duration         sql.NullInt32
+	Status           string
+	CreatedBy        string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	CustomerAddress  string
+	PerformerAddress string
+	ContractAddress  string
+	CustomerName     sql.NullString
+	PerformerName    sql.NullString
+}
+
+func (q *Queries) ContractsGetByPerson(ctx context.Context, personID string) ([]ContractsGetByPersonRow, error) {
 	rows, err := q.db.QueryContext(ctx, contractsGetByPerson, personID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Contract
+	var items []ContractsGetByPersonRow
 	for rows.Next() {
-		var i Contract
+		var i ContractsGetByPersonRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CustomerID,
@@ -224,6 +251,8 @@ func (q *Queries) ContractsGetByPerson(ctx context.Context, personID string) ([]
 			&i.CustomerAddress,
 			&i.PerformerAddress,
 			&i.ContractAddress,
+			&i.CustomerName,
+			&i.PerformerName,
 		); err != nil {
 			return nil, err
 		}
