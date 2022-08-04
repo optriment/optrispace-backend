@@ -537,6 +537,8 @@ func TestContractStatuses(t *testing.T) {
 	var (
 		normalAddress = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
 		emptyAddress  = "0x8Ca2702c5bcc50D79d9a059D58607028aa36Aa6c"
+
+		customerAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
 	)
 
 	stranger, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
@@ -564,6 +566,13 @@ func TestContractStatuses(t *testing.T) {
 			String: pgdao.NewID(),
 			Valid:  true,
 		},
+	})
+	require.NoError(t, err)
+
+	_, err = queries.PersonPatch(ctx, pgdao.PersonPatchParams{
+		EthereumAddressChange: true,
+		EthereumAddress:       customerAddress,
+		ID:                    customer.ID,
 	})
 	require.NoError(t, err)
 
@@ -615,7 +624,8 @@ func TestContractStatuses(t *testing.T) {
 			Int32: 9,
 			Valid: true,
 		},
-		CreatedBy: customer.ID,
+		CustomerAddress: customerAddress,
+		CreatedBy:       customer.ID,
 	})
 
 	resourceName := "contracts"
@@ -809,6 +819,34 @@ func TestContractStatuses(t *testing.T) {
 		}
 	}
 
+	mustBeError := func(action, startStatus, actorToken, body, errorMessage string) func(t *testing.T) {
+		return func(t *testing.T) {
+			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
+				StatusChange:          true,
+				Status:                startStatus,
+				ContractAddressChange: true,
+				ContractAddress:       normalAddress,
+				ID:                    contract.ID,
+			})
+			require.NoError(t, err)
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, theContractURL+"/"+action, bytes.NewBufferString(body))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+actorToken)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := model.BackendError{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.EqualValues(t, errorMessage, e.Message)
+			}
+		}
+	}
+
 	insufficientFunds := func(action, startStatus, actorToken, contractAddress string) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
@@ -847,6 +885,10 @@ func TestContractStatuses(t *testing.T) {
 		t.Run("performer", okTest(action, model.ContractCreated, model.ContractAccepted, performer.AccessToken.String, `{"performer_address":"0x123456abcd"}`, func(t *testing.T, c *pgdao.Contract) {
 			assert.Equal(t, "0x123456abcd", c.PerformerAddress)
 		}))
+
+		t.Run("invalid performer address", mustBeError(action, model.ContractCreated, performer.AccessToken.String,
+			`{"performer_address":"`+customerAddress+`"}`, "customer and performer addresses cannot be the same"))
+
 		for _, st := range []string{
 			// model.ContractCreated,
 			model.ContractAccepted,

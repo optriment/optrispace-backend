@@ -221,6 +221,15 @@ func (s *ContractSvc) Accept(ctx context.Context, id, actorID, performerAddress 
 		if c.Status != allowedSourceStatus {
 			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
 		}
+
+		if performerAddress == c.CustomerAddress {
+			return &model.BackendError{
+				Cause:    model.ErrInsufficientFunds,
+				Message:  "customer and performer addresses cannot be the same",
+				TechInfo: "performer_address",
+			}
+		}
+
 		return nil
 	})
 }
