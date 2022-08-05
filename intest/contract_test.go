@@ -853,12 +853,16 @@ func TestContractStatuses(t *testing.T) {
 	}
 
 	insufficientFunds := func(action, startStatus, actorToken, contractAddress string) func(t *testing.T) {
+		ca := contractAddress
+		if action == "deploy" {
+			ca = ""
+		}
 		return func(t *testing.T) {
 			_, err := queries.ContractPatch(ctx, pgdao.ContractPatchParams{
 				StatusChange:          true,
 				Status:                startStatus,
 				ContractAddressChange: true,
-				ContractAddress:       contractAddress,
+				ContractAddress:       ca,
 				ID:                    contract.ID,
 			})
 			require.NoError(t, err)
