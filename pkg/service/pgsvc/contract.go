@@ -149,8 +149,8 @@ func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*m
 		for _, a := range aa {
 			result = append(result, &model.Contract{
 				ID:          a.ID,
-				Customer:    &model.Person{ID: a.CustomerID},
-				Performer:   &model.Person{ID: a.PerformerID},
+				Customer:    &model.Person{ID: a.CustomerID, DisplayName: a.CustomerName.String},
+				Performer:   &model.Person{ID: a.PerformerID, DisplayName: a.PerformerName.String},
 				Application: &model.Application{},
 				Title:       a.Title,
 				Description: a.Description,

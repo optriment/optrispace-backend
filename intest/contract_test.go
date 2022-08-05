@@ -24,7 +24,7 @@ func TestContract(t *testing.T) {
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-	t.Run("get /contracts should be protected for unauthorized request", func(t *testing.T) {
+	t.Run("get >contracts should be protected for unauthorized request", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -41,8 +41,9 @@ func TestContract(t *testing.T) {
 	})
 
 	customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "customer1",
+		ID:          pgdao.NewID(),
+		DisplayName: "Customer One",
+		Login:       "customer1",
 		AccessToken: sql.NullString{
 			String: pgdao.NewID(),
 			Valid:  true,
@@ -50,7 +51,7 @@ func TestContract(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("get /contracts returns empty array", func(t *testing.T) {
+	t.Run("get >contracts returns empty array", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -68,8 +69,9 @@ func TestContract(t *testing.T) {
 	})
 
 	performer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "performer1",
+		ID:          pgdao.NewID(),
+		DisplayName: "Performer One",
+		Login:       "performer1",
 		AccessToken: sql.NullString{
 			String: pgdao.NewID(),
 			Valid:  true,
@@ -158,7 +160,7 @@ func TestContract(t *testing.T) {
 
 	_ = contract2
 
-	t.Run("get /contracts returns only owned contracts", func(t *testing.T) {
+	t.Run("get >contracts returns only owned contracts", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -177,10 +179,12 @@ func TestContract(t *testing.T) {
 
 			result := ee[0]
 			assert.Equal(t, contract1.ID, result.ID)
+			assert.Equal(t, customer1.DisplayName, result.Customer.DisplayName)
+			assert.Equal(t, performer1.DisplayName, result.Performer.DisplayName)
 		}
 	})
 
-	t.Run("get /contracts/:id should be success for authorized customer", func(t *testing.T) {
+	t.Run("get >contracts>:id should be success for authorized customer", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL+"/"+contract1.ID, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -208,7 +212,7 @@ func TestContract(t *testing.T) {
 		}
 	})
 
-	t.Run("get /contracts/:id should be success for authorized performer", func(t *testing.T) {
+	t.Run("get >contracts>:id should be success for authorized performer", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL+"/"+contract1.ID, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -236,7 +240,7 @@ func TestContract(t *testing.T) {
 		}
 	})
 
-	t.Run("get /contracts/:id should not be found for unauthorized customer", func(t *testing.T) {
+	t.Run("get >contracts>:id should not be found for unauthorized customer", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL+"/"+contract1.ID, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -249,7 +253,7 @@ func TestContract(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status)
 	})
 
-	t.Run("get /contracts/:id should not be found for unauthorized performer", func(t *testing.T) {
+	t.Run("get >contracts>:id should not be found for unauthorized performer", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, contractsURL+"/"+contract1.ID, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -282,8 +286,9 @@ func TestContract(t *testing.T) {
 	})
 
 	performer3, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "performer3",
+		ID:          pgdao.NewID(),
+		DisplayName: "Performer Three",
+		Login:       "performer3",
 	})
 	require.NoError(t, err)
 
