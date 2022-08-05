@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/db/pgdao"
@@ -251,7 +252,7 @@ func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress s
 		if c.Status != allowedSourceStatus {
 			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
 		}
-		return s.checkAddressBalance(ctx, c.Price, c.ContractAddress)
+		return s.checkAddressBalance(ctx, c.Price, contractAddress)
 	})
 }
 
@@ -316,6 +317,14 @@ func (s *ContractSvc) Complete(ctx context.Context, id, actorID string) (*model.
 // checkAddressBalance checks that contract have enough coins to supply contract entity
 // It should return nil if there are enough money at the contract address in the chain
 func (s *ContractSvc) checkAddressBalance(ctx context.Context, requiredBalance decimal.Decimal, contractAddress string) error {
+	if !common.IsHexAddress(contractAddress) {
+		return &model.BackendError{
+			Cause:    model.ErrValidationFailed,
+			Message:  model.ValidationErrorInvalidFormat("contract_address"),
+			TechInfo: contractAddress,
+		}
+	}
+
 	balance, err := s.eth.Balance(ctx, contractAddress)
 	if err != nil {
 		return err
