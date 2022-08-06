@@ -193,30 +193,32 @@ func main() {
 	}
 
 	_, err = pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-		ID:            pgdao.NewID(),
-		Title:         faker.Lorem().Sentence(32),
-		Description:   faker.Lorem().Sentence(100),
-		Price:         fmt.Sprintf("%f", faker.RandomFloat(18, 1, 100)),
-		Duration:      sql.NullInt32{Int32: 42, Valid: true},
-		CustomerID:    customer1.ID,
-		PerformerID:   freelancer1.ID,
-		ApplicationID: application1.ID,
-		CreatedBy:     customer1.ID,
+		ID:              pgdao.NewID(),
+		Title:           faker.Lorem().Sentence(32),
+		Description:     faker.Lorem().Sentence(100),
+		Price:           fmt.Sprintf("%f", faker.RandomFloat(18, 1, 100)),
+		Duration:        sql.NullInt32{Int32: 42, Valid: true},
+		CustomerID:      customer1.ID,
+		PerformerID:     freelancer1.ID,
+		ApplicationID:   application1.ID,
+		CreatedBy:       customer1.ID,
+		CustomerAddress: "0xDEADBEEF",
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create contract1")
 	}
 
 	_, err = pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-		ID:            pgdao.NewID(),
-		Title:         faker.Lorem().Sentence(32),
-		Description:   faker.Lorem().Sentence(100),
-		Price:         fmt.Sprintf("%f", faker.RandomFloat(18, 1, 100)),
-		Duration:      sql.NullInt32{Int32: 42, Valid: true},
-		CustomerID:    customer2.ID,
-		PerformerID:   freelancer3.ID,
-		ApplicationID: application5.ID,
-		CreatedBy:     customer2.ID,
+		ID:              pgdao.NewID(),
+		Title:           faker.Lorem().Sentence(32),
+		Description:     faker.Lorem().Sentence(100),
+		Price:           fmt.Sprintf("%f", faker.RandomFloat(18, 1, 100)),
+		Duration:        sql.NullInt32{Int32: 42, Valid: true},
+		CustomerID:      customer2.ID,
+		PerformerID:     freelancer3.ID,
+		ApplicationID:   application5.ID,
+		CreatedBy:       customer2.ID,
+		CustomerAddress: "0xDEADBEEF",
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create contract2")
