@@ -19,7 +19,7 @@ func doWithQueries(ctx context.Context, db *sql.DB, opts *sql.TxOptions, f func(
 	if err != nil {
 		return fmt.Errorf("unable to start transaction: %w", err)
 	}
-	defer tx.Rollback() // nolint: errcheck
+	defer tx.Rollback() //nolint: errcheck
 
 	queries := pgdao.New(nil).WithTx(tx)
 

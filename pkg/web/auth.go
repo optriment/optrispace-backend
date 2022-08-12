@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"optrispace.com/work/pkg/clog"
@@ -13,8 +12,6 @@ import (
 
 const (
 	anyMethod = "*"
-	// Realm for Basic Auth header
-	Realm = "Optrispace"
 )
 
 // exceptions endpoints
@@ -23,6 +20,7 @@ var exceptions = [][2]string{
 	{anyMethod, "/signup"},
 	{anyMethod, "/stop"},
 	{anyMethod, "/info"},
+	{http.MethodGet, "/stats"},
 	{http.MethodGet, "/jobs"},
 	{http.MethodGet, "/jobs/*"},
 	{anyMethod, "/notifications"},
@@ -62,13 +60,6 @@ func Auth(securitySvc service.Security) echo.MiddlewareFunc {
 				goto further
 			}
 
-			if _, e := securitySvc.FromEchoContextByBasicAuth(c, Realm); e != nil {
-				clog.Ectx(c).Warn().Err(e).Msg("Unable to authenticate user against basic auth")
-			} else {
-				goto further
-			}
-
-			c.Response().Header().Set(echo.HeaderWWWAuthenticate, "Basic realm="+strconv.Quote(Realm))
 			return echo.NewHTTPError(http.StatusUnauthorized, "Authorization required")
 
 		further:
