@@ -25,9 +25,6 @@ type (
 const (
 	// BearerPrefix represents suffix for bearer authentication
 	BearerPrefix = "Bearer "
-
-	// BasicPrefix represents suffix for basic authentication
-	BasicPrefix = "Basic "
 )
 
 // UserContextKey means user information in the context
@@ -75,40 +72,6 @@ func (s *SecuritySvc) FromEchoContext(c echo.Context) (*model.UserContext, error
 
 	c.Set(UserContextKey, newUctx)
 	return newUctx, err
-}
-
-// FromEchoContextByBasicAuth implements interface SecurityManager
-// It modifies echo.Context!!!
-func (s *SecuritySvc) FromEchoContextByBasicAuth(c echo.Context, realm string) (*model.UserContext, error) {
-	prefixLen := len(BasicPrefix)
-	auth := c.Request().Header.Get(echo.HeaderAuthorization)
-	if len(auth) > prefixLen && strings.EqualFold(BasicPrefix, auth[:prefixLen]) {
-		auth = auth[prefixLen:]
-
-		b, err := base64.StdEncoding.DecodeString(auth)
-		if err != nil {
-			clog.Ectx(c).Warn().Err(err).Msg("Unable to decode basic auth string")
-			return nil, model.ErrUnauthorized
-		}
-
-		cred := string(b)
-
-		for i := 0; i < len(cred); i++ {
-			if cred[i] == ':' {
-				newUctx, err := s.FromLoginPassword(c.Request().Context(), cred[:i], cred[i+1:])
-				if err != nil {
-					clog.Ectx(c).Warn().Err(err).Str("login", cred[:i]).Msg("Unable to check login and password")
-					return nil, model.ErrUnauthorized
-				}
-
-				c.Set(UserContextKey, newUctx)
-				return newUctx, nil
-			}
-		}
-
-	}
-
-	return nil, model.ErrUnauthorized
 }
 
 // FromLoginPassword implements service.Security

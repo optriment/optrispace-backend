@@ -29,9 +29,6 @@ type (
 		// It will construct *model.UserContext in the context too
 		FromEchoContext(c echo.Context) (*model.UserContext, error)
 
-		// FromEchoContextByBasicAuth extracts user creds from basic auth header for specified realm
-		FromEchoContextByBasicAuth(c echo.Context, realm string) (*model.UserContext, error)
-
 		// FromLoginPassword creates UserContext from login and password in default realm
 		FromLoginPassword(ctx context.Context, login, password string) (*model.UserContext, error)
 	}

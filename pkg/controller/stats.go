@@ -28,7 +28,7 @@ func NewStats(sm service.Security, svc service.Stats) Registerer {
 // Register implements Registerer interface
 func (cont *Stats) Register(e *echo.Echo) {
 	e.GET(resourceStats, cont.stats)
-	log.Debug().Str("controller", resourcePerson).Msg("Registered")
+	log.Debug().Str("controller", resourceStats).Msg("Registered")
 }
 
 func (cont *Stats) stats(c echo.Context) error {
