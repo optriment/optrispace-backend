@@ -5,8 +5,8 @@ This is the default branch that all Pull Requests (PR) should be made against.
 
 Requirements:
 
-* [Docker](#) version 20 or higher
-* [Docker Compose](#) version 1.29 or higher
+* [Docker](https://www.docker.com/products/docker-desktop/) version 20 or higher
+* Docker Compose version 1.29 or higher
 * GNU Make version 4
 
 ## Prepare
