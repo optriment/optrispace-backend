@@ -1,0 +1,1231 @@
+basePath: /
+definitions:
+  controller.acceptParameters:
+    properties:
+      performer_address:
+        type: string
+    type: object
+  controller.deployParameters:
+    properties:
+      contract_address:
+        type: string
+    type: object
+  controller.jobDescription:
+    properties:
+      budget:
+        type: number
+      description:
+        type: string
+      duration:
+        type: integer
+      title:
+        type: string
+    type: object
+  controller.loginParams:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  controller.newApplication:
+    properties:
+      comment:
+        type: string
+      price:
+        type: number
+    type: object
+  controller.newPasswordParams:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    type: object
+  controller.updatePerson:
+    properties:
+      display_name:
+        type: string
+      ethereum_address:
+        type: string
+    type: object
+  echo.HTTPError:
+    properties:
+      message: {}
+    type: object
+  model.Application:
+    properties:
+      applicant:
+        $ref: '#/definitions/model.Person'
+      comment:
+        type: string
+      contract:
+        $ref: '#/definitions/model.Contract'
+      created_at:
+        type: string
+      id:
+        type: string
+      job:
+        $ref: '#/definitions/model.Job'
+      price:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  model.BackendError:
+    properties:
+      message:
+        type: string
+      tech_info:
+        type: string
+    type: object
+  model.Contract:
+    properties:
+      application:
+        $ref: '#/definitions/model.Application'
+      contract_address:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer:
+        $ref: '#/definitions/model.Person'
+      customer_address:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      performer:
+        $ref: '#/definitions/model.Person'
+      performer_address:
+        type: string
+      price:
+        type: number
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.Job:
+    properties:
+      applications_count:
+        type: integer
+      budget:
+        type: number
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer:
+        $ref: '#/definitions/model.Person'
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.Person:
+    properties:
+      created_at:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+      ethereum_address:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+      password:
+        type: string
+      realm:
+        type: string
+      resources:
+        type: string
+    type: object
+  model.Stats:
+    properties:
+      registrations:
+        additionalProperties:
+          type: integer
+        type: object
+    type: object
+  model.UserContext:
+    properties:
+      authenticated:
+        type: boolean
+      subject:
+        $ref: '#/definitions/model.Person'
+      token:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Optrispace Server API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Optrispace API
+  version: "1.0"
+paths:
+  /applications:
+    get:
+      consumes:
+      - application/json
+      description: Returns applications list for the current user — as an applicant
+        or as a job creator
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Application'
+            type: array
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: List applications by current authenticated user
+      tags:
+      - application
+  /applications/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Applicant create new application for a job
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Application'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: application not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Get an application
+      tags:
+      - application
+  /applications/my:
+    get:
+      consumes:
+      - application/json
+      description: Returns applications list made by the current user as an applicant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Application'
+            type: array
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: List applications were applied by the current authenticated user
+      tags:
+      - application
+  /contracts:
+    get:
+      consumes:
+      - application/json
+      description: Returns list of contracts where the current user is performer or
+        customer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Contract'
+            type: array
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: List contracts
+      tags:
+      - contract
+    post:
+      consumes:
+      - application/json
+      description: Creates a new contract based on existent application.
+      parameters:
+      - description: New contract description
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/controller.jobDescription'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "409":
+          description: duplication
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Create a new contract
+      tags:
+      - contract
+  /contracts/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns contract with specified id. This operation is allowed only
+        for performer or customer.
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Get contract
+      tags:
+      - contract
+  /contracts/{id}/accept:
+    post:
+      consumes:
+      - application/json
+      description: Performer is accepting contract
+      parameters:
+      - description: Parameters
+        in: body
+        name: params
+        required: true
+        schema:
+          $ref: '#/definitions/controller.acceptParameters'
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Accept contract
+      tags:
+      - contract
+  /contracts/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Customer is approving performer's working results
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: insufficient funds on the contract in the blockchain
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Approve working results
+      tags:
+      - contract
+  /contracts/{id}/complete:
+    post:
+      consumes:
+      - application/json
+      description: Performer is completing contract
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Complete contract
+      tags:
+      - contract
+  /contracts/{id}/deploy:
+    post:
+      consumes:
+      - application/json
+      description: Customer is deploying contract in the blockchain
+      parameters:
+      - description: Parameters
+        in: body
+        name: params
+        required: true
+        schema:
+          $ref: '#/definitions/controller.deployParameters'
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed or insufficient funds on the contract in
+            the blockchain
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Deploy contract
+      tags:
+      - contract
+  /contracts/{id}/send:
+    post:
+      consumes:
+      - application/json
+      description: Performer is sending working results to customer
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Contract'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Send working results to customer
+      tags:
+      - contract
+  /jobs:
+    get:
+      consumes:
+      - application/json
+      description: Returns list of jobs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Job'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: List jobs
+      tags:
+      - job
+    post:
+      consumes:
+      - application/json
+      description: Creates a new job. Current user will be creator of the job
+      parameters:
+      - description: New job description
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/controller.jobDescription'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Job'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Create a new job
+      tags:
+      - job
+  /jobs/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates existent job by creator only
+      parameters:
+      - description: New job description
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/controller.jobDescription'
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Job'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: job not found or current user is not creator
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Update existent job
+      tags:
+      - job
+  /jobs/{job_id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns job description by job_id
+      parameters:
+      - description: Job ID
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Job'
+        "404":
+          description: job not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Get job description by job_id
+      tags:
+      - job
+  /jobs/{job_id}/applications:
+    get:
+      consumes:
+      - application/json
+      description: Returns applications list for the job by job_id. The current user
+        MUST be an applicant or a job creator.
+      parameters:
+      - description: Job ID
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Application'
+            type: array
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: job not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: List applications for the job
+      tags:
+      - application
+      - job
+    post:
+      consumes:
+      - application/json
+      description: Applicant create new application for a job
+      parameters:
+      - description: New application request
+        in: body
+        name: application
+        required: true
+        schema:
+          $ref: '#/definitions/controller.newApplication'
+      - description: Job ID to apply
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Application'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: job with specified ID is not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed (details in response)
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Make new application for a job
+      tags:
+      - application
+      - job
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Create user security token for supplied conditionals
+      parameters:
+      - description: Login request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controller.loginParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserContext'
+        "422":
+          description: unable to login (login or password is not valid)
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      summary: Login
+      tags:
+      - auth
+  /me:
+    get:
+      consumes:
+      - application/json
+      description: Returns information about current authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserContext'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Returns current user information
+      tags:
+      - auth
+  /password:
+    put:
+      consumes:
+      - application/json
+      description: Change password for current authenticated user
+      parameters:
+      - description: Change password request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controller.newPasswordParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserContext'
+        "401":
+          description: user not authorized or old password is incorrect
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Change password for current authenticated user
+      tags:
+      - auth
+  /persons/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns person description by id
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Person'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: person not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Get person description by id
+      tags:
+      - person
+    put:
+      consumes:
+      - application/json
+      description: Updates existent person. User must be authenticated as this person.
+      parameters:
+      - description: Update person details
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/controller.updatePerson'
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: person not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Update existent person
+      tags:
+      - person
+  /persons/{id}/resources:
+    put:
+      consumes:
+      - application/json
+      description: Updates resources for existent person. User must be authenticated
+        as this person.
+      parameters:
+      - description: Person resources in JSON
+        in: body
+        name: job
+        required: true
+        schema:
+          type: string
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: invalid format (body should be formatted as JSON)
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: person not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Set resources for person
+      tags:
+      - person
+  /signup:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with specified description
+      parameters:
+      - description: Register new user
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserContext'
+        "422":
+          description: input object is invalid
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /stats:
+    get:
+      description: Get statistics for user registrations grouped by days
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Stats'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      summary: Get statistics for user registrations
+      tags:
+      - stats
+securityDefinitions:
+  BearerToken:
+    description: Bearer token in Authorization header
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

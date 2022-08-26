@@ -585,7 +585,7 @@ func TestPersonResources(t *testing.T) {
 		if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "invalid format", e["message"])
+			assert.Equal(t, "body is not properly formatted json", e["message"])
 		}
 	})
 

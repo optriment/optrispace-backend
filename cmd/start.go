@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/viper"
 	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/controller"
+	_ "optrispace.com/work/pkg/docs"
 	"optrispace.com/work/pkg/service"
 	"optrispace.com/work/pkg/service/ethsvc"
 	"optrispace.com/work/pkg/web"
@@ -92,9 +93,6 @@ func doStart(ctx context.Context) error {
 		return c.JSON(http.StatusOK, c.Echo().Routes())
 	})
 
-	// stopping
-	controller.AddStop(e, cancel)
-
 	if err := addControllers(ctx, e); err != nil {
 		log.Error().Err(err).Msg("Unable to create application")
 	}
@@ -153,6 +151,7 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 		controller.NewStats(sm, service.NewStats(db)),
 	)
 
+	controller.SwaggerRegister(e)
 	for _, r := range rr {
 		r.Register(e)
 	}

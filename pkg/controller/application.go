@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
 	"path"
 
@@ -36,22 +34,35 @@ func (cont *Application) Register(e *echo.Echo) {
 	e.GET(resourceApplication+"/my", cont.listMy)
 	e.GET(resourceApplication, cont.list)
 	e.GET(resourceJob+"/:job_id/"+resourceApplication, cont.list)
-	// e.PUT(name+"/:id", cont.update)
 	log.Debug().Str("controller", resourceApplication).Msg("Registered")
 }
 
-func (cont *Application) add(c echo.Context) error {
-	type incomingApplication struct {
-		Comment string          `json:"comment,omitempty"`
-		Price   decimal.Decimal `json:"price,omitempty"`
-	}
+type newApplication struct {
+	Comment string          `json:"comment,omitempty"`
+	Price   decimal.Decimal `json:"price,omitempty"`
+}
 
+// @Summary     Make new application for a job
+// @Description Applicant create new application for a job
+// @Tags        application, job
+// @Accept      json
+// @Produce     json
+// @Param       application body     controller.newApplication true "New application request"
+// @Param       job_id      path     string                    true "Job ID to apply"
+// @Success     200         {object} model.Application
+// @Failure     401         {object} model.BackendError "user not authorized"
+// @Failure     404         {object} model.BackendError "job with specified ID is not found"
+// @Failure     422         {object} model.BackendError "validation failed (details in response)"
+// @Failure     500         {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /jobs/{job_id}/applications [post]
+func (cont *Application) add(c echo.Context) error {
 	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 
-	ie := new(incomingApplication)
+	ie := new(newApplication)
 
 	if e := c.Bind(ie); e != nil {
 		return e
@@ -78,27 +89,59 @@ func (cont *Application) add(c echo.Context) error {
 		Job:       &model.Job{ID: c.Param("job_id")},
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create application %+v: %w", ie, err)
+		return err
 	}
 
 	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceApplication, createdAppl.ID))
 	return c.JSON(http.StatusCreated, createdAppl)
 }
 
+// @Summary     Get an application
+// @Description Applicant create new application for a job
+// @Tags        application
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string true "Application ID"
+// @Success     200 {object} model.Application
+// @Failure     401    {object} model.BackendError "user not authorized"
+// @Failure     404 {object} model.BackendError "application not found"
+// @Failure     500    {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /applications/{id} [get]
 func (cont *Application) get(c echo.Context) error {
 	ctx := c.Request().Context()
 	id := c.Param("id")
 	o, err := cont.svc.Get(ctx, id)
-	if errors.Is(model.ErrEntityNotFound, err) {
-		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
-	}
-
 	if err != nil {
 		return err
 	}
 	return c.JSON(http.StatusOK, o)
 }
 
+// @Summary     List applications by current authenticated user
+// @Description Returns applications list for the current user — as an applicant or as a job creator
+// @Tags        application
+// @Accept      json
+// @Produce     json
+// @Success     200 {array}  model.Application
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /applications [get]
+func _() {}
+
+// @Summary     List applications for the job
+// @Description Returns applications list for the job by job_id. The current user MUST be an applicant or a job creator.
+// @Tags        application, job
+// @Accept      json
+// @Produce     json
+// @Param       job_id path     string true "Job ID"
+// @Success     200    {array}  model.Application
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     404    {object} model.BackendError "job not found"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /jobs/{job_id}/applications [get]
 func (cont *Application) list(c echo.Context) error {
 	ctx := c.Request().Context()
 	jobID := c.Param("job_id")
@@ -124,6 +167,16 @@ func (cont *Application) list(c echo.Context) error {
 	return c.JSON(http.StatusOK, oo)
 }
 
+// @Summary     List applications were applied by the current authenticated user
+// @Description Returns applications list made by the current user as an applicant
+// @Tags        application
+// @Accept      json
+// @Produce     json
+// @Success     200 {array}  model.Application
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /applications/my [get]
 func (cont *Application) listMy(c echo.Context) error {
 	ctx := c.Request().Context()
 

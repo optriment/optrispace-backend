@@ -32,6 +32,7 @@ func (cont *Notification) Register(e *echo.Echo) {
 	log.Debug().Str("controller", resourceNotification).Msg("Registered")
 }
 
+// Warning! We should NOT add this method to the Swagger specification
 func (cont *Notification) add(c echo.Context) error {
 	bb, err := io.ReadAll(c.Request().Body)
 	if err != nil {

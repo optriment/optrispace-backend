@@ -24,6 +24,7 @@ var exceptions = [][2]string{
 	{http.MethodGet, "/jobs"},
 	{http.MethodGet, "/jobs/*"},
 	{anyMethod, "/notifications"},
+	{http.MethodGet, "/swagger/*"},
 }
 
 func authSkip(c echo.Context) bool {

@@ -40,6 +40,7 @@ func (cont *Person) Register(e *echo.Echo) {
 }
 
 // add is NOT signup method. For signup please see /signup endpoint!
+// Warning! We should NOT add this method to the Swagger specification
 func (cont *Person) add(c echo.Context) error {
 	input := new(model.Person)
 
@@ -57,6 +58,18 @@ func (cont *Person) add(c echo.Context) error {
 	return c.JSON(http.StatusCreated, o)
 }
 
+// @Summary     Get person description by id
+// @Description Returns person description by id
+// @Tags        person
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string true "Person ID"
+// @Success     200 {object} model.Person
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     404 {object} model.BackendError "person not found"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /persons/{id} [get]
 func (cont *Person) get(c echo.Context) error {
 	id := c.Param("id")
 	o, err := cont.svc.Get(c.Request().Context(), id)
@@ -66,6 +79,7 @@ func (cont *Person) get(c echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
+// Warning! We should NOT add this method to the Swagger specification
 func (cont *Person) list(c echo.Context) error {
 	oo, err := cont.svc.List(c.Request().Context())
 	if err != nil {
@@ -74,6 +88,28 @@ func (cont *Person) list(c echo.Context) error {
 	return c.JSON(http.StatusOK, oo)
 }
 
+type updatePerson struct {
+	EthereumAddress string `json:"ethereum_address,omitempty"`
+	DisplayName     string `json:"display_name,omitempty"`
+}
+
+var _ = updatePerson{}
+
+// @Summary     Update existent person
+// @Description Updates existent person. User must be authenticated as this person.
+// @Tags        person
+// @Accept      json
+// @Produce     json
+// @Param       job body controller.updatePerson true "Update person details"
+// @Param       id  path string true "Person ID"
+// @Success     200
+// @Failure     400 {object} model.BackendError "invalid format"
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     404 {object} model.BackendError "person not found"
+// @Failure     403 {object} model.BackendError "insufficient rights"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /persons/{id} [put]
 func (cont *Person) update(c echo.Context) error {
 	ie := make(map[string]any)
 
@@ -90,6 +126,21 @@ func (cont *Person) update(c echo.Context) error {
 	return cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, ie)
 }
 
+// @Summary     Set resources for person
+// @Description Updates resources for existent person. User must be authenticated as this person.
+// @Tags        person
+// @Accept      json
+// @Produce     json
+// @Param       job body string true "Person resources in JSON"
+// @Param       id  path string                  true "Person ID"
+// @Success     200
+// @Failure     400 {object} model.BackendError "invalid format (body should be formatted as JSON)"
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     404 {object} model.BackendError "person not found"
+// @Failure     403 {object} model.BackendError "insufficient rights"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /persons/{id}/resources [put]
 func (cont *Person) setResources(c echo.Context) error {
 	ie := make(map[string]any)
 
@@ -109,7 +160,11 @@ func (cont *Person) setResources(c echo.Context) error {
 
 	// just for validation purposes
 	if e := json.Unmarshal(bb, &ie); e != nil {
-		return fmt.Errorf("invalid JSON in body: %w", model.ErrInvalidFormat)
+		return &model.BackendError{
+			Cause:    model.ErrInvalidFormat,
+			Message:  "body is not properly formatted json",
+			TechInfo: e.Error(),
+		}
 	}
 
 	err = cont.svc.SetResources(c.Request().Context(), id, uc.Subject.ID, bb)

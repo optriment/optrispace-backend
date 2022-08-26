@@ -154,9 +154,17 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string
 		_, params.BudgetChange = patch["budget"]
 		_, params.DurationChange = patch["duration"]
 
+		// force to make budget string
+		if params.BudgetChange {
+			patch["budget"] = fmt.Sprint(patch["budget"])
+		}
+
 		err := mapstructure.Decode(patch, params)
 		if err != nil {
-			return fmt.Errorf("unable to decode patch from struct: %w", err)
+			return &model.BackendError{
+				Cause:   model.ErrInvalidFormat,
+				Message: err.Error(),
+			}
 		}
 
 		if params.BudgetChange {
