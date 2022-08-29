@@ -8,7 +8,7 @@ import (
 
 // Main (main!) purposes of these types is a representation
 // entities when returning to the REST requester
-// Thererefore there are computed fields in these types
+// Therefore there are computed fields in these types
 type (
 	// Job is a job offer publication
 	Job struct {

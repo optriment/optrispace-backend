@@ -37,13 +37,23 @@ func (cont *Auth) Register(e *echo.Echo) {
 	log.Debug().Str("controller", resourceAuth).Msg("Registered")
 }
 
-func (cont *Auth) login(c echo.Context) error {
-	type incoming struct {
-		Login    string `json:"login,omitempty"`
-		Password string `json:"password,omitempty"`
-	}
+type loginParams struct {
+	Login    string `json:"login,omitempty"`
+	Password string `json:"password,omitempty"`
+}
 
-	ie := new(incoming)
+// @Summary     Login
+// @Description Create user security token for supplied conditionals
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     controller.loginParams true "Login request"
+// @Success     200  {object} model.UserContext
+// @Failure     422  {object} model.BackendError "unable to login (login or password is not valid)"
+// @Failure     500  {object} echo.HTTPError{message=string}
+// @Router      /login [post]
+func (cont *Auth) login(c echo.Context) error {
+	ie := new(loginParams)
 	if err := c.Bind(ie); err != nil {
 		return err
 	}
@@ -58,6 +68,16 @@ func (cont *Auth) login(c echo.Context) error {
 	return c.JSON(http.StatusOK, p)
 }
 
+// @Summary     Register a new user
+// @Description Register a new user with specified description
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     model.Person true "Register new user"
+// @Success     200  {object} model.UserContext
+// @Failure     422  {object} echo.HTTPError{message=string} "input object is invalid"
+// @Failure     500  {object} echo.HTTPError{message=string}
+// @Router      /signup [post]
 func (cont *Auth) signup(c echo.Context) error {
 	ie := new(model.Person)
 
@@ -87,6 +107,16 @@ func (cont *Auth) signup(c echo.Context) error {
 	})
 }
 
+// @Summary     Returns current user information
+// @Description Returns information about current authenticated user
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Success     200  {object} model.UserContext
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     500  {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /me [get]
 func (cont *Auth) me(c echo.Context) error {
 	uctx, err := cont.sm.FromEchoContext(c)
 	if err != nil {
@@ -96,17 +126,29 @@ func (cont *Auth) me(c echo.Context) error {
 	return c.JSON(http.StatusOK, uctx)
 }
 
-func (cont *Auth) newPassword(c echo.Context) error {
-	type inputParameters struct {
-		OldPassword string `json:"old_password,omitempty"`
-		NewPassword string `json:"new_password,omitempty"`
-	}
+type newPasswordParams struct {
+	OldPassword string `json:"old_password,omitempty"`
+	NewPassword string `json:"new_password,omitempty"`
+}
 
+// @Summary     Change password for current authenticated user
+// @Description Change password for current authenticated user
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     controller.newPasswordParams true "Change password request"
+// @Success     200 {object} model.UserContext
+// @Failure     401  {object} model.BackendError "user not authorized or old password is incorrect"
+// @Failure     422  {object} model.BackendError "validation failed"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /password [put]
+func (cont *Auth) newPassword(c echo.Context) error {
 	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
-	ie := new(inputParameters)
+	ie := new(newPasswordParams)
 	if e := c.Bind(ie); e != nil {
 		return e
 	}

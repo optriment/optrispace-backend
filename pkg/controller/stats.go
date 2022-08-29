@@ -31,6 +31,13 @@ func (cont *Stats) Register(e *echo.Echo) {
 	log.Debug().Str("controller", resourceStats).Msg("Registered")
 }
 
+// @Summary     Get statistics for user registrations
+// @Description Get statistics for user registrations grouped by days
+// @Tags        stats
+// @Produce     json
+// @Success     200 {object} model.Stats
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Router      /stats [get]
 func (cont *Stats) stats(c echo.Context) error {
 	o, err := cont.svc.Stats(c.Request().Context())
 	if err != nil {

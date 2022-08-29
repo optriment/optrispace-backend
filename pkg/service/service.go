@@ -106,6 +106,7 @@ type (
 
 	// Stats service for statistic information
 	Stats interface {
+		// Stats returns users registrations number grouped by days
 		Stats(ctx context.Context) (*model.Stats, error)
 	}
 )

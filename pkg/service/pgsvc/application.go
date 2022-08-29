@@ -49,6 +49,15 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			if pqe.Code == "23505" {
 				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrApplicationAlreadyExists)
 			}
+
+			if pqe.Code == "23503" && pqe.Constraint == "applications_job_id_fkey" {
+				return &model.BackendError{
+					Cause:    model.ErrEntityNotFound,
+					Message:  "job not found",
+					TechInfo: application.Job.ID,
+				}
+			}
+
 		}
 
 		if err != nil {

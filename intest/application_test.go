@@ -195,6 +195,29 @@ func TestApplication(t *testing.T) {
 		}
 	})
 
+	t.Run("post•none-existent-job", func(t *testing.T) {
+		body := `{
+			"comment": "It is easy!",
+			"price": "123.670000009899232"
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, appURL+"/jobs/"+"non-existent-job-id"+"/"+resourceName, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := model.BackendError{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.EqualValues(t, "job not found", e.Message)
+			assert.EqualValues(t, "non-existent-job-id", e.TechInfo)
+		}
+	})
+
 	t.Run("post•price-required", func(t *testing.T) {
 		body := `{
 			"comment": "Beautiful life!"

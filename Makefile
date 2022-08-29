@@ -4,6 +4,8 @@ LINTBIN = ./.bin/golangci-lint
 STRINGER = ./.bin/stringer
 SHELL := bash
 
+SWAGBIN = ./.bin/swag
+
 DB_URL	?=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
 APP_URL	?=http://localhost:8080
 
@@ -78,7 +80,7 @@ test-migrate-up: # Apply migrations in test database
 test-migrate-drop: # Drop migrations in test database
 	cd pkg/db/db-migrations && env DB_URL="${TEST_DB_URL}" make migrate-drop
 
-$(STRINGER):
+$(STRINGER): # Installs stringer tool
 	@echo "Getting $@"
 	@mkdir -p $(@D)
 	GOBIN=$(abspath $(@D)) go install golang.org/x/tools/cmd/stringer@v0.1.10
@@ -87,3 +89,16 @@ $(STRINGER):
 .PHONY: generate
 generate: $(STRINGER) # code generate with go tools
 	go generate ./...
+
+$(SWAGBIN): # Installs swag tool (Swagger 2.0 description generator)
+	@echo "Getting $@"
+	@mkdir -p $(@D)
+	GOBIN=$(abspath $(@D)) go install github.com/swaggo/swag/cmd/swag@v1.8.4
+
+.PHONY: swag-init
+swag-init: $(SWAGBIN) # (re)generate swagger specification with swag
+	$(SWAGBIN) init --dir ./ --generalInfo ./pkg/controller/api.go --parseDependency --output ./pkg/docs
+
+.PHONY: swag-fmt
+swag-fmt: $(SWAGBIN) # format swag comment annotations 
+	$(SWAGBIN) fmt --dir ./pkg/controller --generalInfo api.go 

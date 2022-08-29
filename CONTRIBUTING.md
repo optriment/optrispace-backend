@@ -94,3 +94,21 @@ Now you are able to run integration tests:
 ```sh
 make test-integration
 ```
+
+## Swagger
+
+### View Swagger specification
+
+The application supports Swagger 2.0 specification by using [swag](https://github.com/swaggo/swag).
+
+After starting the application, you can investigate into API just open link [localhost:8080](http://localhost:8080/swagger/index.html). But be aware about actual published port and host to visit interactive the Swagger specification.
+
+### Edit Swagger specification
+
+After changing Swagger related declarative comments, you have to format these comments and update specification. For this, issue command:
+
+```
+make swag-fmt swag-init
+```
+
+Be patient while swag tool be downloaded check result. All specification changes must be committed into repository. Use git command for it.
