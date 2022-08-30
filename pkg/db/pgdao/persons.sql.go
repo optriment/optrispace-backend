@@ -17,7 +17,7 @@ insert into persons (
 ) values (
     $1, $2, $3, $4, $5, $6, $7
 ) 
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin
 `
 
 type PersonAddParams struct {
@@ -52,12 +52,13 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		&i.EthereumAddress,
 		&i.Resources,
 		&i.AccessToken,
+		&i.IsAdmin,
 	)
 	return i, err
 }
 
 const personGet = `-- name: PersonGet :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin from persons
 	where id = $1::varchar
 `
 
@@ -75,12 +76,13 @@ func (q *Queries) PersonGet(ctx context.Context, id string) (Person, error) {
 		&i.EthereumAddress,
 		&i.Resources,
 		&i.AccessToken,
+		&i.IsAdmin,
 	)
 	return i, err
 }
 
 const personGetByAccessToken = `-- name: PersonGetByAccessToken :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin from persons
 	where access_token = $1::varchar
 `
 
@@ -98,12 +100,13 @@ func (q *Queries) PersonGetByAccessToken(ctx context.Context, accessToken string
 		&i.EthereumAddress,
 		&i.Resources,
 		&i.AccessToken,
+		&i.IsAdmin,
 	)
 	return i, err
 }
 
 const personGetByLogin = `-- name: PersonGetByLogin :one
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons p
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin from persons p
 	where p.login = $1::varchar and p.realm = $2::varchar
 `
 
@@ -126,6 +129,7 @@ func (q *Queries) PersonGetByLogin(ctx context.Context, arg PersonGetByLoginPara
 		&i.EthereumAddress,
 		&i.Resources,
 		&i.AccessToken,
+		&i.IsAdmin,
 	)
 	return i, err
 }
@@ -141,7 +145,7 @@ set
 
 where
     id = $5::varchar
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin
 `
 
 type PersonPatchParams struct {
@@ -172,6 +176,7 @@ func (q *Queries) PersonPatch(ctx context.Context, arg PersonPatchParams) (Perso
 		&i.EthereumAddress,
 		&i.Resources,
 		&i.AccessToken,
+		&i.IsAdmin,
 	)
 	return i, err
 }
@@ -182,7 +187,7 @@ set
     access_token = $1::varchar
 where
     id = $2::varchar
-returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin
 `
 
 type PersonSetAccessTokenParams struct {
@@ -193,6 +198,24 @@ type PersonSetAccessTokenParams struct {
 // Sets the person's access token
 func (q *Queries) PersonSetAccessToken(ctx context.Context, arg PersonSetAccessTokenParams) error {
 	_, err := q.db.ExecContext(ctx, personSetAccessToken, arg.AccessToken, arg.ID)
+	return err
+}
+
+const personSetIsAdmin = `-- name: PersonSetIsAdmin :exec
+update persons
+set
+    is_admin = $1::boolean
+where
+    id = $2::varchar
+`
+
+type PersonSetIsAdminParams struct {
+	IsAdmin bool
+	ID      string
+}
+
+func (q *Queries) PersonSetIsAdmin(ctx context.Context, arg PersonSetIsAdminParams) error {
+	_, err := q.db.ExecContext(ctx, personSetIsAdmin, arg.IsAdmin, arg.ID)
 	return err
 }
 
@@ -233,7 +256,7 @@ func (q *Queries) PersonSetResources(ctx context.Context, arg PersonSetResources
 }
 
 const personsList = `-- name: PersonsList :many
-select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token from persons
+select id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin from persons
 `
 
 func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
@@ -256,6 +279,7 @@ func (q *Queries) PersonsList(ctx context.Context) ([]Person, error) {
 			&i.EthereumAddress,
 			&i.Resources,
 			&i.AccessToken,
+			&i.IsAdmin,
 		); err != nil {
 			return nil, err
 		}

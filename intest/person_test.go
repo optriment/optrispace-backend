@@ -31,6 +31,11 @@ func TestPerson(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	require.NoError(t, queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
+		IsAdmin: true,
+		ID:      creator.ID,
+	}))
+
 	t.Run("post full", func(t *testing.T) {
 		body := `{
 			"realm": "my-realm",
@@ -361,7 +366,6 @@ func TestPersonResources(t *testing.T) {
 	personURL := appURL + "/persons"
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
-	queries := pgdao.New(db)
 
 	t.Run("put resources to new person", func(t *testing.T) {
 		thePerson, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
@@ -377,6 +381,11 @@ func TestPersonResources(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
+
+		require.NoError(t, queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
+			IsAdmin: true,
+			ID:      thePerson.ID,
+		}))
 
 		body := `{
 			"GitHub": "https://github.com/almaz-uno",
@@ -446,6 +455,11 @@ func TestPersonResources(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
+
+		require.NoError(t, queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
+			IsAdmin: true,
+			ID:      thePerson.ID,
+		}))
 
 		err = queries.PersonSetResources(ctx, pgdao.PersonSetResourcesParams{
 			Resources: []byte(`{"field":"some value"}`),
@@ -654,4 +668,79 @@ func TestPersonResources(t *testing.T) {
 			assert.EqualValues(t, "insufficient rights", e.Message)
 		}
 	})
+}
+
+func TestIsAdmin(t *testing.T) {
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+	strangerUser, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
+		Password: "12345678",
+	})
+	require.NoError(t, err)
+
+	passengerUser, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
+		Password: "12345678",
+	})
+	require.NoError(t, err)
+
+	adminUser, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
+		Password: "12345678",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
+		IsAdmin: true,
+		ID:      adminUser.ID,
+	}))
+
+	unauthorized := func(method, url string) func(t *testing.T) {
+		return func(t *testing.T) {
+			req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBufferString("{}"))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+strangerUser.AccessToken)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := model.BackendError{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.EqualValues(t, "insufficient rights", e.Message)
+			}
+		}
+	}
+
+	authorized := func(method, url string) func(t *testing.T) {
+		return func(t *testing.T) {
+			req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBufferString("{}"))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+adminUser.AccessToken)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.True(t, int(res.StatusCode/100) == 2, "Invalid result status code '%s' (must be 2xx)", res.Status) {
+			}
+		}
+	}
+
+	rr := strings.NewReplacer("/", ">")
+
+	cases := []struct{ method, url string }{
+		{http.MethodPost, "/persons"},
+		{http.MethodGet, "/persons"},
+		{http.MethodGet, "/persons/" + passengerUser.ID},
+	}
+
+	for _, c := range cases {
+		t.Run(rr.Replace(c.method+" "+c.url+" unauthorized"), unauthorized(c.method, appURL+c.url))
+	}
+
+	for _, c := range cases {
+		t.Run(rr.Replace(c.method+" "+c.url+" authorized"), authorized(c.method, appURL+c.url))
+	}
 }

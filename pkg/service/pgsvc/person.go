@@ -102,6 +102,7 @@ func personDBtoModel(o pgdao.Person) *model.Person {
 		Email:       o.Email,
 		Resources:   string(o.Resources),
 		AccessToken: o.AccessToken.String,
+		IsAdmin:     o.IsAdmin,
 	}
 }
 

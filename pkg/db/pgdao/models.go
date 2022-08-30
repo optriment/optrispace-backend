@@ -103,4 +103,6 @@ type Person struct {
 	Resources json.RawMessage
 	// Person's personal access token for Bearer authentication schema
 	AccessToken sql.NullString
+	// Does user have admin privileges?
+	IsAdmin bool
 }

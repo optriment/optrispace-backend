@@ -48,6 +48,12 @@ func (cont *Person) add(c echo.Context) error {
 		return err
 	}
 
+	if uc, e := cont.sm.FromEchoContext(c); e != nil {
+		return e
+	} else if !uc.Subject.IsAdmin {
+		return model.ErrInsufficientRights
+	}
+
 	input.ID = ""
 	o, err := cont.svc.Add(c.Request().Context(), input)
 	if err != nil {
@@ -72,6 +78,13 @@ func (cont *Person) add(c echo.Context) error {
 // @Router      /persons/{id} [get]
 func (cont *Person) get(c echo.Context) error {
 	id := c.Param("id")
+
+	if uc, e := cont.sm.FromEchoContext(c); e != nil {
+		return e
+	} else if !uc.Subject.IsAdmin {
+		return model.ErrInsufficientRights
+	}
+
 	o, err := cont.svc.Get(c.Request().Context(), id)
 	if err != nil {
 		return err
@@ -81,6 +94,12 @@ func (cont *Person) get(c echo.Context) error {
 
 // Warning! We should NOT add this method to the Swagger specification
 func (cont *Person) list(c echo.Context) error {
+	if uc, e := cont.sm.FromEchoContext(c); e != nil {
+		return e
+	} else if !uc.Subject.IsAdmin {
+		return model.ErrInsufficientRights
+	}
+
 	oo, err := cont.svc.List(c.Request().Context())
 	if err != nil {
 		return err
