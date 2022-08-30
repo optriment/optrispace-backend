@@ -36,6 +36,7 @@ type (
 		EthereumAddress string    `json:"ethereum_address,omitempty"`
 		Resources       string    `json:"resources,omitempty"`
 		AccessToken     string    `json:"-"`
+		IsAdmin         bool      `json:"is_admin,omitempty"`
 	}
 
 	// Project is a sequence of contracts group

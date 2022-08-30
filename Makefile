@@ -28,6 +28,11 @@ migrate-down: # Downgrade DB one step down
 migrate-drop: # Drop database migrations
 	cd pkg/db/db-migrations && make $@
 
+.PHONY: migrate-new-script
+migrate-new-script: # Add a new script. Specify title in form SCRIPT_TITLE=<title>
+	cd pkg/db/db-migrations && make $@
+
+
 .PHONY: docker-compose-build
 docker-compose-build: # Build Docker image
 	cd ops/docker-compose-dev && docker-compose build --no-cache

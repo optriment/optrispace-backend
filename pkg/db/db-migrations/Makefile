@@ -1,12 +1,12 @@
-version		=v4.15.1
+version		=v4.15.2
 platform	?=linux
 
 DB_URL	?=postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
-SCRDIR 	?=file://./scripts
+SCRDIR 	?=./scripts
 
 MBIN	= ./.bin/migrate
 
-.phony: all
+.PHONY: all
 all: migrate-up
 
 #https://github.com/golang-migrate/migrate
@@ -16,15 +16,18 @@ $(MBIN):
 	@mkdir -p $(@D)
 	curl -L https://github.com/golang-migrate/migrate/releases/download/$(version)/migrate.$(platform)-amd64.tar.gz | tar -C $(dir $(MBIN)) -xvz
 
-.phony: migrate-up
+.PHONY: migrate-up
 migrate-up: $(MBIN)
-	$(MBIN) -database $(DB_URL) -source $(SCRDIR) -verbose up
+	$(MBIN) -database $(DB_URL) -source file://$(SCRDIR) -verbose up
 
-.phony: migrate-down
+.PHONY: migrate-down
 migrate-down: $(MBIN)
-	$(MBIN) -database $(DB_URL) -source $(SCRDIR) -verbose down 1
+	$(MBIN) -database $(DB_URL) -source file://$(SCRDIR) -verbose down 1
 
-.phony: migrate-drop
+.PHONY: migrate-drop
 migrate-drop: $(MBIN)
-	$(MBIN) -database $(DB_URL) -source $(SCRDIR) -verbose drop -f
+	$(MBIN) -database $(DB_URL) -source file://$(SCRDIR) -verbose drop -f
 
+.PHONY: migrate-new-script
+migrate-new-script: $(MBIN) # Add new script. Specify title in form SCRIPT_TITLE=<title>
+	$(MBIN) create -dir $(SCRDIR) -ext sql $(SCRIPT_TITLE)

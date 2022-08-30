@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog/log"
+	"optrispace.com/work/pkg/db/pgdao"
 
 	_ "github.com/lib/pq"
 )
@@ -18,8 +19,9 @@ var (
 )
 
 var (
-	db  *sql.DB
-	ctx = context.Background()
+	db      *sql.DB
+	queries *pgdao.Queries
+	ctx     = context.Background()
 )
 
 // token of default user
@@ -42,6 +44,8 @@ func TestMain(m *testing.M) {
 		log.Fatal().Err(err).Str("dbURL", dbURL).Msg("unable to open DB")
 	}
 	defer db.Close()
+
+	queries = pgdao.New(db)
 
 	if err := cmd.Run(); err != nil {
 		log.Fatal().Err(err).Msg("unable to execute")

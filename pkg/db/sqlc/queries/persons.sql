@@ -33,6 +33,14 @@ where
     id = @id::varchar
 ;
 
+-- name: PersonSetIsAdmin :exec
+update persons
+set
+    is_admin = @is_admin::boolean
+where
+    id = @id::varchar
+;
+
 -- name: PersonPatch :one
 update persons
 set
