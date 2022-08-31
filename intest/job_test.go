@@ -487,3 +487,122 @@ func TestJobEdit(t *testing.T) {
 		}
 	})
 }
+
+func TestBlockedAt(t *testing.T) {
+	require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+	theCreator, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:           pgdao.NewID(),
+		Realm:        "inhouse",
+		Login:        "creator",
+		PasswordHash: "123",
+		DisplayName:  "The Creator",
+		Email:        "creator@sample.com",
+		AccessToken: sql.NullString{
+			String: "abc",
+			Valid:  true,
+		},
+	})
+	require.NoError(t, err)
+
+	theStranger, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:           pgdao.NewID(),
+		Realm:        "inhouse",
+		Login:        "stranger",
+		PasswordHash: "123",
+		DisplayName:  "The Stranger",
+		Email:        "stranger@sample.com",
+		AccessToken: sql.NullString{
+			String: "cde",
+			Valid:  true,
+		},
+	})
+	require.NoError(t, err)
+
+	theForester, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:           pgdao.NewID(),
+		Realm:        "inhouse",
+		Login:        "forester",
+		PasswordHash: "123",
+		DisplayName:  "The Forester",
+		Email:        "forester@sample.com",
+		AccessToken: sql.NullString{
+			String: "kjh",
+			Valid:  true,
+		},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
+		IsAdmin: true,
+		ID:      theForester.ID,
+	}))
+
+	_, err = queries.JobAdd(ctx, pgdao.JobAddParams{
+		ID:          pgdao.NewID(),
+		Title:       "Number 1",
+		Description: "Not blocked",
+		CreatedBy:   theCreator.ID,
+	})
+	require.NoError(t, err)
+
+	j2, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+		ID:          pgdao.NewID(),
+		Title:       "Number 2",
+		Description: "Blocked",
+		CreatedBy:   theCreator.ID,
+	})
+	require.NoError(t, err)
+
+	_, err = queries.JobAdd(ctx, pgdao.JobAddParams{
+		ID:          pgdao.NewID(),
+		Title:       "Number 3",
+		Description: "Not blocked",
+		CreatedBy:   theCreator.ID,
+	})
+	require.NoError(t, err)
+
+	jj, err := queries.JobsList(ctx)
+	require.NoError(t, err)
+	require.Len(t, jj, 3)
+
+	j, err := queries.JobGet(ctx, j2.ID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, j.ID)
+
+	t.Run("block by unauthorized actor", func(t *testing.T) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, appURL+"/jobs/"+j2.ID+"/block", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+theStranger.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := model.BackendError{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.EqualValues(t, "insufficient rights", e.Message)
+		}
+	})
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, appURL+"/jobs/"+j2.ID+"/block", nil)
+	require.NoError(t, err)
+	req.Header.Set(clog.HeaderXHint, t.Name())
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+theForester.AccessToken.String)
+
+	res, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+	}
+
+	jj, err = queries.JobsList(ctx)
+	require.NoError(t, err)
+	require.Len(t, jj, 2)
+
+	_, err = queries.JobGet(ctx, j2.ID)
+	require.ErrorIs(t, err, sql.ErrNoRows)
+}

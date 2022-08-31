@@ -147,6 +147,8 @@ definitions:
         type: string
       id:
         type: string
+      is_admin:
+        type: boolean
       login:
         type: string
       password:
@@ -778,6 +780,51 @@ paths:
       security:
       - BearerToken: []
       summary: Update existent job
+      tags:
+      - job
+  /jobs/{id}/block:
+    post:
+      consumes:
+      - application/json
+      description: Blocks existent job to hide it from public access. To execute this
+        action, user must have admin privileges.
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Job'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: user is not admin
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Block a job
       tags:
       - job
   /jobs/{job_id}:

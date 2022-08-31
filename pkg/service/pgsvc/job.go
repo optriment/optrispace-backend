@@ -141,6 +141,13 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 	})
 }
 
+// Block implements service.Job interface
+func (s *JobSvc) Block(ctx context.Context, id string) error {
+	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		return queries.JobBlock(ctx, id)
+	})
+}
+
 // Patch implements service.Job interface
 func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error) {
 	var result *model.Job
