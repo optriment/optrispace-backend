@@ -26,17 +26,17 @@ type (
 
 	// Person — customer, executor, seller, buyer etc.
 	Person struct {
-		ID              string    `json:"id,omitempty"`
-		Realm           string    `json:"realm,omitempty"`
-		Login           string    `json:"login,omitempty"`
+		ID              string    `json:"id"`
+		Realm           string    `json:"realm"`
+		Login           string    `json:"login"`
 		Password        string    `json:"password,omitempty"`
-		DisplayName     string    `json:"display_name,omitempty"`
-		CreatedAt       time.Time `json:"created_at,omitempty"`
-		Email           string    `json:"email,omitempty"`
-		EthereumAddress string    `json:"ethereum_address,omitempty"`
-		Resources       string    `json:"resources,omitempty"`
+		DisplayName     string    `json:"display_name"`
+		CreatedAt       time.Time `json:"created_at"`
+		Email           string    `json:"email"`
+		EthereumAddress string    `json:"ethereum_address"`
+		Resources       string    `json:"resources"`
 		AccessToken     string    `json:"-"`
-		IsAdmin         bool      `json:"is_admin,omitempty"`
+		IsAdmin         bool      `json:"is_admin"`
 	}
 
 	// Project is a sequence of contracts group
