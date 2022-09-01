@@ -79,6 +79,8 @@ type Job struct {
 	UpdatedAt time.Time
 	// Who created this job and should pay for it
 	CreatedBy string
+	// Job is blocked if this field is not null
+	BlockedAt sql.NullTime
 }
 
 // Person who can pay, get or earn money

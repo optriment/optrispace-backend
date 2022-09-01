@@ -39,6 +39,9 @@ type (
 
 		// Patch partially updates existing Job object
 		Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error)
+
+		// Block job
+		Block(ctx context.Context, id string) error
 	}
 
 	// Person is a person who pay or earn

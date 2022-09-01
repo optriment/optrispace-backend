@@ -35,6 +35,7 @@ func (cont *Job) Register(e *echo.Echo) {
 	e.GET(resourceJob, cont.list)
 	e.GET(resourceJob+"/:id", cont.get)
 	e.PUT(resourceJob+"/:id", cont.update)
+	e.POST(resourceJob+"/:id/block", cont.block)
 	log.Debug().Str("controller", resourceJob).Msg("Registered")
 }
 
@@ -147,7 +148,7 @@ func (cont *Job) get(c echo.Context) error {
 // @Accept      json
 // @Produce     json
 // @Param       job body     controller.jobDescription true "New job description"
-// @Param       id  path     string                    true "Job ID"
+// @Param       id  path     string true "Job ID"
 // @Success     200 {object} model.Job
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     401 {object} model.BackendError "user not authorized"
@@ -174,4 +175,35 @@ func (cont *Job) update(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, o)
+}
+
+// @Summary     Block a job
+// @Description Blocks existent job to hide it from public access. To execute this action, user must have admin privileges.
+// @Tags        job
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string                    true "Job ID"
+// @Success     200 {object} model.Job
+// @Failure     400 {object} model.BackendError "invalid format"
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     403 {object} model.BackendError "user is not admin"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /jobs/{id}/block [post]
+func (cont *Job) block(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	if !uc.Subject.IsAdmin {
+		return model.ErrInsufficientRights
+	}
+
+	id := c.Param("id")
+
+	if e := cont.svc.Block(c.Request().Context(), id); e != nil {
+		return e
+	}
+	return c.JSON(http.StatusOK, "{}")
 }

@@ -16,7 +16,7 @@ insert into jobs (
     id, title, description, budget, duration, created_by
 ) values (
     $1, $2, $3, $4, $5, $6
-) returning id, title, description, budget, duration, created_at, updated_at, created_by
+) returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at
 `
 
 type JobAddParams struct {
@@ -47,8 +47,22 @@ func (q *Queries) JobAdd(ctx context.Context, arg JobAddParams) (Job, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
+		&i.BlockedAt,
 	)
 	return i, err
+}
+
+const jobBlock = `-- name: JobBlock :exec
+update jobs
+set
+    blocked_at = now()
+where
+    id = $1::varchar
+`
+
+func (q *Queries) JobBlock(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, jobBlock, id)
+	return err
 }
 
 const jobGet = `-- name: JobGet :one
@@ -65,7 +79,7 @@ select
     , COALESCE(p.display_name, p.login) AS customer_display_name
     from jobs j
     join persons p on p.id = j.created_by
-    where j.id = $1::varchar
+    where j.id = $1::varchar and j.blocked_at is null
 `
 
 type JobGetRow struct {
@@ -115,7 +129,7 @@ set
         then $8::int else duration end
 where
     id = $9::varchar and $10::varchar = created_by
-returning id, title, description, budget, duration, created_at, updated_at, created_by
+returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at
 `
 
 type JobPatchParams struct {
@@ -154,6 +168,7 @@ func (q *Queries) JobPatch(ctx context.Context, arg JobPatchParams) (Job, error)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedBy,
+		&i.BlockedAt,
 	)
 	return i, err
 }
@@ -170,6 +185,7 @@ select
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     from jobs j
+    where j.blocked_at is null
     order by created_at desc
 `
 
