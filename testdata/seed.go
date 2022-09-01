@@ -36,6 +36,29 @@ func main() {
 
 	faker := faker.New()
 
+	user, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:           pgdao.NewID(),
+		Realm:        realm,
+		Login:        "admin",
+		PasswordHash: defaultPasswordHash,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to create user")
+	}
+
+	fmt.Printf("Created user with login: %s and password: %s\n", user.Login, defaultPassword)
+
+	queries := pgdao.New(db)
+	err = queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
+		IsAdmin: true,
+		ID:      user.ID,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to set user as admin")
+	}
+
+	fmt.Printf("Set user %s as admin\n", user.Login)
+
 	customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 		ID:           pgdao.NewID(),
 		Realm:        realm,
