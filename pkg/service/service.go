@@ -71,6 +71,9 @@ type (
 
 		// ListByApplicant returns list of applications by specified applicant
 		ListByApplicant(ctx context.Context, applicantID string) ([]*model.Application, error)
+
+		// GetChat returns chat associated with this application
+		GetChat(ctx context.Context, id, actorID string) (*model.Chat, error)
 	}
 
 	// Contract is an agreement between a Customer and a Performer (Contractor)
@@ -112,6 +115,15 @@ type (
 		// Stats returns users registrations number grouped by days
 		Stats(ctx context.Context) (*model.Stats, error)
 	}
+
+	// Chat service for chat information, messaging etc.
+	Chat interface {
+		// AddMessage adds an message to the chat
+		AddMessage(ctx context.Context, chatID, participantID, text string) (*model.Message, error)
+
+		// Get returns chat description with all messages in it
+		Get(ctx context.Context, chatID, participantID string) (*model.Chat, error)
+	}
 )
 
 // NewSecurity creates job service
@@ -147,4 +159,9 @@ func NewNotification(tgToken string, chatIDs ...int64) Notification {
 // NewStats create stats service
 func NewStats(db *sql.DB) Stats {
 	return pgsvc.NewStats(db)
+}
+
+// NewChat create chat service
+func NewChat(db *sql.DB) Chat {
+	return pgsvc.NewChat(db)
 }

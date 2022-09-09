@@ -39,9 +39,6 @@ type (
 		IsAdmin         bool      `json:"is_admin"`
 	}
 
-	// Project is a sequence of contracts group
-	Project struct{}
-
 	// Contract is a contract for execution some a task and
 	// a payment obligation
 	Contract struct {
@@ -81,6 +78,23 @@ type (
 	Stats struct {
 		Registrations map[string]int `json:"registrations,omitempty"`
 	}
+
+	// Chat is a chat instance
+	Chat struct {
+		ID        string    `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		Topic     string    `json:"topic"`
+		Messages  []Message `json:"messages,omitempty"`
+	}
+
+	// Message is a message instance
+	Message struct {
+		ID        string    `json:"id"`
+		ChatID    string    `json:"chat_id"`
+		CreatedAt time.Time `json:"created_at"`
+		CreatedBy string    `json:"created_by"`
+		Text      string    `json:"text"`
+	}
 )
 
 // Contract statuses
@@ -92,5 +106,3 @@ const (
 	ContractApproved  = "approved"
 	ContractCompleted = "completed"
 )
-
-// var allContractStatus = []string{ContractCreated, ContractAccepted, ContractSent, ContractApproved, ContractCompleted}

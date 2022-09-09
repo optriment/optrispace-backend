@@ -28,6 +28,24 @@ type Application struct {
 	ApplicantID string
 }
 
+// Chats where users have conversations
+type Chat struct {
+	// PK
+	ID string
+	// Topic whats talk about. In form of URI in form: urn:<type>:id. Where is type is: application, contract etc. ID is id of appropriate entity.
+	Topic string
+	// Creation timestamp
+	CreatedAt time.Time
+}
+
+// Participants in chats
+type ChatsParticipant struct {
+	// Chat where user joined
+	ChatID string
+	// User
+	PersonID string
+}
+
 // Contracts table
 type Contract struct {
 	// PK
@@ -42,12 +60,13 @@ type Contract struct {
 	Title string
 	// Details about the contract. May be long, long text. Also can be copied from the appropriate job.
 	Description string
-	// The crontract price
+	// The contract price
 	Price string
 	// The contract duration
 	Duration sql.NullInt32
 	// Current status of the contract
-	Status    string
+	Status string
+	// Customer
 	CreatedBy string
 	// Creation timestamp
 	CreatedAt time.Time
@@ -81,6 +100,20 @@ type Job struct {
 	CreatedBy string
 	// Job is blocked if this field is not null
 	BlockedAt sql.NullTime
+}
+
+// Messages were sent in chats by users
+type Message struct {
+	// PK
+	ID string
+	// Chat where message was sent
+	ChatID string
+	// Creation timestamp
+	CreatedAt time.Time
+	// User who sent message
+	CreatedBy string
+	// It is a message text, in fact
+	Text string
 }
 
 // Person who can pay, get or earn money
