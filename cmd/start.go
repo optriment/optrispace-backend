@@ -149,6 +149,7 @@ func addControllers(ctx context.Context, e *echo.Echo) error {
 		controller.NewContract(sm, service.NewContract(db, eth)),
 		controller.NewNotification(service.NewNotification(token, chats...)),
 		controller.NewStats(sm, service.NewStats(db)),
+		controller.NewChat(sm, service.NewChat(db)),
 	)
 
 	controller.SwaggerRegister(e)

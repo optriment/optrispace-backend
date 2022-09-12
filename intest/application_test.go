@@ -22,65 +22,15 @@ func TestApplication(t *testing.T) {
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-	stranger, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "stranger",
-		AccessToken: sql.NullString{
-			String: pgdao.NewID(),
-			Valid:  true,
-		},
-	})
-	require.NoError(t, err)
+	var (
+		stranger   = addPerson(t, "stranger")
+		createdBy  = addPerson(t, "createdBy")
+		applicant1 = addPerson(t, "applicant1")
+		applicant2 = addPerson(t, "applicant2")
+		applicant3 = addPerson(t, "applicant3")
 
-	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "created-by",
-		AccessToken: sql.NullString{
-			String: pgdao.NewID(),
-			Valid:  true,
-		},
-	})
-	require.NoError(t, err)
-
-	applicant1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "applicant1",
-		AccessToken: sql.NullString{
-			String: pgdao.NewID(),
-			Valid:  true,
-		},
-	})
-	require.NoError(t, err)
-
-	applicant2, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "applicant2",
-		AccessToken: sql.NullString{
-			String: pgdao.NewID(),
-			Valid:  true,
-		},
-	})
-	require.NoError(t, err)
-
-	applicant3, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:    pgdao.NewID(),
-		Login: "applicant3",
-		AccessToken: sql.NullString{
-			String: pgdao.NewID(),
-			Valid:  true,
-		},
-	})
-	require.NoError(t, err)
-
-	job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-		ID:          pgdao.NewID(),
-		Title:       "Applications testing",
-		Description: "Applications testing description",
-		Budget:      sql.NullString{},
-		Duration:    sql.NullInt32{},
-		CreatedBy:   createdBy.ID,
-	})
-	require.NoError(t, err)
+		job = addJob(t, "Applications testing", "Applications testing description", createdBy.ID, "", "")
+	)
 
 	jobURL := appURL + "/jobs/" + job.ID
 	applicationsURL := jobURL + "/" + resourceName
@@ -201,7 +151,7 @@ func TestApplication(t *testing.T) {
 			"price": "123.670000009899232"
 		}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, appURL+"/jobs/"+"non-existent-job-id"+"/"+resourceName, bytes.NewReader([]byte(body)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, appURL+"/jobs/non-existent-job-id/"+resourceName, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")

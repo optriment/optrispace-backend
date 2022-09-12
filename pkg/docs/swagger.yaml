@@ -35,6 +35,11 @@ definitions:
       price:
         type: number
     type: object
+  controller.newMessage:
+    properties:
+      text:
+        type: string
+    type: object
   controller.newPasswordParams:
     properties:
       new_password:
@@ -77,6 +82,19 @@ definitions:
       message:
         type: string
       tech_info:
+        type: string
+    type: object
+  model.Chat:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/model.Message'
+        type: array
+      topic:
         type: string
     type: object
   model.Contract:
@@ -133,6 +151,19 @@ definitions:
       title:
         type: string
       updated_at:
+        type: string
+    type: object
+  model.Message:
+    properties:
+      chat_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      text:
         type: string
     type: object
   model.Person:
@@ -257,6 +288,47 @@ paths:
       summary: Get an application
       tags:
       - application
+  /applications/{id}/chat:
+    get:
+      consumes:
+      - application/json
+      description: Performer or customer is getting chat for this application
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Chat'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: application not found or user has no permissions for view chat
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Get chat for an application
+      tags:
+      - application
+      - chat
   /applications/my:
     get:
       consumes:
@@ -289,6 +361,104 @@ paths:
       summary: List applications were applied by the current authenticated user
       tags:
       - application
+  /chats/{chat_id}:
+    get:
+      consumes:
+      - application/json
+      description: A chat participant requesting chat description with all messages
+      parameters:
+      - description: chat id
+        in: path
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: chat will be returned with all messages
+          schema:
+            type: string
+        "401":
+          description: user is not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: user is not conversation participant
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: chat does not exist
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Returns a fully chat description
+      tags:
+      - chat
+  /chats/{chat_id}/messages:
+    post:
+      consumes:
+      - application/json
+      description: A chat participant sending message to the chat
+      parameters:
+      - description: New message
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/controller.newMessage'
+      - description: chat id
+        in: path
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "401":
+          description: user is not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: user is not conversation participant
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: chat does not exist
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: message text exceeds maximum text length
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Post a new message to the chat
+      tags:
+      - chat
   /contracts:
     get:
       consumes:

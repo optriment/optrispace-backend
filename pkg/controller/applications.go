@@ -31,6 +31,7 @@ func NewApplication(sm service.Security, svc service.Application) Registerer {
 func (cont *Application) Register(e *echo.Echo) {
 	e.POST(resourceJob+"/:job_id/"+resourceApplication, cont.add)
 	e.GET(resourceApplication+"/:id", cont.get)
+	e.GET(resourceApplication+"/:id/chat", cont.getChat)
 	e.GET(resourceApplication+"/my", cont.listMy)
 	e.GET(resourceApplication, cont.list)
 	e.GET(resourceJob+"/:job_id/"+resourceApplication, cont.list)
@@ -112,6 +113,34 @@ func (cont *Application) get(c echo.Context) error {
 	ctx := c.Request().Context()
 	id := c.Param("id")
 	o, err := cont.svc.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, o)
+}
+
+// @Summary     Get chat for an application
+// @Description Performer or customer is getting chat for this application
+// @Tags        application,chat
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string true "Application ID"
+// @Success     200 {object} model.Chat
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     404 {object} model.BackendError "application not found or user has no permissions for view chat"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /applications/{id}/chat [get]
+func (cont *Application) getChat(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	ctx := c.Request().Context()
+
+	id := c.Param("id")
+	o, err := cont.svc.GetChat(ctx, id, uc.Subject.ID)
 	if err != nil {
 		return err
 	}

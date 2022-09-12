@@ -197,6 +197,235 @@ const docTemplate = `{
                 }
             }
         },
+        "/applications/{id}/chat": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Performer or customer is getting chat for this application",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "application",
+                    "chat"
+                ],
+                "summary": "Get chat for an application",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Application ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Chat"
+                        }
+                    },
+                    "401": {
+                        "description": "user not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "404": {
+                        "description": "application not found or user has no permissions for view chat",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{chat_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "A chat participant requesting chat description with all messages",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Returns a fully chat description",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "chat id",
+                        "name": "chat_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "chat will be returned with all messages",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "user is not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "403": {
+                        "description": "user is not conversation participant",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "404": {
+                        "description": "chat does not exist",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{chat_id}/messages": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "A chat participant sending message to the chat",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Post a new message to the chat",
+                "parameters": [
+                    {
+                        "description": "New message",
+                        "name": "message",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.newMessage"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "chat id",
+                        "name": "chat_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "user is not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "403": {
+                        "description": "user is not conversation participant",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "404": {
+                        "description": "chat does not exist",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "422": {
+                        "description": "message text exceeds maximum text length",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/contracts": {
             "get": {
                 "security": [
@@ -1874,6 +2103,14 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.newMessage": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "controller.newPasswordParams": {
             "type": "object",
             "properties": {
@@ -1938,6 +2175,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tech_info": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Chat": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Message"
+                    }
+                },
+                "topic": {
                     "type": "string"
                 }
             }
@@ -2023,6 +2280,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Message": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "text": {
                     "type": "string"
                 }
             }
