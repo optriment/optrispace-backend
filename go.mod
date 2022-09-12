@@ -8,7 +8,7 @@ require (
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/jaswdr/faker v1.15.0
 	github.com/labstack/echo/v4 v4.8.0
-	github.com/lib/pq v1.10.6
+	github.com/lib/pq v1.10.7
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
