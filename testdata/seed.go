@@ -10,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 	"optrispace.com/work/pkg/db/pgdao"
+	"optrispace.com/work/pkg/model"
 	"optrispace.com/work/pkg/service/pgsvc"
 )
 
@@ -60,11 +61,12 @@ func main() {
 	fmt.Printf("Set user %s as admin\n", user.Login)
 
 	customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:           pgdao.NewID(),
-		Realm:        realm,
-		Login:        "customer1",
-		PasswordHash: defaultPasswordHash,
-		DisplayName:  faker.Person().Name(),
+		ID:              pgdao.NewID(),
+		Realm:           realm,
+		Login:           "customer1",
+		PasswordHash:    defaultPasswordHash,
+		DisplayName:     faker.Person().Name(),
+		EthereumAddress: faker.Crypto().EtheriumAddress(),
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create customer1")
@@ -76,6 +78,7 @@ func main() {
 		ID:           pgdao.NewID(),
 		Realm:        realm,
 		Login:        "customer2",
+		Email:        "customer@domain.tld",
 		PasswordHash: defaultPasswordHash,
 		DisplayName:  faker.Person().Name(),
 	})
@@ -86,11 +89,12 @@ func main() {
 	fmt.Printf("Created customer with login: %s and password: %s\n", customer2.Login, defaultPassword)
 
 	freelancer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID:           pgdao.NewID(),
-		Realm:        realm,
-		Login:        "freelancer1",
-		PasswordHash: defaultPasswordHash,
-		DisplayName:  faker.Person().Name(),
+		ID:              pgdao.NewID(),
+		Realm:           realm,
+		Login:           "freelancer1",
+		PasswordHash:    defaultPasswordHash,
+		DisplayName:     faker.Person().Name(),
+		EthereumAddress: faker.Crypto().EtheriumAddress(),
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create freelancer1")
@@ -160,6 +164,20 @@ func main() {
 		log.Fatal().Err(err).Msg("unable to create job2")
 	}
 
+	_, err = pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+		ID:          pgdao.NewID(),
+		Title:       faker.Lorem().Sentence(faker.RandomNumber(1)),
+		Description: faker.Lorem().Sentence(100),
+		Budget: sql.NullString{
+			String: "0",
+			Valid:  true,
+		},
+		CreatedBy: customer1.ID,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to create job1")
+	}
+
 	application1, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
 		ID:          pgdao.NewID(),
 		Comment:     faker.Lorem().Sentence(faker.RandomNumber(1)),
@@ -216,16 +234,18 @@ func main() {
 	}
 
 	_, err = pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-		ID:              pgdao.NewID(),
-		Title:           faker.Lorem().Sentence(32),
-		Description:     faker.Lorem().Sentence(100),
-		Price:           fmt.Sprintf("%f", faker.RandomFloat(18, 1, 100)),
-		Duration:        sql.NullInt32{Int32: 42, Valid: true},
-		CustomerID:      customer1.ID,
-		PerformerID:     freelancer1.ID,
-		ApplicationID:   application1.ID,
-		CreatedBy:       customer1.ID,
-		CustomerAddress: "0xDEADBEEF",
+		ID:               pgdao.NewID(),
+		Title:            faker.Lorem().Sentence(32),
+		Description:      faker.Lorem().Sentence(100),
+		Price:            fmt.Sprintf("%f", faker.RandomFloat(18, 1, 100)),
+		Duration:         sql.NullInt32{Int32: 42, Valid: true},
+		CustomerID:       customer1.ID,
+		PerformerID:      freelancer1.ID,
+		ApplicationID:    application1.ID,
+		CreatedBy:        customer1.ID,
+		CustomerAddress:  customer1.EthereumAddress,
+		PerformerAddress: freelancer1.EthereumAddress,
+		Status:           model.ContractCreated,
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create contract1")
@@ -242,6 +262,7 @@ func main() {
 		ApplicationID:   application5.ID,
 		CreatedBy:       customer2.ID,
 		CustomerAddress: "0xDEADBEEF",
+		Status:          model.ContractCreated,
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create contract2")

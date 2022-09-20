@@ -34,9 +34,6 @@ var (
 	ctx     = context.Background()
 )
 
-// token of default user
-var testUserToken = ""
-
 func TestMain(m *testing.M) {
 	makeExec, err := exec.LookPath("make")
 	if err != nil {
@@ -80,6 +77,25 @@ func addPerson(t *testing.T, login string) pgdao.Person {
 			String: login + "-token",
 			Valid:  true,
 		},
+	})
+	require.NoError(t, err)
+
+	return person
+}
+
+func addPersonWithEthereumAddress(t *testing.T, login, ethereum_address string) pgdao.Person {
+	person, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:           pgdao.NewID(),
+		Realm:        "inhouse",
+		Login:        login,
+		PasswordHash: pgsvc.CreateHashFromPassword(login + "-password"),
+		DisplayName:  login,
+		Email:        login + "@sample.com",
+		AccessToken: sql.NullString{
+			String: login + "-token",
+			Valid:  true,
+		},
+    EthereumAddress: ethereum_address,
 	})
 	require.NoError(t, err)
 

@@ -60,6 +60,20 @@ func (cont *Auth) login(c echo.Context) error {
 
 	ie.Login = strings.ToLower(strings.TrimSpace(ie.Login))
 
+	if ie.Login == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("login"),
+		}
+	}
+
+	if ie.Password == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("password"),
+		}
+	}
+
 	p, err := cont.sm.FromLoginPassword(c.Request().Context(), ie.Login, ie.Password)
 	if err != nil {
 		return err
@@ -86,12 +100,21 @@ func (cont *Auth) signup(c echo.Context) error {
 	}
 
 	ie.Realm = ""
+	ie.Login = strings.ToLower(strings.TrimSpace(ie.Login))
 
-	if ie.Password == "" {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, "Password required")
+	if ie.Login == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("login"),
+		}
 	}
 
-	ie.Login = strings.ToLower(strings.TrimSpace(ie.Login))
+	if ie.Password == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("password"),
+		}
+	}
 
 	o, err := cont.person.Add(c.Request().Context(), ie)
 	if err != nil {

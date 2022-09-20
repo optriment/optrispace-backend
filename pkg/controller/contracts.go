@@ -1,13 +1,18 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
+	"reflect"
+	"strings"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/shopspring/decimal"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
-	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/model"
 	"optrispace.com/work/pkg/service"
 )
@@ -19,6 +24,48 @@ type (
 		svc service.Contract
 	}
 )
+
+func validateStruct(s interface{}) error {
+	validate := validator.New()
+
+	// Register function to get tag name from json tags.
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+
+	err := validate.Struct(s)
+
+	if err == nil {
+		return nil
+	}
+
+	var ve validator.ValidationErrors
+
+	if errors.As(err, &ve) {
+		for _, err := range ve {
+			if err.Tag() == "required" {
+				return &model.BackendError{
+					Cause:   model.ErrValidationFailed,
+					Message: model.ValidationErrorRequired(err.Field()),
+				}
+			}
+		}
+
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: ve.Error(),
+		}
+	}
+
+	return &model.BackendError{
+		Cause:   model.ErrValidationFailed,
+		Message: err.Error(),
+	}
+}
 
 // NewContract create new service
 func NewContract(sm service.Security, svc service.Contract) Registerer {
@@ -35,20 +82,19 @@ func (cont *Contract) Register(e *echo.Echo) {
 	e.GET(resourceContract+"/:id", cont.get)
 	e.POST(resourceContract+"/:id/accept", cont.accept)
 	e.POST(resourceContract+"/:id/deploy", cont.deploy)
-	e.POST(resourceContract+"/:id/send", cont.send)
+	e.POST(resourceContract+"/:id/sign", cont.sign)
+	e.POST(resourceContract+"/:id/fund", cont.fund)
 	e.POST(resourceContract+"/:id/approve", cont.approve)
 	e.POST(resourceContract+"/:id/complete", cont.complete)
 	log.Debug().Str("controller", resourceContract).Msg("Registered")
 }
 
-type contractDescription struct {
-	PerformerID     string          `json:"performer_id,omitempty"`
-	ApplicationID   string          `json:"application_id,omitempty"`
-	Title           string          `json:"title,omitempty"`
-	Description     string          `json:"description,omitempty"`
-	Price           decimal.Decimal `json:"price,omitempty"`
-	Duration        int32           `json:"duration,omitempty"`
-	CustomerAddress string          `json:"customer_address,omitempty"`
+type createContractParams struct {
+	ApplicationID string          `json:"application_id" validate:"required"`
+	Title         string          `json:"title" validate:"required"`
+	Description   string          `json:"description" validate:"required"`
+	Price         decimal.Decimal `json:"price" validate:"required"`
+	Duration      int32           `json:"duration"`
 }
 
 // @Summary     Create a new contract
@@ -56,12 +102,12 @@ type contractDescription struct {
 // @Tags        contract
 // @Accept      json
 // @Produce     json
-// @Param       job body     controller.jobDescription true "New contract description"
-// @Success     200    {object} model.Contract
+// @Param       job body     controller.createContractParams true "Contract Params"
+// @Success     201 {object} model.ContractDTO
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     409 {object} model.BackendError "duplication"
 // @Failure     422 {object} model.BackendError "validation failed"
-// @Failure     500    {object} echo.HTTPError{message=string}
+// @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /contracts [post]
 func (cont *Contract) add(c echo.Context) error {
@@ -70,74 +116,25 @@ func (cont *Contract) add(c echo.Context) error {
 		return err
 	}
 
-	ie := new(contractDescription)
+	ie := new(createContractParams)
 
 	if e := c.Bind(ie); e != nil {
 		return e
 	}
 
-	if ie.ApplicationID == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("application_id"),
-		}
+	if err = validateStruct(ie); err != nil {
+		return err
 	}
 
-	if ie.PerformerID == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("performer_id"),
-		}
+	dto := model.CreateContractDTO{
+		ApplicationID: ie.ApplicationID,
+		Title:         ie.Title,
+		Description:   ie.Description,
+		Price:         ie.Price,
+		Duration:      ie.Duration,
 	}
 
-	if ie.Title == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("title"),
-		}
-	}
-
-	if ie.Description == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("description"),
-		}
-	}
-
-	if decimal.Zero.Equal(ie.Price) {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("price"),
-		}
-	}
-
-	if ie.Price.IsNegative() {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorMustBePositive("price"),
-		}
-	}
-
-	if ie.CustomerAddress == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("customer_address"),
-		}
-	}
-
-	newContract := &model.Contract{
-		Customer:        &model.Person{ID: uc.Subject.ID},
-		Performer:       &model.Person{ID: ie.PerformerID},
-		Application:     &model.Application{ID: ie.ApplicationID},
-		Title:           ie.Title,
-		Description:     ie.Description,
-		Price:           ie.Price,
-		Duration:        ie.Duration,
-		CreatedBy:       uc.Subject.ID,
-		CustomerAddress: ie.CustomerAddress,
-	}
-
-	newContract, err = cont.svc.Add(c.Request().Context(), newContract)
+	newContract, err := cont.svc.Add(c.Request().Context(), uc.Subject.ID, &dto)
 	if err != nil {
 		return fmt.Errorf("unable to save contract: %w", err)
 	}
@@ -151,11 +148,11 @@ func (cont *Contract) add(c echo.Context) error {
 // @Tags        contract
 // @Accept      json
 // @Produce     json
-// @Param       id     path     string                      true "Contract ID"
-// @Success     200    {object} model.Contract
-// @Failure     401    {object} model.BackendError "user not authorized"
+// @Param       id  path     string true "Contract ID"
+// @Success     200 {object} model.ContractDTO
+// @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
-// @Failure     500    {object} echo.HTTPError{message=string}
+// @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /contracts/{id} [get]
 func (cont *Contract) get(c echo.Context) error {
@@ -180,7 +177,7 @@ func (cont *Contract) get(c echo.Context) error {
 // @Tags        contract
 // @Accept      json
 // @Produce     json
-// @Success     200 {array}  model.Contract
+// @Success     200 {array}  model.ContractDTO
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
@@ -201,23 +198,17 @@ func (cont *Contract) list(c echo.Context) error {
 	return c.JSON(http.StatusOK, oo)
 }
 
-type acceptParameters struct {
-	PerformerAddress string `json:"performer_address,omitempty"`
-}
-
 // @Summary     Accept contract
 // @Description Performer is accepting contract
 // @Tags        contract
 // @Accept      json
 // @Produce     json
-// @Param       params body     controller.acceptParameters true "Parameters"
-// @Param       id     path     string                      true "Contract ID"
-// @Success     200 {object} model.Contract
-// @Failure     400    {object} model.BackendError "invalid format"
+// @Param       id  path     string true "Contract ID"
+// @Success     200 {object} model.ContractDTO
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     403 {object} model.BackendError "insufficient rights"
-// @Failure     404    {object} model.BackendError "contract not found or user not authorized to view contract"
-// @Failure     422    {object} model.BackendError "validation failed"
+// @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
+// @Failure     422 {object} model.BackendError "validation failed"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /contracts/{id}/accept [post]
@@ -227,20 +218,7 @@ func (cont *Contract) accept(c echo.Context) error {
 		return err
 	}
 
-	ie := new(acceptParameters)
-
-	if e := c.Bind(ie); e != nil {
-		return e
-	}
-
-	if ie.PerformerAddress == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("performer_address"),
-		}
-	}
-
-	o, err := cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.PerformerAddress)
+	o, err := cont.svc.Accept(c.Request().Context(), c.Param("id"), uc.Subject.ID)
 	if err != nil {
 		return err
 	}
@@ -248,23 +226,22 @@ func (cont *Contract) accept(c echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
-type deployParameters struct {
-	ContractAddress string `json:"contract_address,omitempty"`
+type deployContractParams struct {
+	ContractAddress string `json:"contract_address" validate:"required"`
 }
 
 // @Summary     Deploy contract
-// @Description Customer is deploying contract in the blockchain
+// @Description Customer has deployed contract to the blockchain
 // @Tags        contract
 // @Accept      json
 // @Produce     json
-// @Param       params body     controller.deployParameters true "Parameters"
 // @Param       id  path     string true "Contract ID"
-// @Success     200 {object} model.Contract
-// @Failure     400    {object} model.BackendError "invalid format"
-// @Failure     401    {object} model.BackendError "user not authorized"
-// @Failure     403    {object} model.BackendError "insufficient rights"
-// @Failure     404    {object} model.BackendError "contract not found or user not authorized to view contract"
-// @Failure     422    {object} model.BackendError "validation failed or insufficient funds on the contract in the blockchain"
+// @Success     200 {object} model.ContractDTO
+// @Failure     400 {object} model.BackendError "invalid format"
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     403 {object} model.BackendError "insufficient rights"
+// @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
+// @Failure     422 {object} model.BackendError "validation failed"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /contracts/{id}/deploy [post]
@@ -274,20 +251,21 @@ func (cont *Contract) deploy(c echo.Context) error {
 		return err
 	}
 
-	ie := new(deployParameters)
+	ie := new(deployContractParams)
 
 	if e := c.Bind(ie); e != nil {
 		return e
 	}
 
-	if ie.ContractAddress == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("contract_address"),
-		}
+	if err = validateStruct(ie); err != nil {
+		return err
 	}
 
-	o, err := cont.svc.Deploy(c.Request().Context(), c.Param("id"), uc.Subject.ID, ie.ContractAddress)
+	dto := model.DeployContractDTO{
+		ContractAddress: ie.ContractAddress,
+	}
+
+	o, err := cont.svc.Deploy(c.Request().Context(), c.Param("id"), uc.Subject.ID, &dto)
 	if err != nil {
 		return err
 	}
@@ -295,26 +273,28 @@ func (cont *Contract) deploy(c echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
-// @Summary     Send working results to customer
-// @Description Performer is sending working results to customer
+// @Summary     Sign contract
+// @Description Performer is signing contract
 // @Tags        contract
 // @Accept      json
 // @Produce     json
 // @Param       id  path     string true "Contract ID"
-// @Success     200 {object} model.Contract
+// @Success     200 {object} model.ContractDTO
+// @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     403 {object} model.BackendError "insufficient rights"
 // @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
+// @Failure     422 {object} model.BackendError "validation failed"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
-// @Router      /contracts/{id}/send [post]
-func (cont *Contract) send(c echo.Context) error {
+// @Router      /contracts/{id}/sign [post]
+func (cont *Contract) sign(c echo.Context) error {
 	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 
-	o, err := cont.svc.Send(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	o, err := cont.svc.Sign(c.Request().Context(), c.Param("id"), uc.Subject.ID)
 	if err != nil {
 		return err
 	}
@@ -322,13 +302,42 @@ func (cont *Contract) send(c echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
-// @Summary     Approve working results
+// @Summary     Fund contract
+// @Description Customer is funded contract in the blockchain
+// @Tags        contract
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string true "Contract ID"
+// @Success     200 {object} model.ContractDTO
+// @Failure     400 {object} model.BackendError "invalid format"
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     403 {object} model.BackendError "insufficient rights"
+// @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
+// @Failure     422 {object} model.BackendError "validation failed"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /contracts/{id}/fund [post]
+func (cont *Contract) fund(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	o, err := cont.svc.Fund(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, o)
+}
+
+// @Summary     Approve working results and allow to withdraw money from Smart Contract
 // @Description Customer is approving performer's working results
 // @Tags        contract
 // @Accept      json
 // @Produce     json
 // @Param       id  path     string true "Contract ID"
-// @Success     200 {object} model.Contract
+// @Success     200 {object} model.ContractDTO
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     403 {object} model.BackendError "insufficient rights"
 // @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
@@ -356,9 +365,9 @@ func (cont *Contract) approve(c echo.Context) error {
 // @Accept      json
 // @Produce     json
 // @Param       id  path     string true "Contract ID"
-// @Success     200 {object} model.Contract
+// @Success     200 {object} model.ContractDTO
 // @Failure     401 {object} model.BackendError "user not authorized"
-// @Failure     403    {object} model.BackendError "insufficient rights"
+// @Failure     403 {object} model.BackendError "insufficient rights"
 // @Failure     404 {object} model.BackendError "contract not found or user not authorized to view contract"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken

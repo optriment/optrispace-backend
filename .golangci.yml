@@ -73,7 +73,7 @@ linters-settings:
       - github.com/kr/pretty
       - log
       - github.com/ryboe/q
-      
+
   misspell:
     locale: US
   lll:

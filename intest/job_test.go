@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jaswdr/faker"
 	"github.com/labstack/echo/v4"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ import (
 )
 
 func TestJob(t *testing.T) {
+	faker := faker.New()
 	resourceName := "jobs"
 	startURL := appURL + "/" + resourceName
 
@@ -27,7 +29,23 @@ func TestJob(t *testing.T) {
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
 	createdBy, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-		ID: pgdao.NewID(),
+		ID:    pgdao.NewID(),
+		Login: "Person1",
+		AccessToken: sql.NullString{
+			String: pgdao.NewID(),
+			Valid:  true,
+		},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, queries.PersonSetEthereumAddress(ctx, pgdao.PersonSetEthereumAddressParams{
+		EthereumAddress: faker.Crypto().EtheriumAddress(),
+		ID:              createdBy.ID,
+	}))
+
+	personWithoutWallet, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+		ID:    pgdao.NewID(),
+		Login: "Person2",
 		AccessToken: sql.NullString{
 			String: pgdao.NewID(),
 			Valid:  true,
@@ -50,10 +68,56 @@ func TestJob(t *testing.T) {
 		}
 	})
 
+	t.Run("post•without wallet", func(t *testing.T) {
+		body := `{
+			"title":"Create awesome site",
+			"description": "There are words here. Very many words."
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+personWithoutWallet.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "Ethereum address is required", e["message"])
+		}
+	})
+
+	t.Run("post•budget has an invalid format", func(t *testing.T) {
+		body := `{
+			"title":"Create awesome site",
+			"description": "There are words here. Very many words.",
+			"budget": "",
+			"duration": 30
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "invalid format", e["message"])
+		}
+	})
+
 	t.Run("post•budget negative", func(t *testing.T) {
 		body := `{
 			"title":"Create awesome site",
-			"description": "There are words here. Very much words.",
+			"description": "There are words here. Very many words.",
 			"budget": -100.2,
 			"duration": 30
 		}`
@@ -70,14 +134,14 @@ func TestJob(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "budget: must be positive", e["message"])
+			assert.Equal(t, "Budget must be positive", e["message"])
 		}
 	})
 
 	t.Run("post•401", func(t *testing.T) {
 		body := `{
 			"title":"Create awesome site",
-			"description": "There are words here. Very much words.",
+			"description": "There are words here. Very many words.",
 			"budget": 100.2,
 			"duration": 30
 		}`
@@ -100,7 +164,7 @@ func TestJob(t *testing.T) {
 	t.Run("post•full", func(t *testing.T) {
 		body := `{
 			"title":"Create awesome site",
-			"description": "There are words here. Very much words.",
+			"description": "There are words here. Very many words.",
 			"budget": "100.2",
 			"duration": 30
 		}`
@@ -123,7 +187,7 @@ func TestJob(t *testing.T) {
 
 			assert.NotEmpty(t, e.ID)
 			assert.Equal(t, "Create awesome site", e.Title)
-			assert.Equal(t, "There are words here. Very much words.", e.Description)
+			assert.Equal(t, "There are words here. Very many words.", e.Description)
 			assert.True(t, decimal.RequireFromString("100.2").Equal(e.Budget))
 			assert.EqualValues(t, 30, e.Duration)
 			assert.NotEmpty(t, e.CreatedAt)
@@ -149,7 +213,7 @@ func TestJob(t *testing.T) {
 	t.Run("post•wo-optional", func(t *testing.T) {
 		body := `{
 			"title":"Create awesome site (wo optional)",
-			"description": "There are words here. Very much words. Without optional fields."
+			"description": "There are words here. Very many words. Without optional fields."
 		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, startURL, bytes.NewReader([]byte(body)))
@@ -169,7 +233,7 @@ func TestJob(t *testing.T) {
 
 			assert.NotEmpty(t, e.ID)
 			assert.Equal(t, "Create awesome site (wo optional)", e.Title)
-			assert.Equal(t, "There are words here. Very much words. Without optional fields.", e.Description)
+			assert.Equal(t, "There are words here. Very many words. Without optional fields.", e.Description)
 			assert.True(t, decimal.Zero.Equal(e.Budget))
 			assert.EqualValues(t, 0, e.Duration)
 			assert.NotEmpty(t, e.CreatedAt)
@@ -209,7 +273,7 @@ func TestJob(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "title: is required", e.Message)
+			assert.EqualValues(t, "Title is required", e.Message)
 		}
 	})
 
@@ -231,7 +295,7 @@ func TestJob(t *testing.T) {
 					assert.NotEmpty(t, e.Title)
 					assert.NotEmpty(t, e.Description)
 					assert.NotEmpty(t, e.CreatedAt)
-					assert.NotEmpty(t, e.UpdatedAt)
+					assert.Empty(t, e.UpdatedAt)
 					assert.NotEmpty(t, e.CreatedBy)
 					assert.EqualValues(t, 0, e.ApplicationsCount)
 				}
@@ -254,7 +318,7 @@ func TestJob(t *testing.T) {
 			if assert.NotEmpty(t, e) {
 				assert.NotEmpty(t, e.ID)
 				assert.Equal(t, "Create awesome site", e.Title)
-				assert.Equal(t, "There are words here. Very much words.", e.Description)
+				assert.Equal(t, "There are words here. Very many words.", e.Description)
 				assert.True(t, decimal.RequireFromString("100.2").Equal(e.Budget))
 				assert.EqualValues(t, 30, e.Duration)
 				assert.NotEmpty(t, e.CreatedAt)
@@ -367,6 +431,46 @@ func TestJobEdit(t *testing.T) {
 		}
 	})
 
+	t.Run("put•budget has an invalid format", func(t *testing.T) {
+		theJob, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title before change",
+			Description: "Description before change",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			Duration: sql.NullInt32{
+				Int32: 24,
+				Valid: true,
+			},
+			CreatedBy: createdBy.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"title":"Editing title",
+			"description": "Editing description. There are words here.",
+			"budget": "",
+			"duration": 42
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, startURL+"/"+theJob.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+createdBy.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "Budget has an invalid format", e["message"])
+		}
+	})
+
 	t.Run("put•budget negative", func(t *testing.T) {
 		theJob, err := queries.JobAdd(ctx, pgdao.JobAddParams{
 			ID:          pgdao.NewID(),
@@ -403,7 +507,7 @@ func TestJobEdit(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "budget: must be positive", e["message"])
+			assert.Equal(t, "Budget must be positive", e["message"])
 		}
 	})
 

@@ -63,6 +63,13 @@ func (cont *Application) add(c echo.Context) error {
 		return err
 	}
 
+	if uc.Subject.EthereumAddress == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: "Ethereum address is required",
+		}
+	}
+
 	ie := new(newApplication)
 
 	if e := c.Bind(ie); e != nil {
@@ -72,19 +79,19 @@ func (cont *Application) add(c echo.Context) error {
 	if ie.Comment == "" {
 		return &model.BackendError{
 			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("comment"),
+			Message: model.ValidationErrorRequired("Comment"),
 		}
 	}
 
 	if decimal.Zero.Equal(ie.Price) {
 		return &model.BackendError{
 			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("price"),
+			Message: model.ValidationErrorRequired("Price"),
 		}
 	}
 
 	createdAppl, err := cont.svc.Add(c.Request().Context(), &model.Application{
-		Applicant: uc.Subject,
+		Applicant: &model.JobApplicant{ID: uc.Subject.ID},
 		Comment:   ie.Comment,
 		Price:     ie.Price,
 		Job:       &model.Job{ID: c.Param("job_id")},

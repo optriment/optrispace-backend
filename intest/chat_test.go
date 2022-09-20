@@ -18,8 +18,8 @@ func TestApplicationChat(t *testing.T) {
 	pgdao.PurgeDB(ctx, db)
 
 	var (
-		customer  = addPerson(t, "customer")
-		performer = addPerson(t, "performer")
+		customer  = addPersonWithEthereumAddress(t, "customer", "0x8Ca2702c5bcc50D79d9a059D58607028aa36Aa6c")
+		performer = addPersonWithEthereumAddress(t, "performer", "0x8Ca2702c5bcc50D79d9a059D58607028aa36Aa6c")
 		stranger  = addPerson(t, "stranger")
 
 		job1 = addJob(t, "A job1", "Some beautiful 1", customer.ID, "", "")

@@ -3,6 +3,8 @@ package web
 import (
 	"errors"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
@@ -27,18 +29,31 @@ import (
 // @Failure     422  {object} model.BackendError "insufficient funds"
 // @Failure     422  {object} model.BackendError "unable to login"
 // @Failure     500  {object} echo.HTTPError{message=string}
-func GetErrorHandler(oldHandler echo.HTTPErrorHandler) echo.HTTPErrorHandler {
+func GetErrorHandler(oldHandler echo.HTTPErrorHandler) echo.HTTPErrorHandler { //nolint: cyclop
 	return func(err error, c echo.Context) {
 		clog.Ectx(c).Error().Err(err).Stringer("url", c.Request().URL).Str("method", c.Request().Method).
 			Msg("Processing error (see above)")
 
 		var (
-			be     *model.BackendError
-			status = 0
-			cause  error
+			be        *model.BackendError
+			httpError *echo.HTTPError
+			status    = 0
+			cause     error
 		)
 
 		switch {
+		case errors.As(err, &httpError) && httpError.Code == 400:
+			status = http.StatusBadRequest // 400
+
+			re := regexp.MustCompile("error decoding string.*to decimal")
+
+			switch {
+			case strings.Contains(httpError.Error(), "Syntax error"):
+				cause = model.ErrInvalidJSON // "invalid JSON"
+			case re.MatchString(httpError.Error()):
+				cause = model.ErrInvalidFormat // "invalid format"
+			}
+
 		case errors.Is(err, model.ErrInvalidFormat):
 			status = http.StatusBadRequest // 400
 			cause = model.ErrInvalidFormat // "invalid format"

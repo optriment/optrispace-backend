@@ -34,7 +34,7 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 		if application.Price.IsNegative() {
 			return &model.BackendError{
 				Cause:   model.ErrValidationFailed,
-				Message: model.ValidationErrorMustBePositive("price"),
+				Message: model.ValidationErrorMustBePositive("Price"),
 			}
 		}
 
@@ -84,7 +84,7 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			ID:        appl.ID,
 			CreatedAt: appl.CreatedAt,
 			UpdatedAt: appl.UpdatedAt,
-			Applicant: &model.Person{ID: appl.ApplicantID},
+			Applicant: &model.JobApplicant{ID: appl.ApplicantID},
 			Comment:   appl.Comment,
 			Price:     decimal.RequireFromString(appl.Price),
 			Job:       &model.Job{ID: appl.JobID},
@@ -111,7 +111,7 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 			ID:        a.ID,
 			CreatedAt: a.CreatedAt,
 			UpdatedAt: a.UpdatedAt,
-			Applicant: &model.Person{ID: a.ApplicantID},
+			Applicant: &model.JobApplicant{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName, EthereumAddress: a.ApplicantEthereumAddress},
 			Comment:   a.Comment,
 			Price:     decimal.RequireFromString(a.Price),
 			Job:       &model.Job{ID: a.JobID},
@@ -167,7 +167,7 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 				ID:        a.ID,
 				CreatedAt: a.CreatedAt,
 				UpdatedAt: a.UpdatedAt,
-				Applicant: &model.Person{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName},
+				Applicant: &model.JobApplicant{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName, EthereumAddress: a.ApplicantEthereumAddress},
 				Comment:   a.Comment,
 				Price:     decimal.RequireFromString(a.Price),
 				Job:       job,
@@ -213,7 +213,7 @@ func (s *ApplicationSvc) ListByApplicant(ctx context.Context, applicantID string
 				ID:        a.ID,
 				CreatedAt: a.CreatedAt,
 				UpdatedAt: a.UpdatedAt,
-				Applicant: &model.Person{ID: a.ApplicantID},
+				Applicant: &model.JobApplicant{ID: a.ApplicantID},
 				Comment:   a.Comment,
 				Price:     decimal.RequireFromString(a.Price),
 				Job:       job,

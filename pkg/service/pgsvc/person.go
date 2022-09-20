@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
-	"github.com/jaswdr/faker"
 	"github.com/lib/pq"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
@@ -45,14 +46,13 @@ func (s *PersonSvc) Add(ctx context.Context, person *model.Person) (*model.Perso
 			input.Realm = model.InhouseRealm
 		}
 
-		f := faker.New()
+		input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 
-		if input.Login == "" {
-			input.Login = input.ID
-		}
+		input.DisplayName = strings.TrimSpace(input.DisplayName)
 
 		if input.DisplayName == "" {
-			input.DisplayName = f.Person().Name()
+			now := time.Now()
+			input.DisplayName = fmt.Sprintf("Person%d", now.Unix())
 		}
 
 		o, err := queries.PersonAdd(ctx, input)
@@ -94,15 +94,16 @@ func (s *PersonSvc) Get(ctx context.Context, id string) (*model.Person, error) {
 
 func personDBtoModel(o pgdao.Person) *model.Person {
 	return &model.Person{
-		ID:          o.ID,
-		Realm:       o.Realm,
-		Login:       o.Login,
-		DisplayName: o.DisplayName,
-		CreatedAt:   o.CreatedAt,
-		Email:       o.Email,
-		Resources:   string(o.Resources),
-		AccessToken: o.AccessToken.String,
-		IsAdmin:     o.IsAdmin,
+		ID:              o.ID,
+		Realm:           o.Realm,
+		Login:           o.Login,
+		DisplayName:     o.DisplayName,
+		CreatedAt:       o.CreatedAt,
+		Email:           o.Email,
+		Resources:       string(o.Resources),
+		AccessToken:     o.AccessToken.String,
+		IsAdmin:         o.IsAdmin,
+		EthereumAddress: o.EthereumAddress,
 	}
 }
 

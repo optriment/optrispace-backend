@@ -674,16 +674,19 @@ func TestIsAdmin(t *testing.T) {
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 
 	strangerUser, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
+		Login:    "stranger",
 		Password: "12345678",
 	})
 	require.NoError(t, err)
 
 	passengerUser, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
+		Login:    "passenger",
 		Password: "12345678",
 	})
 	require.NoError(t, err)
 
 	adminUser, err := pgsvc.NewPerson(db).Add(ctx, &model.Person{
+		Login:    "admin",
 		Password: "12345678",
 	})
 	require.NoError(t, err)
