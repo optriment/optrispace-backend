@@ -13,21 +13,22 @@ import (
 
 const personAdd = `-- name: PersonAdd :one
 insert into persons (
-    id, realm, login, password_hash, display_name, email, access_token
+    id, realm, login, password_hash, display_name, email, access_token, ethereum_address
 ) values (
-    $1, $2, $3, $4, $5, $6, $7
-) 
+    $1, $2, $3, $4, $5, $6, $7, $8
+)
 returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin
 `
 
 type PersonAddParams struct {
-	ID           string
-	Realm        string
-	Login        string
-	PasswordHash string
-	DisplayName  string
-	Email        string
-	AccessToken  sql.NullString
+	ID              string
+	Realm           string
+	Login           string
+	PasswordHash    string
+	DisplayName     string
+	Email           string
+	AccessToken     sql.NullString
+	EthereumAddress string
 }
 
 func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, error) {
@@ -39,6 +40,7 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		arg.DisplayName,
 		arg.Email,
 		arg.AccessToken,
+		arg.EthereumAddress,
 	)
 	var i Person
 	err := row.Scan(
@@ -198,6 +200,24 @@ type PersonSetAccessTokenParams struct {
 // Sets the person's access token
 func (q *Queries) PersonSetAccessToken(ctx context.Context, arg PersonSetAccessTokenParams) error {
 	_, err := q.db.ExecContext(ctx, personSetAccessToken, arg.AccessToken, arg.ID)
+	return err
+}
+
+const personSetEthereumAddress = `-- name: PersonSetEthereumAddress :exec
+update persons
+set
+    ethereum_address = $1
+where
+    id = $2::varchar
+`
+
+type PersonSetEthereumAddressParams struct {
+	EthereumAddress string
+	ID              string
+}
+
+func (q *Queries) PersonSetEthereumAddress(ctx context.Context, arg PersonSetEthereumAddressParams) error {
+	_, err := q.db.ExecContext(ctx, personSetEthereumAddress, arg.EthereumAddress, arg.ID)
 	return err
 }
 

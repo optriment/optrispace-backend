@@ -10,7 +10,9 @@ server:
 db:
   url: postgres://postgres:postgres@localhost:65432/optrwork?sslmode=disable
 ethereum:
-  url: https://bsctestapi.terminet.io/rpc
+  # NOTE: If you have an issue with getting balance from blockchain by contract address,
+  # please try to choose another server from https://chainlist.org/chain/97
+  url: https://data-seed-prebsc-1-s3.binance.org:8545
 notification:
   tg:
     chat:

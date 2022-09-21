@@ -51,20 +51,25 @@ func (q *Queries) ApplicationAdd(ctx context.Context, arg ApplicationAddParams) 
 
 const applicationGet = `-- name: ApplicationGet :one
 
-select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id, c.id as contract_id from applications a
-	left join contracts c on a.id = c.application_id
+select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id,
+	(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS applicant_display_name,
+	p.ethereum_address AS applicant_ethereum_address
+	from applications a
+	join jobs j on j.id = a.job_id
+  join persons p on p.id = a.applicant_id
 	where a.id = $1::varchar
 `
 
 type ApplicationGetRow struct {
-	ID          string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Comment     string
-	Price       string
-	JobID       string
-	ApplicantID string
-	ContractID  sql.NullString
+	ID                       string
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	Comment                  string
+	Price                    string
+	JobID                    string
+	ApplicantID              string
+	ApplicantDisplayName     string
+	ApplicantEthereumAddress string
 }
 
 // on conflict
@@ -80,7 +85,8 @@ func (q *Queries) ApplicationGet(ctx context.Context, id string) (ApplicationGet
 		&i.Price,
 		&i.JobID,
 		&i.ApplicantID,
-		&i.ContractID,
+		&i.ApplicantDisplayName,
+		&i.ApplicantEthereumAddress,
 	)
 	return i, err
 }
@@ -188,7 +194,8 @@ func (q *Queries) ApplicationsGetByJob(ctx context.Context, jobID string) ([]App
 const applicationsListBy = `-- name: ApplicationsListBy :many
 select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id, c.id as contract_id, c.status as contract_status, c.price as contract_price,
 	j.title as job_title, j.description as job_description, j.budget as job_budget,
-  COALESCE(p.display_name, p.login) AS applicant_display_name
+	(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS applicant_display_name,
+	p.ethereum_address AS applicant_ethereum_address
 	from applications a
 	join jobs j on a.job_id = j.id
   join persons p on p.id = a.applicant_id
@@ -207,20 +214,21 @@ type ApplicationsListByParams struct {
 }
 
 type ApplicationsListByRow struct {
-	ID                   string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-	Comment              string
-	Price                string
-	JobID                string
-	ApplicantID          string
-	ContractID           sql.NullString
-	ContractStatus       sql.NullString
-	ContractPrice        sql.NullString
-	JobTitle             string
-	JobDescription       string
-	JobBudget            sql.NullString
-	ApplicantDisplayName string
+	ID                       string
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	Comment                  string
+	Price                    string
+	JobID                    string
+	ApplicantID              string
+	ContractID               sql.NullString
+	ContractStatus           sql.NullString
+	ContractPrice            sql.NullString
+	JobTitle                 string
+	JobDescription           string
+	JobBudget                sql.NullString
+	ApplicantDisplayName     string
+	ApplicantEthereumAddress string
 }
 
 func (q *Queries) ApplicationsListBy(ctx context.Context, arg ApplicationsListByParams) ([]ApplicationsListByRow, error) {
@@ -247,6 +255,7 @@ func (q *Queries) ApplicationsListBy(ctx context.Context, arg ApplicationsListBy
 			&i.JobDescription,
 			&i.JobBudget,
 			&i.ApplicantDisplayName,
+			&i.ApplicantEthereumAddress,
 		); err != nil {
 			return nil, err
 		}

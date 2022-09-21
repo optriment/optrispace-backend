@@ -1,9 +1,9 @@
 -- name: PersonAdd :one
 insert into persons (
-    id, realm, login, password_hash, display_name, email, access_token
+    id, realm, login, password_hash, display_name, email, access_token, ethereum_address
 ) values (
-    $1, $2, $3, $4, $5, $6, $7
-) 
+    $1, $2, $3, $4, $5, $6, $7, $8
+)
 returning *;
 
 -- name: PersonGet :one
@@ -37,6 +37,14 @@ where
 update persons
 set
     is_admin = @is_admin::boolean
+where
+    id = @id::varchar
+;
+
+-- name: PersonSetEthereumAddress :exec
+update persons
+set
+    ethereum_address = @ethereum_address
 where
     id = @id::varchar
 ;

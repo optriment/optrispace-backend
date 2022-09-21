@@ -13,24 +13,27 @@ import (
 
 const contractAdd = `-- name: ContractAdd :one
 insert into contracts (
-    id, customer_id, performer_id, application_id, title, description, price, duration, created_by, customer_address
+    id, customer_id, performer_id, application_id, title, description, price, duration, created_by, customer_address, performer_address, status, contract_address
 ) values (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
 returning id, customer_id, performer_id, application_id, title, description, price, duration, status, created_by, created_at, updated_at, customer_address, performer_address, contract_address
 `
 
 type ContractAddParams struct {
-	ID              string
-	CustomerID      string
-	PerformerID     string
-	ApplicationID   string
-	Title           string
-	Description     string
-	Price           string
-	Duration        sql.NullInt32
-	CreatedBy       string
-	CustomerAddress string
+	ID               string
+	CustomerID       string
+	PerformerID      string
+	ApplicationID    string
+	Title            string
+	Description      string
+	Price            string
+	Duration         sql.NullInt32
+	CreatedBy        string
+	CustomerAddress  string
+	PerformerAddress string
+	Status           string
+	ContractAddress  string
 }
 
 func (q *Queries) ContractAdd(ctx context.Context, arg ContractAddParams) (Contract, error) {
@@ -45,6 +48,9 @@ func (q *Queries) ContractAdd(ctx context.Context, arg ContractAddParams) (Contr
 		arg.Duration,
 		arg.CreatedBy,
 		arg.CustomerAddress,
+		arg.PerformerAddress,
+		arg.Status,
+		arg.ContractAddress,
 	)
 	var i Contract
 	err := row.Scan(
@@ -195,7 +201,7 @@ func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) (C
 }
 
 const contractsGetByPerson = `-- name: ContractsGetByPerson :many
-select 
+select
     c.id, c.customer_id, c.performer_id, c.application_id, c.title, c.description, c.price, c.duration, c.status, c.created_by, c.created_at, c.updated_at, c.customer_address, c.performer_address, c.contract_address
     , pc.display_name as customer_name
     , pp.display_name as performer_name

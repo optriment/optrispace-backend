@@ -32,7 +32,6 @@ migrate-drop: # Drop database migrations
 migrate-new-script: # Add a new script. Specify title in form SCRIPT_TITLE=<title>
 	cd pkg/db/db-migrations && make $@
 
-
 .PHONY: docker-compose-build
 docker-compose-build: # Build Docker image
 	cd ops/docker-compose-dev && docker-compose build --no-cache
@@ -90,7 +89,6 @@ $(STRINGER): # Installs stringer tool
 	@mkdir -p $(@D)
 	GOBIN=$(abspath $(@D)) go install golang.org/x/tools/cmd/stringer@v0.1.10
 
-
 .PHONY: generate
 generate: $(STRINGER) # code generate with go tools
 	go generate ./...
@@ -105,5 +103,5 @@ swag-init: $(SWAGBIN) # (re)generate swagger specification with swag
 	$(SWAGBIN) init --dir ./ --generalInfo ./pkg/controller/api.go --parseDependency --output ./pkg/docs
 
 .PHONY: swag-fmt
-swag-fmt: $(SWAGBIN) # format swag comment annotations 
-	$(SWAGBIN) fmt --dir ./pkg/controller --generalInfo api.go 
+swag-fmt: $(SWAGBIN) # format swag comment annotations
+	$(SWAGBIN) fmt --dir ./pkg/controller --generalInfo api.go

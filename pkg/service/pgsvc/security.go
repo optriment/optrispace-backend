@@ -113,12 +113,13 @@ func (s *SecuritySvc) FromLoginPassword(ctx context.Context, login, password str
 		newUctx.Authenticated = true
 		newUctx.Token = token
 		newUctx.Subject = &model.Person{
-			ID:          u.ID,
-			Realm:       u.Realm,
-			Login:       u.Login,
-			DisplayName: u.DisplayName,
-			CreatedAt:   u.CreatedAt,
-			Email:       u.Email,
+			ID:              u.ID,
+			Login:           u.Login,
+			DisplayName:     u.DisplayName,
+			CreatedAt:       u.CreatedAt,
+			Email:           u.Email,
+			IsAdmin:         u.IsAdmin,
+			EthereumAddress: u.EthereumAddress,
 		}
 		return nil
 	})

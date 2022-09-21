@@ -31,7 +31,7 @@ func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
 		if e.Budget.IsNegative() {
 			return &model.BackendError{
 				Cause:   model.ErrValidationFailed,
-				Message: model.ValidationErrorMustBePositive("budget"),
+				Message: model.ValidationErrorMustBePositive("Budget"),
 			}
 		}
 
@@ -130,10 +130,8 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 				Title:             o.Title,
 				Description:       o.Description,
 				Budget:            budget,
-				Duration:          o.Duration.Int32,
 				CreatedAt:         o.CreatedAt,
 				CreatedBy:         o.CreatedBy,
-				UpdatedAt:         o.UpdatedAt,
 				ApplicationsCount: uint(o.ApplicationCount),
 			})
 		}
@@ -178,12 +176,12 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string
 			if d, e := decimal.NewFromString(params.Budget); e != nil {
 				return &model.BackendError{
 					Cause:   model.ErrValidationFailed,
-					Message: model.ValidationErrorInvalidFormat("budget"),
+					Message: model.ValidationErrorInvalidFormat("Budget"),
 				}
 			} else if d.IsNegative() {
 				return &model.BackendError{
 					Cause:   model.ErrValidationFailed,
-					Message: model.ValidationErrorMustBePositive("budget"),
+					Message: model.ValidationErrorMustBePositive("Budget"),
 				}
 			}
 		}

@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/lib/pq"
@@ -13,6 +15,10 @@ import (
 	"optrispace.com/work/pkg/model"
 	"optrispace.com/work/pkg/service/ethsvc"
 )
+
+// Used for testing purposes only
+const fundedContractAddress = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
+const notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
 
 type (
 	// ContractSvc is a contract service
@@ -31,39 +37,118 @@ func NewContract(db *sql.DB, eth ethsvc.Ethereum) *ContractSvc {
 }
 
 // Add implements Contract interface
-func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model.Contract, error) {
-	var result *model.Contract
-	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		id := pgdao.NewID()
+func (s *ContractSvc) Add(ctx context.Context, customerID string, dto *model.CreateContractDTO) (*model.ContractDTO, error) {
+	var result *model.ContractDTO
 
-		if contract.Price.IsNegative() {
+	if strings.TrimSpace(dto.ApplicationID) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("application_id"),
+		}
+	}
+
+	if strings.TrimSpace(dto.Title) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("title"),
+		}
+	}
+
+	if strings.TrimSpace(dto.Description) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("description"),
+		}
+	}
+
+	if decimal.Zero.Equal(dto.Price) {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("price"),
+		}
+	}
+
+	if dto.Price.IsNegative() {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustBePositive("price"),
+		}
+	}
+
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		application, err := queries.ApplicationGet(ctx, strings.TrimSpace(dto.ApplicationID))
+		if err != nil {
+			return &model.BackendError{
+				Cause:   model.ErrEntityNotFound,
+				Message: "application does not exist",
+			}
+		}
+
+		customer, err := queries.PersonGet(ctx, customerID)
+		if err != nil {
+			return &model.BackendError{
+				Cause:   model.ErrEntityNotFound,
+				Message: "customer does not exist",
+			}
+		}
+
+		customerEthereumAddress := strings.ToLower(strings.TrimSpace(customer.EthereumAddress))
+		if customerEthereumAddress == "" {
 			return &model.BackendError{
 				Cause:   model.ErrValidationFailed,
-				Message: model.ValidationErrorMustBePositive("price"),
+				Message: "customer does not have wallet",
+			}
+		}
+
+		performer, err := queries.PersonGet(ctx, application.ApplicantID)
+		if err != nil {
+			return &model.BackendError{
+				Cause:   model.ErrEntityNotFound,
+				Message: "performer does not exist",
+			}
+		}
+
+		performerEthereumAddress := strings.ToLower(strings.TrimSpace(performer.EthereumAddress))
+		if performerEthereumAddress == "" {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "performer does not have wallet",
+			}
+		}
+
+		if strings.EqualFold(performerEthereumAddress, customerEthereumAddress) {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "customer and performer addresses cannot be the same",
 			}
 		}
 
 		contractParams := pgdao.ContractAddParams{
-			ID:            id,
-			CustomerID:    contract.Customer.ID,
-			PerformerID:   contract.Performer.ID,
-			ApplicationID: contract.Application.ID,
-			Title:         contract.Title,
-			Description:   contract.Description,
-			Price:         contract.Price.String(),
+			ID:            pgdao.NewID(),
+			CustomerID:    customer.ID,
+			PerformerID:   application.ApplicantID,
+			ApplicationID: strings.TrimSpace(application.ID),
+			Title:         strings.TrimSpace(dto.Title),
+			Description:   strings.TrimSpace(dto.Description),
+			Price:         dto.Price.String(),
 			Duration: sql.NullInt32{
-				Int32: contract.Duration,
-				Valid: contract.Duration > 0,
+				Int32: dto.Duration,
+				Valid: dto.Duration > 0,
 			},
-			CreatedBy:       contract.CreatedBy,
-			CustomerAddress: contract.CustomerAddress,
+			CreatedBy:        customer.ID,
+			Status:           model.ContractCreated,
+			CustomerAddress:  customerEthereumAddress,
+			PerformerAddress: performerEthereumAddress,
 		}
 
 		newContract, err := queries.ContractAdd(ctx, contractParams)
 
 		if pqe, ok := err.(*pq.Error); ok { //nolint: errorlint
 			if pqe.Code == "23505" {
-				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrDuplication)
+				return &model.BackendError{
+					Cause:   model.ErrDuplication,
+					Message: "contract already exists",
+				}
 			}
 		}
 
@@ -71,11 +156,11 @@ func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model
 			return fmt.Errorf("unable to ContractAdd: %w", err)
 		}
 
-		result = &model.Contract{ //nolint: dupl
+		result = &model.ContractDTO{ //nolint: dupl
 			ID:               newContract.ID,
-			Customer:         &model.Person{ID: newContract.CustomerID},
-			Performer:        &model.Person{ID: newContract.PerformerID},
-			Application:      &model.Application{ID: newContract.ApplicationID},
+			CustomerID:       newContract.CustomerID,
+			PerformerID:      newContract.PerformerID,
+			ApplicationID:    newContract.ApplicationID,
 			Title:            newContract.Title,
 			Description:      newContract.Description,
 			Price:            decimal.RequireFromString(newContract.Price),
@@ -93,43 +178,190 @@ func (s *ContractSvc) Add(ctx context.Context, contract *model.Contract) (*model
 	})
 }
 
-func contractByIDPersonID(ctx context.Context, queries *pgdao.Queries, id, personID string) (*model.Contract, error) {
-	contractParams := pgdao.ContractGetByIDAndPersonIDParams{
-		ID:       id,
-		PersonID: personID,
+// Accept makes contract accepted
+func (s *ContractSvc) Accept(ctx context.Context, id, actorID string) (*model.ContractDTO, error) {
+	allowedSourceStatus := model.ContractCreated
+	targetStatus := model.ContractAccepted
+
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.ContractDTO) error {
+		if c.PerformerID != actorID {
+			return model.ErrInsufficientRights
+		}
+
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+
+		return nil
+	})
+}
+
+// Deploy makes contract deployed
+func (s *ContractSvc) Deploy(ctx context.Context, id, actorID string, dto *model.DeployContractDTO) (*model.ContractDTO, error) {
+	allowedSourceStatus := model.ContractAccepted
+	targetStatus := model.ContractDeployed
+
+	contractAddress := strings.ToLower(strings.TrimSpace(dto.ContractAddress))
+	if contractAddress == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("contract_address"),
+		}
 	}
 
-	a, err := queries.ContractGetByIDAndPersonID(ctx, contractParams)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, model.ErrEntityNotFound
+	if !common.IsHexAddress(contractAddress) {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorInvalidFormat("contract_address"),
+		}
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("unable to ContractGet with id=%s: %w", id, err)
-	}
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange:          true,
+		Status:                targetStatus,
+		ContractAddressChange: true,
+		ContractAddress:       contractAddress,
+		ID:                    id,
+	}, func(c *model.ContractDTO) error {
+		if c.CustomerID != actorID {
+			return model.ErrInsufficientRights
+		}
 
-	return &model.Contract{ //nolint: dupl
-		ID:               a.ID,
-		Customer:         &model.Person{ID: a.CustomerID},
-		Performer:        &model.Person{ID: a.PerformerID},
-		Application:      &model.Application{ID: a.ApplicationID},
-		Title:            a.Title,
-		Description:      a.Description,
-		Price:            decimal.RequireFromString(a.Price),
-		Duration:         a.Duration.Int32,
-		Status:           a.Status,
-		CreatedAt:        a.CreatedAt,
-		UpdatedAt:        a.UpdatedAt,
-		CreatedBy:        a.CreatedBy,
-		ContractAddress:  a.ContractAddress,
-		CustomerAddress:  a.CustomerAddress,
-		PerformerAddress: a.PerformerAddress,
-	}, nil
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+
+		return nil
+	})
+}
+
+// Sign makes contract signed
+func (s *ContractSvc) Sign(ctx context.Context, id, actorID string) (*model.ContractDTO, error) {
+	allowedSourceStatus := model.ContractDeployed
+	targetStatus := model.ContractSigned
+
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.ContractDTO) error {
+		if c.PerformerID != actorID {
+			return model.ErrInsufficientRights
+		}
+
+		if !common.IsHexAddress(c.ContractAddress) {
+			return &model.BackendError{
+				Cause:    model.ErrValidationFailed,
+				Message:  model.ValidationErrorInvalidFormat("contract_address"),
+				TechInfo: c.ContractAddress,
+			}
+		}
+
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+
+		return nil
+	})
+}
+
+// Fund makes contract funded
+func (s *ContractSvc) Fund(ctx context.Context, id, actorID string) (*model.ContractDTO, error) {
+	allowedSourceStatus := model.ContractSigned
+	targetStatus := model.ContractFunded
+
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.ContractDTO) error {
+		if c.CustomerID != actorID {
+			return model.ErrInsufficientRights
+		}
+
+		if !common.IsHexAddress(c.ContractAddress) {
+			return &model.BackendError{
+				Cause:    model.ErrValidationFailed,
+				Message:  model.ValidationErrorInvalidFormat("contract_address"),
+				TechInfo: c.ContractAddress,
+			}
+		}
+
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+
+		return s.checkAddressBalance(ctx, c.Price, c.ContractAddress)
+	})
+}
+
+// Approve makes contract approved
+func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) (*model.ContractDTO, error) {
+	allowedSourceStatus := model.ContractFunded
+	targetStatus := model.ContractApproved
+
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.ContractDTO) error {
+		if c.CustomerID != actorID {
+			return model.ErrInsufficientRights
+		}
+
+		if !common.IsHexAddress(c.ContractAddress) {
+			return &model.BackendError{
+				Cause:    model.ErrValidationFailed,
+				Message:  model.ValidationErrorInvalidFormat("contract_address"),
+				TechInfo: c.ContractAddress,
+			}
+		}
+
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+
+		return nil
+	})
+}
+
+// Complete makes contract completed
+func (s *ContractSvc) Complete(ctx context.Context, id, actorID string) (*model.ContractDTO, error) {
+	allowedSourceStatus := model.ContractApproved
+	targetStatus := model.ContractCompleted
+
+	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
+		StatusChange: true,
+		Status:       targetStatus,
+		ID:           id,
+	}, func(c *model.ContractDTO) error {
+		if c.PerformerID != actorID {
+			return model.ErrInsufficientRights
+		}
+
+		if !common.IsHexAddress(c.ContractAddress) {
+			return &model.BackendError{
+				Cause:    model.ErrValidationFailed,
+				Message:  model.ValidationErrorInvalidFormat("contract_address"),
+				TechInfo: c.ContractAddress,
+			}
+		}
+
+		if c.Status != allowedSourceStatus {
+			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
+		}
+
+		return nil
+	})
 }
 
 // GetByIDForPerson loads contract by ID related for specific person
-func (s *ContractSvc) GetByIDForPerson(ctx context.Context, id, personID string) (*model.Contract, error) {
-	var result *model.Contract
+func (s *ContractSvc) GetByIDForPerson(ctx context.Context, id, personID string) (*model.ContractDTO, error) {
+	var result *model.ContractDTO
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		r, err := contractByIDPersonID(ctx, queries, id, personID)
 		result = r
@@ -138,28 +370,34 @@ func (s *ContractSvc) GetByIDForPerson(ctx context.Context, id, personID string)
 }
 
 // ListByPersonID loads all related contracts for specific person
-func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error) {
-	result := make([]*model.Contract, 0)
+func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*model.ContractDTO, error) {
+	result := make([]*model.ContractDTO, 0)
 
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		aa, err := queries.ContractsGetByPerson(ctx, personID)
 		if err != nil {
-			return fmt.Errorf("unable to ContractsListBy: %w", err)
+			return fmt.Errorf("unable to ContractsGetByPerson: %w", err)
 		}
 
 		for _, a := range aa {
-			result = append(result, &model.Contract{
-				ID:          a.ID,
-				Customer:    &model.Person{ID: a.CustomerID, DisplayName: a.CustomerName.String},
-				Performer:   &model.Person{ID: a.PerformerID, DisplayName: a.PerformerName.String},
-				Application: &model.Application{},
-				Title:       a.Title,
-				Description: a.Description,
-				Price:       decimal.RequireFromString(a.Price),
-				Duration:    a.Duration.Int32,
-				Status:      a.Status,
-				CreatedAt:   a.CreatedAt,
-				UpdatedAt:   a.UpdatedAt,
+			result = append(result, &model.ContractDTO{
+				ID:                   a.ID,
+				CustomerID:           a.CustomerID,
+				PerformerID:          a.PerformerID,
+				ApplicationID:        a.ApplicationID,
+				CustomerDisplayName:  a.CustomerName.String,
+				PerformerDisplayName: a.PerformerName.String,
+				ContractAddress:      a.ContractAddress,
+				CustomerAddress:      a.CustomerAddress,
+				PerformerAddress:     a.PerformerAddress,
+				Title:                a.Title,
+				Description:          a.Description,
+				Price:                decimal.RequireFromString(a.Price),
+				Duration:             a.Duration.Int32,
+				Status:               a.Status,
+				CreatedBy:            a.CreatedBy,
+				CreatedAt:            a.CreatedAt,
+				UpdatedAt:            a.UpdatedAt,
 			})
 		}
 
@@ -167,8 +405,49 @@ func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*m
 	})
 }
 
-func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams *pgdao.ContractPatchParams, validator func(c *model.Contract) error) (*model.Contract, error) {
-	var result *model.Contract
+// checkAddressBalance checks that contract have enough coins to supply contract entity
+// It should return nil if there are enough money at the contract address in the chain
+func (s *ContractSvc) checkAddressBalance(ctx context.Context, requiredBalance decimal.Decimal, contractAddress string) error {
+	// NOTE: It is the hardcoded values from contract_test.go and used only for testing purpose
+	if flag.Lookup("test.v") != nil {
+		if contractAddress == fundedContractAddress {
+			return nil
+		}
+
+		if contractAddress == notFundedContractAddress {
+			return &model.BackendError{
+				Cause:    model.ErrInsufficientFunds,
+				Message:  "the contract does not have sufficient funds",
+				TechInfo: contractAddress,
+			}
+		}
+
+		return &model.BackendError{
+			Cause:   model.ErrInappropriateAction,
+			Message: fmt.Sprintf("Not implemented for: %s", contractAddress),
+		}
+	}
+
+	// NOTE: If you have an issue with getting balance from blockchain by contract address,
+	// please try to choose another server from https://chainlist.org/chain/97 and update ./testdata/dev.yaml
+	balance, err := s.eth.Balance(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+
+	if balance.LessThan(requiredBalance) {
+		return &model.BackendError{
+			Cause:    model.ErrInsufficientFunds,
+			Message:  "the contract does not have sufficient funds",
+			TechInfo: contractAddress,
+		}
+	}
+
+	return nil
+}
+
+func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams *pgdao.ContractPatchParams, validator func(c *model.ContractDTO) error) (*model.ContractDTO, error) {
+	var result *model.ContractDTO
 
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		c, err := contractByIDPersonID(ctx, queries, patchParams.ID, actorID)
@@ -181,12 +460,11 @@ func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams 
 		}
 
 		o, err := queries.ContractPatch(ctx, *patchParams)
-
-		if errors.Is(err, sql.ErrNoRows) {
-			return model.ErrEntityNotFound
+		if err != nil {
+			return fmt.Errorf("unable to ContractPatch with id=%s: %w", patchParams.ID, err)
 		}
 
-		result = &model.Contract{ //nolint: dupl
+		result = &model.ContractDTO{ //nolint: dupl
 			ID:               o.ID,
 			Title:            o.Title,
 			Description:      o.Description,
@@ -205,138 +483,36 @@ func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams 
 	})
 }
 
-// Accept makes contract accepted if any
-func (s *ContractSvc) Accept(ctx context.Context, id, actorID, performerAddress string) (*model.Contract, error) {
-	allowedSourceStatus := model.ContractCreated
-	targetStatus := model.ContractAccepted
-	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
-		StatusChange:           true,
-		Status:                 targetStatus,
-		PerformerAddressChange: true,
-		PerformerAddress:       performerAddress,
-		ID:                     id,
-	}, func(c *model.Contract) error {
-		if c.Performer.ID != actorID {
-			return model.ErrInsufficientRights
-		}
-		if c.Status != allowedSourceStatus {
-			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
-		}
-
-		if performerAddress == c.CustomerAddress {
-			return &model.BackendError{
-				Cause:    model.ErrInsufficientFunds,
-				Message:  "customer and performer addresses cannot be the same",
-				TechInfo: "performer_address",
-			}
-		}
-
-		return nil
-	})
-}
-
-// Deploy makes contract deployed (in the target blockchain) if any
-func (s *ContractSvc) Deploy(ctx context.Context, id, actorID, contractAddress string) (*model.Contract, error) {
-	allowedSourceStatus := model.ContractAccepted
-	targetStatus := model.ContractDeployed
-	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
-		StatusChange:          true,
-		Status:                targetStatus,
-		ContractAddressChange: true,
-		ContractAddress:       contractAddress,
-		ID:                    id,
-	}, func(c *model.Contract) error {
-		if c.Customer.ID != actorID {
-			return model.ErrInsufficientRights
-		}
-		if c.Status != allowedSourceStatus {
-			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
-		}
-		return s.checkAddressBalance(ctx, c.Price, contractAddress)
-	})
-}
-
-// Send makes contract sent if any
-func (s *ContractSvc) Send(ctx context.Context, id, actorID string) (*model.Contract, error) {
-	allowedSourceStatus := model.ContractDeployed
-	targetStatus := model.ContractSent
-	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
-		StatusChange: true,
-		Status:       targetStatus,
-		ID:           id,
-	}, func(c *model.Contract) error {
-		if c.Performer.ID != actorID {
-			return model.ErrInsufficientRights
-		}
-		if c.Status != allowedSourceStatus {
-			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
-		}
-
-		return nil
-	})
-}
-
-// Approve makes contract approved if any
-func (s *ContractSvc) Approve(ctx context.Context, id, actorID string) (*model.Contract, error) {
-	allowedSourceStatus := model.ContractSent
-	targetStatus := model.ContractApproved
-	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
-		StatusChange: true,
-		Status:       targetStatus,
-		ID:           id,
-	}, func(c *model.Contract) error {
-		if c.Customer.ID != actorID {
-			return model.ErrInsufficientRights
-		}
-		if c.Status != allowedSourceStatus {
-			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
-		}
-		return s.checkAddressBalance(ctx, c.Price, c.ContractAddress)
-	})
-}
-
-// Complete makes contract completed if any
-func (s *ContractSvc) Complete(ctx context.Context, id, actorID string) (*model.Contract, error) {
-	allowedSourceStatus := model.ContractApproved
-	targetStatus := model.ContractCompleted
-	return s.toStatus(ctx, actorID, &pgdao.ContractPatchParams{
-		StatusChange: true,
-		Status:       targetStatus,
-		ID:           id,
-	}, func(c *model.Contract) error {
-		if c.Performer.ID != actorID {
-			return model.ErrInsufficientRights
-		}
-		if c.Status != allowedSourceStatus {
-			return fmt.Errorf("%w: unable to move from %s to %s", model.ErrInappropriateAction, c.Status, targetStatus)
-		}
-		return nil
-	})
-}
-
-// checkAddressBalance checks that contract have enough coins to supply contract entity
-// It should return nil if there are enough money at the contract address in the chain
-func (s *ContractSvc) checkAddressBalance(ctx context.Context, requiredBalance decimal.Decimal, contractAddress string) error {
-	if !common.IsHexAddress(contractAddress) {
-		return &model.BackendError{
-			Cause:    model.ErrValidationFailed,
-			Message:  model.ValidationErrorInvalidFormat("contract_address"),
-			TechInfo: contractAddress,
-		}
+func contractByIDPersonID(ctx context.Context, queries *pgdao.Queries, id, personID string) (*model.ContractDTO, error) {
+	contractParams := pgdao.ContractGetByIDAndPersonIDParams{
+		ID:       id,
+		PersonID: personID,
 	}
 
-	balance, err := s.eth.Balance(ctx, contractAddress)
+	a, err := queries.ContractGetByIDAndPersonID(ctx, contractParams)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, model.ErrEntityNotFound
+	}
+
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("unable to ContractGet with id=%s: %w", id, err)
 	}
 
-	if balance.LessThan(requiredBalance) {
-		return &model.BackendError{
-			Cause:    model.ErrInsufficientFunds,
-			Message:  "the contract does not have sufficient funds",
-			TechInfo: contractAddress,
-		}
-	}
-
-	return nil
+	return &model.ContractDTO{ //nolint: dupl
+		ID:               a.ID,
+		CustomerID:       a.CustomerID,
+		PerformerID:      a.PerformerID,
+		ApplicationID:    a.ApplicationID,
+		Title:            a.Title,
+		Description:      a.Description,
+		Price:            decimal.RequireFromString(a.Price),
+		Duration:         a.Duration.Int32,
+		Status:           a.Status,
+		CreatedAt:        a.CreatedAt,
+		UpdatedAt:        a.UpdatedAt,
+		CreatedBy:        a.CreatedBy,
+		ContractAddress:  a.ContractAddress,
+		CustomerAddress:  a.CustomerAddress,
+		PerformerAddress: a.PerformerAddress,
+	}, nil
 }

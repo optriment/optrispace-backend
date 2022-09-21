@@ -52,8 +52,8 @@ func TestStatRegistrations(t *testing.T) {
 	require.NoError(t, err)
 
 	type registrations struct {
-		Day           string `json:"day,omitempty"`
-		Registrations int    `json:"registrations,omitempty"`
+		Day           string `json:"day"`
+		Registrations int    `json:"registrations"`
 	}
 
 	t.Run("for 3 persons", func(t *testing.T) {

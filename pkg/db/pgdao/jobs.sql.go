@@ -76,7 +76,7 @@ select
     ,j.created_by
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
-    , COALESCE(p.display_name, p.login) AS customer_display_name
+    ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
     from jobs j
     join persons p on p.id = j.created_by
     where j.id = $1::varchar and j.blocked_at is null

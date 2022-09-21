@@ -10,14 +10,19 @@ returning *;
 -- do nothing
 
 -- name: ApplicationGet :one
-select a.*, c.id as contract_id from applications a
-	left join contracts c on a.id = c.application_id
+select a.*,
+	(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS applicant_display_name,
+	p.ethereum_address AS applicant_ethereum_address
+	from applications a
+	join jobs j on j.id = a.job_id
+  join persons p on p.id = a.applicant_id
 	where a.id = @id::varchar;
 
 -- name: ApplicationsListBy :many
 select a.*, c.id as contract_id, c.status as contract_status, c.price as contract_price,
 	j.title as job_title, j.description as job_description, j.budget as job_budget,
-  COALESCE(p.display_name, p.login) AS applicant_display_name
+	(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS applicant_display_name,
+	p.ethereum_address AS applicant_ethereum_address
 	from applications a
 	join jobs j on a.job_id = j.id
   join persons p on p.id = a.applicant_id

@@ -64,6 +64,13 @@ func (cont *Job) add(c echo.Context) error {
 		return err
 	}
 
+	if uc.Subject.EthereumAddress == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: "Ethereum address is required",
+		}
+	}
+
 	ie := new(jobDescription)
 
 	if e := c.Bind(ie); e != nil {
@@ -73,14 +80,14 @@ func (cont *Job) add(c echo.Context) error {
 	if ie.Title == "" {
 		return &model.BackendError{
 			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("title"),
+			Message: model.ValidationErrorRequired("Title"),
 		}
 	}
 
 	if ie.Description == "" {
 		return &model.BackendError{
 			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("description"),
+			Message: model.ValidationErrorRequired("Description"),
 		}
 	}
 

@@ -38,12 +38,13 @@ var (
 	ErrValidationFailed         = errors.New("validation failed")
 	ErrInvalidFormat            = errors.New("invalid format")     // entire request body has invalid format
 	ErrInsufficientFunds        = errors.New("insufficient funds") // insufficient funds on some address in a blockchain network
+	ErrInvalidJSON              = errors.New("invalid JSON")
 )
 
 // Validation errors
 var (
-	ValidationErrorRequired       = func(field string) string { return fmt.Sprintf("%s: is required", field) }
-	ValidationErrorMustBePositive = func(field string) string { return fmt.Sprintf("%s: must be positive", field) }
-	ValidationErrorInvalidFormat  = func(field string) string { return fmt.Sprintf("%s: invalid format", field) } // only ONE field has invalid format, not entire request body!
-	ValidationErrorTooLong        = func(field string) string { return fmt.Sprintf("%s: too long", field) }
+	ValidationErrorRequired       = func(field string) string { return fmt.Sprintf("%s is required", field) }
+	ValidationErrorMustBePositive = func(field string) string { return fmt.Sprintf("%s must be positive", field) }
+	ValidationErrorInvalidFormat  = func(field string) string { return fmt.Sprintf("%s has an invalid format", field) } // only ONE field has invalid format, not entire request body!
+	ValidationErrorTooLong        = func(field string) string { return fmt.Sprintf("%s is too long", field) }
 )

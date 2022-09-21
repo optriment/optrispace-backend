@@ -12,15 +12,15 @@ import (
 type (
 	// Job is a job offer publication
 	Job struct {
-		ID                string          `json:"id,omitempty"`
-		Title             string          `json:"title,omitempty"`
-		Description       string          `json:"description,omitempty"`
-		Budget            decimal.Decimal `json:"budget,omitempty"`
+		ID                string          `json:"id"`
+		Title             string          `json:"title"`
+		Description       string          `json:"description"`
+		Budget            decimal.Decimal `json:"budget"`
 		Duration          int32           `json:"duration,omitempty"`
-		CreatedAt         time.Time       `json:"created_at,omitempty"`
-		UpdatedAt         time.Time       `json:"updated_at,omitempty"`
-		CreatedBy         string          `json:"created_by,omitempty"`
-		ApplicationsCount uint            `json:"applications_count,omitempty"`
+		CreatedAt         time.Time       `json:"created_at"`
+		UpdatedAt         time.Time       `json:"updated_at"`
+		CreatedBy         string          `json:"created_by"`
+		ApplicationsCount uint            `json:"applications_count"`
 		Customer          *Person         `json:"customer,omitempty"`
 	}
 
@@ -67,7 +67,7 @@ type (
 		ID        string          `json:"id,omitempty"`
 		CreatedAt time.Time       `json:"created_at,omitempty"`
 		UpdatedAt time.Time       `json:"updated_at,omitempty"`
-		Applicant *Person         `json:"applicant,omitempty"`
+		Applicant *JobApplicant   `json:"applicant,omitempty"`
 		Comment   string          `json:"comment,omitempty"`
 		Price     decimal.Decimal `json:"price,omitempty"`
 		Job       *Job            `json:"job,omitempty"`
@@ -95,6 +95,14 @@ type (
 		CreatedBy string    `json:"created_by"`
 		Text      string    `json:"text"`
 	}
+
+	// JobApplicant represents a person who applied for specific job
+	JobApplicant struct {
+		ID              string `json:"id"`
+		DisplayName     string `json:"display_name"`
+		EthereumAddress string `json:"ethereum_address"`
+		Resources       string `json:"resources"`
+	}
 )
 
 // Contract statuses
@@ -102,7 +110,8 @@ const (
 	ContractCreated   = "created"
 	ContractAccepted  = "accepted"
 	ContractDeployed  = "deployed"
-	ContractSent      = "sent"
+	ContractSigned    = "signed"
+	ContractFunded    = "funded"
 	ContractApproved  = "approved"
 	ContractCompleted = "completed"
 )

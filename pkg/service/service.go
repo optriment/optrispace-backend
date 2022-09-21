@@ -79,29 +79,32 @@ type (
 	// Contract is an agreement between a Customer and a Performer (Contractor)
 	Contract interface {
 		// Add saves the entity into storage
-		Add(ctx context.Context, c *model.Contract) (*model.Contract, error)
+		Add(ctx context.Context, customerID string, dto *model.CreateContractDTO) (*model.ContractDTO, error)
+
+		// Accept makes contract accepted by performer
+		Accept(ctx context.Context, id, performerID string) (*model.ContractDTO, error)
+
+		// Deploy makes contract deployed by customer
+		Deploy(ctx context.Context, id, customerID string, contractParams *model.DeployContractDTO) (*model.ContractDTO, error)
+
+		// Sign makes contract signed by performer
+		Sign(ctx context.Context, id, performerID string) (*model.ContractDTO, error)
+
+		// Fund makes contract funded by customer
+		Fund(ctx context.Context, id, customerID string) (*model.ContractDTO, error)
+
+		// Approve makes contract approved by customer
+		Approve(ctx context.Context, id, customerID string) (*model.ContractDTO, error)
+
+		// Complete makes contract completed by performer
+		Complete(ctx context.Context, id, performerID string) (*model.ContractDTO, error)
 
 		// GetByIDForPerson reads specified entity from storage by specified id and related for person
 		// It can return model.ErrNotFound
-		GetByIDForPerson(ctx context.Context, id, personID string) (*model.Contract, error)
+		GetByIDForPerson(ctx context.Context, id, personID string) (*model.ContractDTO, error)
 
 		// ListByPersonID returns list of entities by specific Person
-		ListByPersonID(ctx context.Context, personID string) ([]*model.Contract, error)
-
-		// Accept makes contract accepted if any
-		Accept(ctx context.Context, id, actorID, performerAddress string) (*model.Contract, error)
-
-		// Deploy makes contract accepted if any
-		Deploy(ctx context.Context, id, actorID, contractAddress string) (*model.Contract, error)
-
-		// Send makes contract sent if any
-		Send(ctx context.Context, id, actorID string) (*model.Contract, error)
-
-		// Approve makes contract approved if any
-		Approve(ctx context.Context, id, actorID string) (*model.Contract, error)
-
-		// Complete makes contract completed if any
-		Complete(ctx context.Context, id, actorID string) (*model.Contract, error)
+		ListByPersonID(ctx context.Context, personID string) ([]*model.ContractDTO, error)
 	}
 
 	// Notification service manipulates with notifications

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jaswdr/faker"
 	"github.com/labstack/echo/v4"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ import (
 )
 
 func TestApplication(t *testing.T) {
+	faker := faker.New()
 	resourceName := "applications"
 
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
@@ -28,9 +30,24 @@ func TestApplication(t *testing.T) {
 		applicant1 = addPerson(t, "applicant1")
 		applicant2 = addPerson(t, "applicant2")
 		applicant3 = addPerson(t, "applicant3")
-
-		job = addJob(t, "Applications testing", "Applications testing description", createdBy.ID, "", "")
+		applicant4 = addPerson(t, "applicant4")
+		job        = addJob(t, "Applications testing", "Applications testing description", createdBy.ID, "", "")
 	)
+
+	require.NoError(t, queries.PersonSetEthereumAddress(ctx, pgdao.PersonSetEthereumAddressParams{
+		EthereumAddress: faker.Crypto().EtheriumAddress(),
+		ID:              applicant1.ID,
+	}))
+
+	require.NoError(t, queries.PersonSetEthereumAddress(ctx, pgdao.PersonSetEthereumAddressParams{
+		EthereumAddress: faker.Crypto().EtheriumAddress(),
+		ID:              applicant2.ID,
+	}))
+
+	require.NoError(t, queries.PersonSetEthereumAddress(ctx, pgdao.PersonSetEthereumAddressParams{
+		EthereumAddress: faker.Crypto().EtheriumAddress(),
+		ID:              applicant3.ID,
+	}))
 
 	jobURL := appURL + "/jobs/" + job.ID
 	applicationsURL := jobURL + "/" + resourceName
@@ -141,7 +158,7 @@ func TestApplication(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "comment: is required", e.Message)
+			assert.EqualValues(t, "Comment is required", e.Message)
 		}
 	})
 
@@ -185,7 +202,7 @@ func TestApplication(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "price: is required", e.Message)
+			assert.EqualValues(t, "Price is required", e.Message)
 		}
 	})
 
@@ -207,7 +224,7 @@ func TestApplication(t *testing.T) {
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "price: must be positive", e.Message)
+			assert.EqualValues(t, "Price must be positive", e.Message)
 		}
 	})
 
@@ -318,6 +335,28 @@ func TestApplication(t *testing.T) {
 		}
 	})
 
+	t.Run("post•without wallet", func(t *testing.T) {
+		body := `{
+			"comment":"Title",
+			"price": "1.0"
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, applicationsURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant4.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := model.BackendError{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.EqualValues(t, "Ethereum address is required", e.Message)
+		}
+	})
+
 	t.Run("post•repeat-applicant2", func(t *testing.T) {
 		body := `{
 			"comment":"Repeat",
@@ -366,6 +405,7 @@ func TestApplication(t *testing.T) {
 		PerformerID:   applicant1.ID,
 		ApplicationID: application1.ID,
 		CreatedBy:     createdBy.ID,
+		Status:        model.ContractCreated,
 	})
 	require.NoError(t, err)
 

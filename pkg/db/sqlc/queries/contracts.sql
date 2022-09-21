@@ -1,8 +1,8 @@
 -- name: ContractAdd :one
 insert into contracts (
-    id, customer_id, performer_id, application_id, title, description, price, duration, created_by, customer_address
+    id, customer_id, performer_id, application_id, title, description, price, duration, created_by, customer_address, performer_address, status, contract_address
 ) values (
-    @id, @customer_id, @performer_id, @application_id, @title, @description, @price, @duration, @created_by, @customer_address
+    @id, @customer_id, @performer_id, @application_id, @title, @description, @price, @duration, @created_by, @customer_address, @performer_address, @status, @contract_address
 )
 returning *;
 
@@ -39,7 +39,7 @@ where
 returning *;
 
 -- name: ContractsGetByPerson :many
-select 
+select
     c.*
     , pc.display_name as customer_name
     , pp.display_name as performer_name

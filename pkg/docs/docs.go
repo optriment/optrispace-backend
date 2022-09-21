@@ -450,7 +450,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.Contract"
+                                "$ref": "#/definitions/model.ContractDTO"
                             }
                         }
                     },
@@ -499,20 +499,20 @@ const docTemplate = `{
                 "summary": "Create a new contract",
                 "parameters": [
                     {
-                        "description": "New contract description",
+                        "description": "Contract Params",
                         "name": "job",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.jobDescription"
+                            "$ref": "#/definitions/controller.createContractParams"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
+                            "$ref": "#/definitions/model.ContractDTO"
                         }
                     },
                     "400": {
@@ -585,7 +585,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
+                            "$ref": "#/definitions/model.ContractDTO"
                         }
                     },
                     "401": {
@@ -641,15 +641,6 @@ const docTemplate = `{
                 "summary": "Accept contract",
                 "parameters": [
                     {
-                        "description": "Parameters",
-                        "name": "params",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.acceptParameters"
-                        }
-                    },
-                    {
                         "type": "string",
                         "description": "Contract ID",
                         "name": "id",
@@ -661,13 +652,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
-                        }
-                    },
-                    "400": {
-                        "description": "invalid format",
-                        "schema": {
-                            "$ref": "#/definitions/model.BackendError"
+                            "$ref": "#/definitions/model.ContractDTO"
                         }
                     },
                     "401": {
@@ -732,7 +717,7 @@ const docTemplate = `{
                 "tags": [
                     "contract"
                 ],
-                "summary": "Approve working results",
+                "summary": "Approve working results and allow to withdraw money from Smart Contract",
                 "parameters": [
                     {
                         "type": "string",
@@ -746,7 +731,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
+                            "$ref": "#/definitions/model.ContractDTO"
                         }
                     },
                     "401": {
@@ -825,7 +810,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
+                            "$ref": "#/definitions/model.ContractDTO"
                         }
                     },
                     "401": {
@@ -874,7 +859,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "Customer is deploying contract in the blockchain",
+                "description": "Customer has deployed contract to the blockchain",
                 "consumes": [
                     "application/json"
                 ],
@@ -887,15 +872,6 @@ const docTemplate = `{
                 "summary": "Deploy contract",
                 "parameters": [
                     {
-                        "description": "Parameters",
-                        "name": "params",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.deployParameters"
-                        }
-                    },
-                    {
                         "type": "string",
                         "description": "Contract ID",
                         "name": "id",
@@ -907,7 +883,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
+                            "$ref": "#/definitions/model.ContractDTO"
                         }
                     },
                     "400": {
@@ -935,7 +911,7 @@ const docTemplate = `{
                         }
                     },
                     "422": {
-                        "description": "validation failed or insufficient funds on the contract in the blockchain",
+                        "description": "validation failed",
                         "schema": {
                             "$ref": "#/definitions/model.BackendError"
                         }
@@ -961,14 +937,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/contracts/{id}/send": {
+        "/contracts/{id}/fund": {
             "post": {
                 "security": [
                     {
                         "BearerToken": []
                     }
                 ],
-                "description": "Performer is sending working results to customer",
+                "description": "Customer is funded contract in the blockchain",
                 "consumes": [
                     "application/json"
                 ],
@@ -978,7 +954,7 @@ const docTemplate = `{
                 "tags": [
                     "contract"
                 ],
-                "summary": "Send working results to customer",
+                "summary": "Fund contract",
                 "parameters": [
                     {
                         "type": "string",
@@ -992,7 +968,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Contract"
+                            "$ref": "#/definitions/model.ContractDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid format",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
                         }
                     },
                     "401": {
@@ -1009,6 +991,97 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "contract not found or user not authorized to view contract",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "422": {
+                        "description": "validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/contracts/{id}/sign": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Performer is signing contract",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contract"
+                ],
+                "summary": "Sign contract",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Contract ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ContractDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid format",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "401": {
+                        "description": "user not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "403": {
+                        "description": "insufficient rights",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "404": {
+                        "description": "contract not found or user not authorized to view contract",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "422": {
+                        "description": "validation failed",
                         "schema": {
                             "$ref": "#/definitions/model.BackendError"
                         }
@@ -2048,18 +2121,28 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "controller.acceptParameters": {
+        "controller.createContractParams": {
             "type": "object",
+            "required": [
+                "application_id",
+                "description",
+                "price",
+                "title"
+            ],
             "properties": {
-                "performer_address": {
+                "application_id": {
                     "type": "string"
-                }
-            }
-        },
-        "controller.deployParameters": {
-            "type": "object",
-            "properties": {
-                "contract_address": {
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "title": {
                     "type": "string"
                 }
             }
@@ -2143,7 +2226,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "applicant": {
-                    "$ref": "#/definitions/model.Person"
+                    "$ref": "#/definitions/model.JobApplicant"
                 },
                 "comment": {
                     "type": "string"
@@ -2249,6 +2332,62 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ContractDTO": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "string"
+                },
+                "contract_address": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "customer_address": {
+                    "type": "string"
+                },
+                "customer_display_name": {
+                    "type": "string"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "performer_address": {
+                    "type": "string"
+                },
+                "performer_display_name": {
+                    "type": "string"
+                },
+                "performer_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Job": {
             "type": "object",
             "properties": {
@@ -2280,6 +2419,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.JobApplicant": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "ethereum_address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "resources": {
                     "type": "string"
                 }
             }

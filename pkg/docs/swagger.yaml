@@ -1,14 +1,22 @@
 basePath: /
 definitions:
-  controller.acceptParameters:
+  controller.createContractParams:
     properties:
-      performer_address:
+      application_id:
         type: string
-    type: object
-  controller.deployParameters:
-    properties:
-      contract_address:
+      description:
         type: string
+      duration:
+        type: integer
+      price:
+        type: number
+      title:
+        type: string
+    required:
+    - application_id
+    - description
+    - price
+    - title
     type: object
   controller.jobDescription:
     properties:
@@ -61,7 +69,7 @@ definitions:
   model.Application:
     properties:
       applicant:
-        $ref: '#/definitions/model.Person'
+        $ref: '#/definitions/model.JobApplicant'
       comment:
         type: string
       contract:
@@ -130,6 +138,43 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.ContractDTO:
+    properties:
+      application_id:
+        type: string
+      contract_address:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer_address:
+        type: string
+      customer_display_name:
+        type: string
+      customer_id:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      performer_address:
+        type: string
+      performer_display_name:
+        type: string
+      performer_id:
+        type: string
+      price:
+        type: number
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.Job:
     properties:
       applications_count:
@@ -151,6 +196,17 @@ definitions:
       title:
         type: string
       updated_at:
+        type: string
+    type: object
+  model.JobApplicant:
+    properties:
+      display_name:
+        type: string
+      ethereum_address:
+        type: string
+      id:
+        type: string
+      resources:
         type: string
     type: object
   model.Message:
@@ -472,7 +528,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.Contract'
+              $ref: '#/definitions/model.ContractDTO'
             type: array
         "401":
           description: user not authorized
@@ -497,19 +553,19 @@ paths:
       - application/json
       description: Creates a new contract based on existent application.
       parameters:
-      - description: New contract description
+      - description: Contract Params
         in: body
         name: job
         required: true
         schema:
-          $ref: '#/definitions/controller.jobDescription'
+          $ref: '#/definitions/controller.createContractParams'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/model.Contract'
+            $ref: '#/definitions/model.ContractDTO'
         "400":
           description: invalid format
           schema:
@@ -554,7 +610,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Contract'
+            $ref: '#/definitions/model.ContractDTO'
         "401":
           description: user not authorized
           schema:
@@ -583,12 +639,6 @@ paths:
       - application/json
       description: Performer is accepting contract
       parameters:
-      - description: Parameters
-        in: body
-        name: params
-        required: true
-        schema:
-          $ref: '#/definitions/controller.acceptParameters'
       - description: Contract ID
         in: path
         name: id
@@ -600,11 +650,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Contract'
-        "400":
-          description: invalid format
-          schema:
-            $ref: '#/definitions/model.BackendError'
+            $ref: '#/definitions/model.ContractDTO'
         "401":
           description: user not authorized
           schema:
@@ -652,7 +698,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Contract'
+            $ref: '#/definitions/model.ContractDTO'
         "401":
           description: user not authorized
           schema:
@@ -680,7 +726,7 @@ paths:
               type: object
       security:
       - BearerToken: []
-      summary: Approve working results
+      summary: Approve working results and allow to withdraw money from Smart Contract
       tags:
       - contract
   /contracts/{id}/complete:
@@ -700,7 +746,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Contract'
+            $ref: '#/definitions/model.ContractDTO'
         "401":
           description: user not authorized
           schema:
@@ -731,14 +777,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Customer is deploying contract in the blockchain
+      description: Customer has deployed contract to the blockchain
       parameters:
-      - description: Parameters
-        in: body
-        name: params
-        required: true
-        schema:
-          $ref: '#/definitions/controller.deployParameters'
       - description: Contract ID
         in: path
         name: id
@@ -750,7 +790,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Contract'
+            $ref: '#/definitions/model.ContractDTO'
         "400":
           description: invalid format
           schema:
@@ -768,8 +808,7 @@ paths:
           schema:
             $ref: '#/definitions/model.BackendError'
         "422":
-          description: validation failed or insufficient funds on the contract in
-            the blockchain
+          description: validation failed
           schema:
             $ref: '#/definitions/model.BackendError'
         "500":
@@ -786,11 +825,11 @@ paths:
       summary: Deploy contract
       tags:
       - contract
-  /contracts/{id}/send:
+  /contracts/{id}/fund:
     post:
       consumes:
       - application/json
-      description: Performer is sending working results to customer
+      description: Customer is funded contract in the blockchain
       parameters:
       - description: Contract ID
         in: path
@@ -803,7 +842,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Contract'
+            $ref: '#/definitions/model.ContractDTO'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
         "401":
           description: user not authorized
           schema:
@@ -814,6 +857,10 @@ paths:
             $ref: '#/definitions/model.BackendError'
         "404":
           description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
           schema:
             $ref: '#/definitions/model.BackendError'
         "500":
@@ -827,7 +874,59 @@ paths:
               type: object
       security:
       - BearerToken: []
-      summary: Send working results to customer
+      summary: Fund contract
+      tags:
+      - contract
+  /contracts/{id}/sign:
+    post:
+      consumes:
+      - application/json
+      description: Performer is signing contract
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ContractDTO'
+        "400":
+          description: invalid format
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: insufficient rights
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: contract not found or user not authorized to view contract
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "422":
+          description: validation failed
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Sign contract
       tags:
       - contract
   /jobs:

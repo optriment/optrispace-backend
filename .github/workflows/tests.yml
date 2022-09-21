@@ -43,3 +43,6 @@ jobs:
 
     - name: Tests
       run: make test-integration
+
+    - name: Test swagger generation
+      run: make swag-init
