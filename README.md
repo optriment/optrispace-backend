@@ -2,6 +2,8 @@
 
 ![OptriSpace](./assets/optrispace.png)
 
+[![Tests](https://github.com/optriment/optrispace-backend/actions/workflows/tests.yml/badge.svg)](https://github.com/optriment/optrispace-backend/actions/workflows/tests.yml)
+
 ## Getting Started
 
 Visit [https://optrispace.com/](https://optrispace.com/) to learn more about us.
