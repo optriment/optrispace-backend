@@ -49,7 +49,9 @@ set
         then @budget::decimal else budget end,
 
     duration = case when @duration_change::boolean
-        then @duration::int else duration end
+        then @duration::int else duration end,
+
+    updated_at = now()
 where
     id = @id::varchar and @actor::varchar = created_by
 returning *;

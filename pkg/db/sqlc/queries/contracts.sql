@@ -33,7 +33,9 @@ set
         then @performer_address::varchar else performer_address end,
 
     contract_address = case when @contract_address_change::boolean
-        then @contract_address::varchar else contract_address end
+        then @contract_address::varchar else contract_address end,
+
+    updated_at = now()
 where
     id = @id::varchar
 returning *;

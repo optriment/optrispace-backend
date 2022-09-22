@@ -425,6 +425,7 @@ func TestJobEdit(t *testing.T) {
 					assert.Equal(t, "Editing title", d.Title)
 					assert.Equal(t, "Editing description. There are words here.", d.Description)
 					assert.Equal(t, "45.00", d.Budget.String)
+					assert.Greater(t, d.UpdatedAt, d.CreatedAt)
 					assert.EqualValues(t, 42, d.Duration.Int32)
 				}
 			}

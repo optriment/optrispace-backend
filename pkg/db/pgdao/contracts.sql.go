@@ -153,7 +153,9 @@ set
         then $4::varchar else performer_address end,
 
     contract_address = case when $5::boolean
-        then $6::varchar else contract_address end
+        then $6::varchar else contract_address end,
+
+    updated_at = now()
 where
     id = $7::varchar
 returning id, customer_id, performer_id, application_id, title, description, price, duration, status, created_by, created_at, updated_at, customer_address, performer_address, contract_address
