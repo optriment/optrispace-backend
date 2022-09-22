@@ -126,7 +126,9 @@ set
         then $6::decimal else budget end,
 
     duration = case when $7::boolean
-        then $8::int else duration end
+        then $8::int else duration end,
+
+    updated_at = now()
 where
     id = $9::varchar and $10::varchar = created_by
 returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at
