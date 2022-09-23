@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	// GenericCRUD represents the standart methods for CRUD operations
+	// GenericCRUD represents the standard methods for CRUD operations
 	GenericCRUD[E any] interface {
 		// Add saves the entity into storage
 		Add(ctx context.Context, e *E) (*E, error)
