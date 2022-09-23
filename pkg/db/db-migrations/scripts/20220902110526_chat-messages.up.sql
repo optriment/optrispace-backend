@@ -7,7 +7,7 @@ create table chats (
 comment on table chats is 'Chats where users have conversations';
 
 comment on column chats.id is 'PK';
-comment on column chats.topic is 'Topic whats talk about. In form of URI in form: urn:<type>:id. Where is type is: application, contract etc. ID is id of appropriate entity.';
+comment on column chats.topic is 'Topic what is talk about. In form of URI in form: urn:<type>:id. Where is type is: application, contract etc. ID is id of appropriate entity.';
 comment on column chats.created_at is 'Creation timestamp';
 
 create table messages (

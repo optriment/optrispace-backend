@@ -32,7 +32,7 @@ type Application struct {
 type Chat struct {
 	// PK
 	ID string
-	// Topic whats talk about. In form of URI in form: urn:<type>:id. Where is type is: application, contract etc. ID is id of appropriate entity.
+	// Topic what is talk about. In form of URI in form: urn:<type>:id. Where is type is: application, contract etc. ID is id of appropriate entity.
 	Topic string
 	// Creation timestamp
 	CreatedAt time.Time
