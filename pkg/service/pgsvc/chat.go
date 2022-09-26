@@ -164,7 +164,17 @@ func (s *ChatSvc) Get(ctx context.Context, chatID, participantID string) (*model
 			return err
 		}
 
-		result = chatFromDB(ch, mm...)
+		result = chatFromDB(ch)
+		for _, m := range mm {
+			result.Messages = append(result.Messages, model.Message{
+				ID:         m.ID,
+				ChatID:     chatID,
+				CreatedAt:  m.CreatedAt,
+				CreatedBy:  m.CreatedBy,
+				AuthorName: m.DisplayName,
+				Text:       m.Text,
+			})
+		}
 
 		return nil
 	})
