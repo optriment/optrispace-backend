@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/ethereum/go-ethereum v1.10.23
 	github.com/getsentry/sentry-go v0.13.0
-	github.com/go-playground/validator/v10 v10.11.0
+	github.com/go-playground/validator/v10 v10.11.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/jaswdr/faker v1.15.0
 	github.com/labstack/echo/v4 v4.9.0
