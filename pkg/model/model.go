@@ -89,11 +89,12 @@ type (
 
 	// Message is a message instance
 	Message struct {
-		ID        string    `json:"id"`
-		ChatID    string    `json:"chat_id"`
-		CreatedAt time.Time `json:"created_at"`
-		CreatedBy string    `json:"created_by"`
-		Text      string    `json:"text"`
+		ID         string    `json:"id"`
+		ChatID     string    `json:"chat_id"`
+		CreatedAt  time.Time `json:"created_at"`
+		CreatedBy  string    `json:"created_by"`
+		Text       string    `json:"text"`
+		AuthorName string    `json:"author_name"`
 	}
 
 	// JobApplicant represents a person who applied for specific job

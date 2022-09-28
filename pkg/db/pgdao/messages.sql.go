@@ -7,6 +7,7 @@ package pgdao
 
 import (
 	"context"
+	"time"
 )
 
 const messageAdd = `-- name: MessageAdd :one
@@ -44,27 +45,39 @@ func (q *Queries) MessageAdd(ctx context.Context, arg MessageAddParams) (Message
 
 const messagesListByChat = `-- name: MessagesListByChat :many
 select 
-    m.id, m.chat_id, m.created_at, m.created_by, m.text
-from messages m
+     m.id, m.chat_id, m.created_at, m.created_by, m.text
+    ,p.display_name
+from messages m 
+    join persons p on m.created_by = p.id
 where m.chat_id = $1::varchar
 order by m.created_at asc
 `
 
-func (q *Queries) MessagesListByChat(ctx context.Context, chatID string) ([]Message, error) {
+type MessagesListByChatRow struct {
+	ID          string
+	ChatID      string
+	CreatedAt   time.Time
+	CreatedBy   string
+	Text        string
+	DisplayName string
+}
+
+func (q *Queries) MessagesListByChat(ctx context.Context, chatID string) ([]MessagesListByChatRow, error) {
 	rows, err := q.db.QueryContext(ctx, messagesListByChat, chatID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []MessagesListByChatRow
 	for rows.Next() {
-		var i Message
+		var i MessagesListByChatRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChatID,
 			&i.CreatedAt,
 			&i.CreatedBy,
 			&i.Text,
+			&i.DisplayName,
 		); err != nil {
 			return nil, err
 		}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"optrispace.com/work/pkg/db/pgdao"
@@ -99,6 +100,13 @@ func newChat(ctx context.Context, queries *pgdao.Queries, topic, text, createdBy
 
 // AddMessage implements service.Chat
 func (s *ChatSvc) AddMessage(ctx context.Context, chatID, participantID, text string) (*model.Message, error) {
+	if strings.TrimSpace(text) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("text"),
+		}
+	}
+
 	if utf8.RuneCountInString(text) > messageTextMaxLen {
 		return nil, &model.BackendError{
 			Cause:   model.ErrValidationFailed,
@@ -122,7 +130,7 @@ func (s *ChatSvc) AddMessage(ctx context.Context, chatID, participantID, text st
 			ID:        pgdao.NewID(),
 			ChatID:    chatID,
 			CreatedBy: participantID,
-			Text:      text,
+			Text:      strings.TrimSpace(text),
 		})
 
 		result = &model.Message{
@@ -164,7 +172,17 @@ func (s *ChatSvc) Get(ctx context.Context, chatID, participantID string) (*model
 			return err
 		}
 
-		result = chatFromDB(ch, mm...)
+		result = chatFromDB(ch)
+		for _, m := range mm {
+			result.Messages = append(result.Messages, model.Message{
+				ID:         m.ID,
+				ChatID:     chatID,
+				CreatedAt:  m.CreatedAt,
+				CreatedBy:  m.CreatedBy,
+				AuthorName: m.DisplayName,
+				Text:       m.Text,
+			})
+		}
 
 		return nil
 	})

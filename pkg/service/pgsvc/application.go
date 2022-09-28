@@ -107,6 +107,15 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 			return fmt.Errorf("unable to ApplicationGet with id=%s: %w", id, err)
 		}
 
+		job := &model.Job{
+			ID:    a.JobID,
+			Title: a.JobTitle,
+		}
+
+		if a.JobBudget.Valid {
+			job.Budget = decimal.RequireFromString(a.JobBudget.String)
+		}
+
 		result = &model.Application{
 			ID:        a.ID,
 			CreatedAt: a.CreatedAt,
@@ -114,7 +123,7 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 			Applicant: &model.JobApplicant{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName, EthereumAddress: a.ApplicantEthereumAddress},
 			Comment:   a.Comment,
 			Price:     decimal.RequireFromString(a.Price),
-			Job:       &model.Job{ID: a.JobID},
+			Job:       job,
 		}
 
 		return nil

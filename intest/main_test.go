@@ -160,7 +160,7 @@ func addContract(t *testing.T, customerID, performerID, applicationID, title, de
 	return contract
 }
 
-// HTTP staff
+// HTTP stuff
 
 func doRequest[T any](t *testing.T, httpMethod, url, body, token string) T {
 	req, err := http.NewRequestWithContext(ctx, httpMethod, url, bytes.NewBufferString(body))

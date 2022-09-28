@@ -1,7 +1,9 @@
 -- name: MessagesListByChat :many
 select 
-    m.*
-from messages m
+     m.*
+    ,p.display_name
+from messages m 
+    join persons p on m.created_by = p.id
 where m.chat_id = @chat_id::varchar
 order by m.created_at asc;
 
