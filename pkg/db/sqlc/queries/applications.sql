@@ -12,7 +12,9 @@ returning *;
 -- name: ApplicationGet :one
 select a.*,
 	(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS applicant_display_name,
-	p.ethereum_address AS applicant_ethereum_address
+	p.ethereum_address AS applicant_ethereum_address,
+  j.title AS job_title,
+  j.budget AS job_budget
 	from applications a
 	join jobs j on j.id = a.job_id
   join persons p on p.id = a.applicant_id

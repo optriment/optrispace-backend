@@ -53,7 +53,9 @@ const applicationGet = `-- name: ApplicationGet :one
 
 select a.id, a.created_at, a.updated_at, a.comment, a.price, a.job_id, a.applicant_id,
 	(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS applicant_display_name,
-	p.ethereum_address AS applicant_ethereum_address
+	p.ethereum_address AS applicant_ethereum_address,
+  j.title AS job_title,
+  j.budget AS job_budget
 	from applications a
 	join jobs j on j.id = a.job_id
   join persons p on p.id = a.applicant_id
@@ -70,6 +72,8 @@ type ApplicationGetRow struct {
 	ApplicantID              string
 	ApplicantDisplayName     string
 	ApplicantEthereumAddress string
+	JobTitle                 string
+	JobBudget                sql.NullString
 }
 
 // on conflict
@@ -87,6 +91,8 @@ func (q *Queries) ApplicationGet(ctx context.Context, id string) (ApplicationGet
 		&i.ApplicantID,
 		&i.ApplicantDisplayName,
 		&i.ApplicantEthereumAddress,
+		&i.JobTitle,
+		&i.JobBudget,
 	)
 	return i, err
 }
