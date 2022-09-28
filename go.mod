@@ -3,7 +3,7 @@ module optrispace.com/work
 go 1.18
 
 require (
-	github.com/ethereum/go-ethereum v1.10.23
+	github.com/ethereum/go-ethereum v1.10.25
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
