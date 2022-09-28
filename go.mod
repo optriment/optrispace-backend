@@ -19,7 +19,7 @@ require (
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.0
 	github.com/swaggo/echo-swagger v1.3.4
-	github.com/swaggo/swag v1.8.5
+	github.com/swaggo/swag v1.8.6
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
 )
 
