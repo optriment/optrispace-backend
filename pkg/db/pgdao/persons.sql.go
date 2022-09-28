@@ -9,6 +9,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 )
 
 const personAdd = `-- name: PersonAdd :one
@@ -41,6 +42,81 @@ func (q *Queries) PersonAdd(ctx context.Context, arg PersonAddParams) (Person, e
 		arg.Email,
 		arg.AccessToken,
 		arg.EthereumAddress,
+	)
+	var i Person
+	err := row.Scan(
+		&i.ID,
+		&i.Realm,
+		&i.Login,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.CreatedAt,
+		&i.Email,
+		&i.EthereumAddress,
+		&i.Resources,
+		&i.AccessToken,
+		&i.IsAdmin,
+	)
+	return i, err
+}
+
+const personAddFull = `-- name: PersonAddFull :one
+insert into persons (
+    id
+  , realm
+  , login
+  , password_hash
+  , display_name
+  , created_at
+  , email
+  , ethereum_address
+  , resources
+  , access_token
+  , is_admin
+) values (
+    $1
+  , $2
+  , $3
+  , $4
+  , $5
+  , $6
+  , $7
+  , $8
+  , $9
+  , $10
+  , $11
+)
+returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin
+`
+
+type PersonAddFullParams struct {
+	ID              string
+	Realm           string
+	Login           string
+	PasswordHash    string
+	DisplayName     string
+	CreatedAt       time.Time
+	Email           string
+	EthereumAddress string
+	Resources       json.RawMessage
+	AccessToken     sql.NullString
+	IsAdmin         bool
+}
+
+// in special cases only!
+func (q *Queries) PersonAddFull(ctx context.Context, arg PersonAddFullParams) (Person, error) {
+	row := q.db.QueryRowContext(ctx, personAddFull,
+		arg.ID,
+		arg.Realm,
+		arg.Login,
+		arg.PasswordHash,
+		arg.DisplayName,
+		arg.CreatedAt,
+		arg.Email,
+		arg.EthereumAddress,
+		arg.Resources,
+		arg.AccessToken,
+		arg.IsAdmin,
 	)
 	var i Person
 	err := row.Scan(

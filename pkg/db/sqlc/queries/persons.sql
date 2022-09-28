@@ -78,3 +78,32 @@ select * from persons
 -- name: PersonsPurge :exec
 -- Handle with care!
 DELETE FROM persons;
+
+-- name: PersonAddFull :one
+-- in special cases only!
+insert into persons (
+    id
+  , realm
+  , login
+  , password_hash
+  , display_name
+  , created_at
+  , email
+  , ethereum_address
+  , resources
+  , access_token
+  , is_admin
+) values (
+    @id
+  , @realm
+  , @login
+  , @password_hash
+  , @display_name
+  , @created_at
+  , @email
+  , @ethereum_address
+  , @resources
+  , @access_token
+  , @is_admin
+)
+returning *;
