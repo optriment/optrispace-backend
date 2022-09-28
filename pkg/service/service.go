@@ -55,7 +55,7 @@ type (
 		UpdatePassword(ctx context.Context, subjectID, oldPassword, newPassword string) error
 
 		// Patch partially updates existing Person object
-		Patch(ctx context.Context, id, actorID string, patch map[string]any) error
+		Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.BasicPersonDTO, error)
 
 		// SetResources fully replace resources for the person
 		SetResources(ctx context.Context, id, actorID string, resources []byte) error

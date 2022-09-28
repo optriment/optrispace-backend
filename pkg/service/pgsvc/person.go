@@ -171,8 +171,10 @@ func (s *PersonSvc) UpdatePassword(ctx context.Context, subjectID, oldPassword, 
 }
 
 // Patch implements service.Person
-func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[string]any) error {
-	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.BasicPersonDTO, error) {
+	var result *model.BasicPersonDTO
+
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		if id != actorID {
 			return model.ErrInsufficientRights
 		}
@@ -189,14 +191,31 @@ func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[str
 		params.EthereumAddress, params.EthereumAddressChange = fmt.Sprint(v), c
 
 		v, c = patch["display_name"]
-		params.DisplayName, params.DisplayNameChange = fmt.Sprint(v), c
+		newDisplayName := strings.TrimSpace(fmt.Sprint(v))
+		if newDisplayName != "" {
+			params.DisplayName, params.DisplayNameChange = newDisplayName, c
+		}
 
-		_, err := queries.PersonPatch(ctx, params)
+		o, err := queries.PersonPatch(ctx, params)
+
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ErrEntityNotFound
 		}
 
-		return err
+		if err != nil {
+			return err
+		}
+
+		result = &model.BasicPersonDTO{
+			ID:              o.ID,
+			Login:           o.Login,
+			DisplayName:     o.DisplayName,
+			Email:           o.Email,
+			EthereumAddress: o.EthereumAddress,
+			Resources:       string(o.Resources),
+		}
+
+		return nil
 	})
 }
 

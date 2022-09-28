@@ -119,9 +119,9 @@ var _ = updatePerson{}
 // @Tags        person
 // @Accept      json
 // @Produce     json
-// @Param       job body controller.updatePerson true "Update person details"
-// @Param       id  path string true "Person ID"
-// @Success     200
+// @Param       job body     controller.updatePerson true "Update person details"
+// @Param       id  path     string                  true "Person ID"
+// @Success     200 {object} model.Person
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     404 {object} model.BackendError "person not found"
@@ -142,7 +142,12 @@ func (cont *Person) update(c echo.Context) error {
 		return e
 	}
 
-	return cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, ie)
+	oo, err := cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, ie)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, oo)
 }
 
 // @Summary     Set resources for person
@@ -151,7 +156,7 @@ func (cont *Person) update(c echo.Context) error {
 // @Accept      json
 // @Produce     json
 // @Param       job body string true "Person resources in JSON"
-// @Param       id  path string                  true "Person ID"
+// @Param       id  path string true "Person ID"
 // @Success     200
 // @Failure     400 {object} model.BackendError "invalid format (body should be formatted as JSON)"
 // @Failure     401 {object} model.BackendError "user not authorized"
