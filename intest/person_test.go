@@ -168,8 +168,6 @@ func TestPersonPatch(t *testing.T) {
 			Realm:        "inhouse",
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
-			DisplayName:  "John Smith",
-			Email:        "js@sample.com",
 			AccessToken: sql.NullString{
 				String: pgdao.NewID(),
 				Valid:  true,
@@ -191,18 +189,16 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			bb, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			assert.Empty(t, bb)
+			e := new(model.BasicPersonDTO)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.Equal(t, thePerson.ID, e.ID)
+			assert.Equal(t, "0x1234567890abcd", e.EthereumAddress)
+
 			d, err := queries.PersonGet(ctx, thePerson.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, thePerson.ID, d.ID)
 				assert.Equal(t, "0x1234567890abcd", d.EthereumAddress)
-				assert.Equal(t, "inhouse", d.Realm)
-				assert.Equal(t, thePerson.Login, d.Login)
-				assert.NotEmpty(t, d.PasswordHash)
-				assert.Equal(t, "John Smith", d.DisplayName)
-				assert.Equal(t, "js@sample.com", d.Email)
 			}
 		}
 	})
@@ -213,8 +209,6 @@ func TestPersonPatch(t *testing.T) {
 			Realm:        "inhouse",
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
-			DisplayName:  "John Smith",
-			Email:        "js@sample.com",
 			AccessToken: sql.NullString{
 				String: pgdao.NewID(),
 				Valid:  true,
@@ -236,18 +230,58 @@ func TestPersonPatch(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			bb, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			assert.Empty(t, bb)
+			e := new(model.BasicPersonDTO)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.Equal(t, thePerson.ID, e.ID)
+			assert.Equal(t, "Jude Law", e.DisplayName)
+
 			d, err := queries.PersonGet(ctx, thePerson.ID)
 			if assert.NoError(t, err) {
 				assert.Equal(t, thePerson.ID, d.ID)
-				assert.Equal(t, "", d.EthereumAddress)
-				assert.Equal(t, "inhouse", d.Realm)
-				assert.Equal(t, thePerson.Login, d.Login)
-				assert.NotEmpty(t, d.PasswordHash)
 				assert.Equal(t, "Jude Law", d.DisplayName)
-				assert.Equal(t, "js@sample.com", d.Email)
+			}
+		}
+	})
+
+	t.Run("patch display_name will not change the original value if new value is an empty string", func(t *testing.T) {
+		thePerson, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:           pgdao.NewID(),
+			Realm:        "inhouse",
+			Login:        pgdao.NewID(),
+			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
+			DisplayName:  "Original Name",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"display_name":" "
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, personURL+"/"+thePerson.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.BasicPersonDTO)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.Equal(t, thePerson.ID, e.ID)
+			assert.Equal(t, "Original Name", e.DisplayName)
+
+			d, err := queries.PersonGet(ctx, thePerson.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, thePerson.ID, d.ID)
+				assert.Equal(t, "Original Name", d.DisplayName)
 			}
 		}
 	})
@@ -258,8 +292,6 @@ func TestPersonPatch(t *testing.T) {
 			Realm:        "inhouse",
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
-			DisplayName:  "John Smith",
-			Email:        "js@sample.com",
 		})
 		require.NoError(t, err)
 
@@ -268,8 +300,7 @@ func TestPersonPatch(t *testing.T) {
 			Realm:        "inhouse",
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("1234"),
-			DisplayName:  "Stranger",
-			Email:        "s@sample.com", AccessToken: sql.NullString{
+			AccessToken: sql.NullString{
 				String: pgdao.NewID(),
 				Valid:  true,
 			},
@@ -302,8 +333,6 @@ func TestPersonPatch(t *testing.T) {
 			Realm:        "inhouse",
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
-			DisplayName:  "John Smith",
-			Email:        "js@sample.com",
 		})
 		require.NoError(t, err)
 
@@ -332,8 +361,6 @@ func TestPersonPatch(t *testing.T) {
 			Realm:        "inhouse",
 			Login:        pgdao.NewID(),
 			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
-			DisplayName:  "John Smith",
-			Email:        "js@sample.com",
 			AccessToken: sql.NullString{
 				String: pgdao.NewID(),
 				Valid:  true,

@@ -41,4 +41,14 @@ type (
 		CustomerAddress      string          `json:"customer_address"`
 		PerformerAddress     string          `json:"performer_address"`
 	}
+
+	// BasicPersonDTO is a representation of a person excepts restricted fields
+	BasicPersonDTO struct {
+		ID              string `json:"id"`
+		Login           string `json:"login"`
+		DisplayName     string `json:"display_name"`
+		Email           string `json:"email"`
+		EthereumAddress string `json:"ethereum_address"`
+		Resources       string `json:"resources"`
+	}
 )

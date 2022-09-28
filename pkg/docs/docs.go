@@ -1879,7 +1879,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Person"
+                        }
                     },
                     "400": {
                         "description": "invalid format",
@@ -2443,6 +2446,9 @@ const docTemplate = `{
         "model.Message": {
             "type": "object",
             "properties": {
+                "author_name": {
+                    "type": "string"
+                },
                 "chat_id": {
                     "type": "string"
                 },
