@@ -18,7 +18,7 @@ definitions:
     - price
     - title
     type: object
-  controller.jobDescription:
+  controller.createJobParams:
     properties:
       budget:
         type: number
@@ -28,6 +28,9 @@ definitions:
         type: integer
       title:
         type: string
+    required:
+    - description
+    - title
     type: object
   controller.loginParams:
     properties:
@@ -54,6 +57,20 @@ definitions:
         type: string
       old_password:
         type: string
+    type: object
+  controller.updateJobParams:
+    properties:
+      budget:
+        type: number
+      description:
+        type: string
+      duration:
+        type: integer
+      title:
+        type: string
+    required:
+    - description
+    - title
     type: object
   controller.updatePerson:
     properties:
@@ -207,6 +224,31 @@ definitions:
       id:
         type: string
       resources:
+        type: string
+    type: object
+  model.JobDTO:
+    properties:
+      applications_count:
+        type: integer
+      budget:
+        type: number
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer_display_name:
+        type: string
+      customer_ethereum_address:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      title:
+        type: string
+      updated_at:
         type: string
     type: object
   model.Message:
@@ -943,7 +985,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.Job'
+              $ref: '#/definitions/model.JobDTO'
             type: array
         "500":
           description: Internal Server Error
@@ -962,21 +1004,21 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new job. Current user will be creator of the job
+      description: Creates a new job
       parameters:
-      - description: New job description
+      - description: Job Params
         in: body
         name: job
         required: true
         schema:
-          $ref: '#/definitions/controller.jobDescription'
+          $ref: '#/definitions/controller.createJobParams'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/model.Job'
+            $ref: '#/definitions/model.JobDTO'
         "400":
           description: invalid format
           schema:
@@ -1000,17 +1042,11 @@ paths:
       tags:
       - job
   /jobs/{id}:
-    put:
+    get:
       consumes:
       - application/json
-      description: Updates existent job by creator only
+      description: Returns job by id
       parameters:
-      - description: New job description
-        in: body
-        name: job
-        required: true
-        schema:
-          $ref: '#/definitions/controller.jobDescription'
       - description: Job ID
         in: path
         name: id
@@ -1022,7 +1058,48 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Job'
+            $ref: '#/definitions/model.JobDTO'
+        "404":
+          description: job not found
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Get job by id
+      tags:
+      - job
+    put:
+      consumes:
+      - application/json
+      description: Updates job
+      parameters:
+      - description: Job params
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/controller.updateJobParams'
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.JobDTO'
         "400":
           description: invalid format
           schema:
@@ -1050,7 +1127,7 @@ paths:
               type: object
       security:
       - BearerToken: []
-      summary: Update existent job
+      summary: Update job
       tags:
       - job
   /jobs/{id}/block:
@@ -1096,42 +1173,6 @@ paths:
       security:
       - BearerToken: []
       summary: Block a job
-      tags:
-      - job
-  /jobs/{job_id}:
-    get:
-      consumes:
-      - application/json
-      description: Returns job description by job_id
-      parameters:
-      - description: Job ID
-        in: path
-        name: job_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.Job'
-        "404":
-          description: job not found
-          schema:
-            $ref: '#/definitions/model.BackendError'
-        "500":
-          description: Internal Server Error
-          schema:
-            allOf:
-            - $ref: '#/definitions/echo.HTTPError'
-            - properties:
-                message:
-                  type: string
-              type: object
-      security:
-      - BearerToken: []
-      summary: Get job description by job_id
       tags:
       - job
   /jobs/{job_id}/applications:

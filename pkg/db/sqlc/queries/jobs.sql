@@ -9,7 +9,10 @@ select
     ,j.created_by
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
+    ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
+    ,p.ethereum_address AS customer_ethereum_address
     from jobs j
+    join persons p on p.id = j.created_by
     where j.blocked_at is null
     order by created_at desc;
 
@@ -25,6 +28,7 @@ select
     ,j.updated_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
+    ,p.ethereum_address AS customer_ethereum_address
     from jobs j
     join persons p on p.id = j.created_by
     where j.id = @id::varchar and j.blocked_at is null;
@@ -39,18 +43,10 @@ insert into jobs (
 -- name: JobPatch :one
 update jobs
 set
-    title = case when @title_change::boolean
-        then @title::varchar else title end,
-
-    description = case when @description_change::boolean
-        then @description::varchar else description end,
-
-    budget = case when @budget_change::boolean
-        then @budget::decimal else budget end,
-
-    duration = case when @duration_change::boolean
-        then @duration::int else duration end,
-
+    title = @title::varchar,
+    description = @description::varchar,
+    budget = @budget::decimal,
+    duration = @duration::int,
     updated_at = now()
 where
     id = @id::varchar and @actor::varchar = created_by

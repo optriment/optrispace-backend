@@ -39,20 +39,20 @@ func (cont *Job) Register(e *echo.Echo) {
 	log.Debug().Str("controller", resourceJob).Msg("Registered")
 }
 
-type jobDescription struct {
-	Title       string          `json:"title,omitempty"`
-	Description string          `json:"description,omitempty"`
-	Budget      decimal.Decimal `json:"budget,omitempty"`
-	Duration    int32           `json:"duration,omitempty"`
+type createJobParams struct {
+	Title       string          `json:"title" validate:"required"`
+	Description string          `json:"description" validate:"required"`
+	Budget      decimal.Decimal `json:"budget"`
+	Duration    int32           `json:"duration"`
 }
 
 // @Summary     Create a new job
-// @Description Creates a new job. Current user will be creator of the job
+// @Description Creates a new job
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       job body     controller.jobDescription true "New job description"
-// @Success     200 {object} model.Job
+// @Param       job body     controller.createJobParams true "Job Params"
+// @Success     201 {object} model.JobDTO
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     422 {object} model.BackendError "validation failed"
 // @Failure     500 {object} echo.HTTPError{message=string}
@@ -64,48 +64,30 @@ func (cont *Job) add(c echo.Context) error {
 		return err
 	}
 
-	if uc.Subject.EthereumAddress == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: "Ethereum address is required",
-		}
-	}
-
-	ie := new(jobDescription)
+	ie := new(createJobParams)
 
 	if e := c.Bind(ie); e != nil {
 		return e
 	}
 
-	if ie.Title == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("Title"),
-		}
+	if err = validateStruct(ie); err != nil {
+		return err
 	}
 
-	if ie.Description == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("Description"),
-		}
-	}
-
-	o := &model.Job{
+	dto := model.CreateJobDTO{
 		Title:       ie.Title,
 		Description: ie.Description,
 		Budget:      ie.Budget,
 		Duration:    ie.Duration,
-		CreatedBy:   uc.Subject.ID,
 	}
 
-	o, err = cont.svc.Add(c.Request().Context(), o)
+	newJob, err := cont.svc.Add(c.Request().Context(), uc.Subject.ID, &dto)
 	if err != nil {
 		return fmt.Errorf("unable to save job: %w", err)
 	}
 
-	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceJob, o.ID))
-	return c.JSON(http.StatusCreated, o)
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceJob, newJob.ID))
+	return c.JSON(http.StatusCreated, newJob)
 }
 
 // @Summary     List jobs
@@ -113,7 +95,7 @@ func (cont *Job) add(c echo.Context) error {
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Success     200 {array}  model.Job
+// @Success     200 {array}  model.JobDTO
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /jobs [get]
@@ -125,19 +107,20 @@ func (cont *Job) list(c echo.Context) error {
 	return c.JSON(http.StatusOK, oo)
 }
 
-// @Summary     Get job description by job_id
-// @Description Returns job description by job_id
+// @Summary     Get job by id
+// @Description Returns job by id
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       job_id path     string true "Job ID"
-// @Success     200    {object} model.Job
-// @Failure     404    {object} model.BackendError "job not found"
-// @Failure     500    {object} echo.HTTPError{message=string}
+// @Param       id  path     string                     true "Job ID"
+// @Success     200 {object} model.JobDTO
+// @Failure     404 {object} model.BackendError "job not found"
+// @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
-// @Router      /jobs/{job_id} [get]
+// @Router      /jobs/{id} [get]
 func (cont *Job) get(c echo.Context) error {
 	id := c.Param("id")
+
 	o, err := cont.svc.Get(c.Request().Context(), id)
 	if errors.Is(model.ErrEntityNotFound, err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
@@ -149,14 +132,21 @@ func (cont *Job) get(c echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
-// @Summary     Update existent job
-// @Description Updates existent job by creator only
+type updateJobParams struct {
+	Title       string          `json:"title" validate:"required"`
+	Description string          `json:"description" validate:"required"`
+	Budget      decimal.Decimal `json:"budget"`
+	Duration    int32           `json:"duration"`
+}
+
+// @Summary     Update job
+// @Description Updates job
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       job body     controller.jobDescription true "New job description"
+// @Param       job body     controller.updateJobParams true "Job params"
 // @Param       id  path     string true "Job ID"
-// @Success     200 {object} model.Job
+// @Success     200 {object} model.JobDTO
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     404 {object} model.BackendError "job not found or current user is not creator"
@@ -165,19 +155,30 @@ func (cont *Job) get(c echo.Context) error {
 // @Security    BearerToken
 // @Router      /jobs/{id} [put]
 func (cont *Job) update(c echo.Context) error {
-	ie := make(map[string]any)
-
 	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 	id := c.Param("id")
 
+	ie := new(updateJobParams)
+
 	if e := c.Bind(&ie); e != nil {
 		return e
 	}
 
-	o, err := cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, ie)
+	if err = validateStruct(ie); err != nil {
+		return err
+	}
+
+	dto := model.UpdateJobDTO{
+		Title:       ie.Title,
+		Description: ie.Description,
+		Budget:      ie.Budget,
+		Duration:    ie.Duration,
+	}
+
+	o, err := cont.svc.Patch(c.Request().Context(), id, uc.Subject.ID, &dto)
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func (cont *Job) update(c echo.Context) error {
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       id  path     string                    true "Job ID"
+// @Param       id  path     string true "Job ID"
 // @Success     200 {object} model.Job
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     401 {object} model.BackendError "user not authorized"

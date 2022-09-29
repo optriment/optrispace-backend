@@ -1131,7 +1131,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.Job"
+                                "$ref": "#/definitions/model.JobDTO"
                             }
                         }
                     },
@@ -1161,7 +1161,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "Creates a new job. Current user will be creator of the job",
+                "description": "Creates a new job",
                 "consumes": [
                     "application/json"
                 ],
@@ -1174,20 +1174,20 @@ const docTemplate = `{
                 "summary": "Create a new job",
                 "parameters": [
                     {
-                        "description": "New job description",
+                        "description": "Job Params",
                         "name": "job",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.jobDescription"
+                            "$ref": "#/definitions/controller.createJobParams"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Job"
+                            "$ref": "#/definitions/model.JobDTO"
                         }
                     },
                     "400": {
@@ -1224,13 +1224,13 @@ const docTemplate = `{
             }
         },
         "/jobs/{id}": {
-            "put": {
+            "get": {
                 "security": [
                     {
                         "BearerToken": []
                     }
                 ],
-                "description": "Updates existent job by creator only",
+                "description": "Returns job by id",
                 "consumes": [
                     "application/json"
                 ],
@@ -1240,15 +1240,74 @@ const docTemplate = `{
                 "tags": [
                     "job"
                 ],
-                "summary": "Update existent job",
+                "summary": "Get job by id",
                 "parameters": [
                     {
-                        "description": "New job description",
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.JobDTO"
+                        }
+                    },
+                    "404": {
+                        "description": "job not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Updates job",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "job"
+                ],
+                "summary": "Update job",
+                "parameters": [
+                    {
+                        "description": "Job params",
                         "name": "job",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.jobDescription"
+                            "$ref": "#/definitions/controller.updateJobParams"
                         }
                     },
                     {
@@ -1263,7 +1322,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Job"
+                            "$ref": "#/definitions/model.JobDTO"
                         }
                     },
                     "400": {
@@ -1359,67 +1418,6 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "user is not admin",
-                        "schema": {
-                            "$ref": "#/definitions/model.BackendError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/echo.HTTPError"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/jobs/{job_id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerToken": []
-                    }
-                ],
-                "description": "Returns job description by job_id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "job"
-                ],
-                "summary": "Get job description by job_id",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Job ID",
-                        "name": "job_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.Job"
-                        }
-                    },
-                    "404": {
-                        "description": "job not found",
                         "schema": {
                             "$ref": "#/definitions/model.BackendError"
                         }
@@ -2150,8 +2148,12 @@ const docTemplate = `{
                 }
             }
         },
-        "controller.jobDescription": {
+        "controller.createJobParams": {
             "type": "object",
+            "required": [
+                "description",
+                "title"
+            ],
             "properties": {
                 "budget": {
                     "type": "number"
@@ -2204,6 +2206,27 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "old_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.updateJobParams": {
+            "type": "object",
+            "required": [
+                "description",
+                "title"
+            ],
+            "properties": {
+                "budget": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "title": {
                     "type": "string"
                 }
             }
@@ -2439,6 +2462,44 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "resources": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.JobDTO": {
+            "type": "object",
+            "properties": {
+                "applications_count": {
+                    "type": "integer"
+                },
+                "budget": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "customer_display_name": {
+                    "type": "string"
+                },
+                "customer_ethereum_address": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
