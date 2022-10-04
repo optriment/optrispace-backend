@@ -35,10 +35,17 @@ type (
 
 	// Job handles job offers
 	Job interface {
-		GenericCRUD[model.Job]
+		// Add saves the entity into storage
+		Add(ctx context.Context, customerID string, dto *model.CreateJobDTO) (*model.JobDTO, error)
+
+		// Get returns a specific job by ID
+		Get(ctx context.Context, id string) (*model.JobDTO, error)
+
+		// List returns a list of jobs
+		List(ctx context.Context) ([]*model.JobDTO, error)
 
 		// Patch partially updates existing Job object
-		Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error)
+		Patch(ctx context.Context, id, customerID string, patch *model.UpdateJobDTO) (*model.JobDTO, error)
 
 		// Block job
 		Block(ctx context.Context, id string) error

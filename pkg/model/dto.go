@@ -7,6 +7,37 @@ import (
 )
 
 type (
+	// CreateJobDTO is a contract representation on creation process
+	CreateJobDTO struct {
+		Title       string `validate:"required"`
+		Description string `validate:"required"`
+		Budget      decimal.Decimal
+		Duration    int32
+	}
+
+	// JobDTO is a representation of the job
+	JobDTO struct {
+		ID                      string          `json:"id"`
+		Title                   string          `json:"title"`
+		Description             string          `json:"description"`
+		Budget                  decimal.Decimal `json:"budget"`
+		Duration                int32           `json:"duration,omitempty"`
+		CreatedAt               time.Time       `json:"created_at"`
+		UpdatedAt               time.Time       `json:"updated_at"`
+		CreatedBy               string          `json:"created_by"`
+		ApplicationsCount       uint            `json:"applications_count"`
+		CustomerDisplayName     string          `json:"customer_display_name"`
+		CustomerEthereumAddress string          `json:"customer_ethereum_address"`
+	}
+
+	// UpdateJobDTO is a job representation on updation process
+	UpdateJobDTO struct {
+		Title       string `validate:"required"`
+		Description string `validate:"required"`
+		Budget      decimal.Decimal
+		Duration    int32
+	}
+
 	// CreateContractDTO is a contract representation on creation process
 	CreateContractDTO struct {
 		ApplicationID string          `validate:"required"`

@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
@@ -25,57 +25,96 @@ func NewJob(db *sql.DB) *JobSvc {
 }
 
 // Add implements service.Job interface
-func (s *JobSvc) Add(ctx context.Context, e *model.Job) (*model.Job, error) {
-	var result *model.Job
+func (s *JobSvc) Add(ctx context.Context, customerID string, dto *model.CreateJobDTO) (*model.JobDTO, error) {
+	var result *model.JobDTO
+
+	if strings.TrimSpace(dto.Title) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("title"),
+		}
+	}
+
+	if strings.TrimSpace(dto.Description) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("description"),
+		}
+	}
+
+	if dto.Budget.IsNegative() {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustBePositive("budget"),
+		}
+	}
+
+	if dto.Duration < 0 {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustNotBeNegative("duration"),
+		}
+	}
+
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		if e.Budget.IsNegative() {
+		customer, err := queries.PersonGet(ctx, customerID)
+		if err != nil {
 			return &model.BackendError{
-				Cause:   model.ErrValidationFailed,
-				Message: model.ValidationErrorMustBePositive("Budget"),
+				Cause:   model.ErrEntityNotFound,
+				Message: "customer does not exist",
 			}
 		}
 
-		o, err := queries.JobAdd(ctx,
-			pgdao.JobAddParams{
-				ID:          pgdao.NewID(),
-				Title:       e.Title,
-				Description: e.Description,
-				Budget: sql.NullString{
-					String: e.Budget.String(),
-					Valid:  !e.Budget.Equal(decimal.Zero),
-				},
-				Duration: sql.NullInt32{
-					Int32: e.Duration,
-					Valid: e.Duration > 0,
-				},
-				CreatedBy: e.CreatedBy,
-			})
+		customerEthereumAddress := strings.ToLower(strings.TrimSpace(customer.EthereumAddress))
+		if customerEthereumAddress == "" {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "customer does not have wallet",
+			}
+		}
+
+		jobParams := pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       strings.TrimSpace(dto.Title),
+			Description: strings.TrimSpace(dto.Description),
+			Budget: sql.NullString{
+				String: dto.Budget.String(),
+				Valid:  !dto.Budget.Equal(decimal.Zero),
+			},
+			Duration: sql.NullInt32{
+				Int32: dto.Duration,
+				Valid: dto.Duration > 0,
+			},
+			CreatedBy: customer.ID,
+		}
+
+		newJob, err := queries.JobAdd(ctx, jobParams)
 		if err != nil {
 			return fmt.Errorf("unable to JobAdd job: %w", err)
 		}
 
 		budget := decimal.Zero
-		if o.Budget.Valid {
-			budget = decimal.RequireFromString(o.Budget.String)
+		if newJob.Budget.Valid {
+			budget = decimal.RequireFromString(newJob.Budget.String)
 		}
 
-		result = &model.Job{
-			ID:          o.ID,
-			Title:       o.Title,
-			Description: o.Description,
+		result = &model.JobDTO{
+			ID:          newJob.ID,
+			Title:       newJob.Title,
+			Description: newJob.Description,
 			Budget:      budget,
-			Duration:    o.Duration.Int32,
-			CreatedAt:   o.CreatedAt,
-			CreatedBy:   o.CreatedBy,
-			UpdatedAt:   o.UpdatedAt,
+			Duration:    newJob.Duration.Int32,
+			CreatedAt:   newJob.CreatedAt,
+			UpdatedAt:   newJob.UpdatedAt,
+			CreatedBy:   newJob.CreatedBy,
 		}
 		return nil
 	})
 }
 
 // Get implements service.Job interface
-func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
-	var result *model.Job
+func (s *JobSvc) Get(ctx context.Context, id string) (*model.JobDTO, error) {
+	var result *model.JobDTO
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
 		o, err := queries.JobGet(ctx, id)
 
@@ -92,28 +131,26 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.Job, error) {
 			budget = decimal.RequireFromString(o.Budget.String)
 		}
 
-		result = &model.Job{
-			ID:                o.ID,
-			Title:             o.Title,
-			Description:       o.Description,
-			Budget:            budget,
-			Duration:          o.Duration.Int32,
-			CreatedAt:         o.CreatedAt,
-			CreatedBy:         o.CreatedBy,
-			UpdatedAt:         o.UpdatedAt,
-			ApplicationsCount: uint(o.ApplicationCount),
-			Customer: &model.Person{
-				ID:          o.CreatedBy,
-				DisplayName: o.CustomerDisplayName,
-			},
+		result = &model.JobDTO{
+			ID:                      o.ID,
+			Title:                   o.Title,
+			Description:             o.Description,
+			Budget:                  budget,
+			Duration:                o.Duration.Int32,
+			CreatedAt:               o.CreatedAt,
+			CreatedBy:               o.CreatedBy,
+			UpdatedAt:               o.UpdatedAt,
+			ApplicationsCount:       uint(o.ApplicationCount),
+			CustomerDisplayName:     o.CustomerDisplayName,
+			CustomerEthereumAddress: o.CustomerEthereumAddress,
 		}
 		return nil
 	})
 }
 
 // List implements service.Job interface
-func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
-	result := make([]*model.Job, 0)
+func (s *JobSvc) List(ctx context.Context) ([]*model.JobDTO, error) {
+	result := make([]*model.JobDTO, 0)
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
 		oo, err := queries.JobsList(ctx)
 		if err != nil {
@@ -125,14 +162,16 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.Job, error) {
 				budget = decimal.RequireFromString(o.Budget.String)
 			}
 
-			result = append(result, &model.Job{
-				ID:                o.ID,
-				Title:             o.Title,
-				Description:       o.Description,
-				Budget:            budget,
-				CreatedAt:         o.CreatedAt,
-				CreatedBy:         o.CreatedBy,
-				ApplicationsCount: uint(o.ApplicationCount),
+			result = append(result, &model.JobDTO{
+				ID:                      o.ID,
+				Title:                   o.Title,
+				Description:             o.Description,
+				Budget:                  budget,
+				CreatedAt:               o.CreatedAt,
+				CreatedBy:               o.CreatedBy,
+				ApplicationsCount:       uint(o.ApplicationCount),
+				CustomerDisplayName:     o.CustomerDisplayName,
+				CustomerEthereumAddress: o.CustomerEthereumAddress,
 			})
 		}
 		return nil
@@ -147,46 +186,65 @@ func (s *JobSvc) Block(ctx context.Context, id string) error {
 }
 
 // Patch implements service.Job interface
-func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string]any) (*model.Job, error) {
-	var result *model.Job
+func (s *JobSvc) Patch(ctx context.Context, id, actorID string, dto *model.UpdateJobDTO) (*model.JobDTO, error) {
+	var result *model.JobDTO
+
+	if strings.TrimSpace(dto.Title) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("title"),
+		}
+	}
+
+	if strings.TrimSpace(dto.Description) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("description"),
+		}
+	}
+
+	if dto.Budget.IsNegative() {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustBePositive("budget"),
+		}
+	}
+
+	if dto.Duration < 0 {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustNotBeNegative("duration"),
+		}
+	}
+
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		params := &pgdao.JobPatchParams{
-			ID:    id,
-			Actor: actorID,
-		}
-		_, params.TitleChange = patch["title"]
-		_, params.DescriptionChange = patch["description"]
-		_, params.BudgetChange = patch["budget"]
-		_, params.DurationChange = patch["duration"]
-
-		// force to make budget string
-		if params.BudgetChange {
-			patch["budget"] = fmt.Sprint(patch["budget"])
-		}
-
-		err := mapstructure.Decode(patch, params)
+		customer, err := queries.PersonGet(ctx, actorID)
 		if err != nil {
 			return &model.BackendError{
-				Cause:   model.ErrInvalidFormat,
-				Message: err.Error(),
+				Cause:   model.ErrEntityNotFound,
+				Message: "customer does not exist",
 			}
 		}
 
-		if params.BudgetChange {
-			if d, e := decimal.NewFromString(params.Budget); e != nil {
-				return &model.BackendError{
-					Cause:   model.ErrValidationFailed,
-					Message: model.ValidationErrorInvalidFormat("Budget"),
-				}
-			} else if d.IsNegative() {
-				return &model.BackendError{
-					Cause:   model.ErrValidationFailed,
-					Message: model.ValidationErrorMustBePositive("Budget"),
-				}
+		customerEthereumAddress := strings.ToLower(strings.TrimSpace(customer.EthereumAddress))
+		if customerEthereumAddress == "" {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "customer does not have wallet",
 			}
 		}
 
-		o, err := queries.JobPatch(ctx, *params)
+		params := &pgdao.JobPatchParams{
+			ID:    id,
+			Actor: customer.ID,
+		}
+
+		params.Title = strings.TrimSpace(dto.Title)
+		params.Description = strings.TrimSpace(dto.Description)
+		params.Budget = dto.Budget.String()
+		params.Duration = dto.Duration
+
+		_, err = queries.JobPatch(ctx, *params)
 
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ErrEntityNotFound
@@ -196,24 +254,25 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, patch map[string
 			return fmt.Errorf("unable to JobPatch with id='%s': %w", id, err)
 		}
 
-		budget := decimal.Zero
-		if o.Budget.Valid {
-			budget = decimal.RequireFromString(o.Budget.String)
+		job, err := queries.JobGet(ctx, id)
+		if err != nil {
+			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
 		}
 
-		result = &model.Job{
-			ID:          o.ID,
-			Title:       o.Title,
-			Description: o.Description,
-			Budget:      budget,
-			Duration:    o.Duration.Int32,
-			CreatedAt:   o.CreatedAt,
-			CreatedBy:   o.CreatedBy,
-			UpdatedAt:   o.UpdatedAt,
-			Customer: &model.Person{
-				ID: o.CreatedBy,
-			},
+		result = &model.JobDTO{
+			ID:                      job.ID,
+			Title:                   job.Title,
+			Description:             job.Description,
+			Budget:                  decimal.RequireFromString(job.Budget.String),
+			Duration:                job.Duration.Int32,
+			CreatedAt:               job.CreatedAt,
+			CreatedBy:               job.CreatedBy,
+			UpdatedAt:               job.UpdatedAt,
+			ApplicationsCount:       uint(job.ApplicationCount),
+			CustomerDisplayName:     job.CustomerDisplayName,
+			CustomerEthereumAddress: job.CustomerEthereumAddress,
 		}
+
 		return nil
 	})
 }
