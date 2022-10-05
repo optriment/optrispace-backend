@@ -17,8 +17,10 @@ import (
 )
 
 // Used for testing purposes only
-const fundedContractAddress = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
-const notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
+const (
+	fundedContractAddress    = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
+	notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
+)
 
 type (
 	// ContractSvc is a contract service

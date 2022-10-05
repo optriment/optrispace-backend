@@ -124,6 +124,27 @@ definitions:
       topic:
         type: string
     type: object
+  model.ChatDTO:
+    properties:
+      application_id:
+        type: string
+      contract_id:
+        type: string
+      id:
+        type: string
+      job_id:
+        type: string
+      kind:
+        type: string
+      participants:
+        items:
+          $ref: '#/definitions/model.ParticipantDTO'
+        type: array
+      title:
+        type: string
+      topic:
+        type: string
+    type: object
   model.Contract:
     properties:
       application:
@@ -266,6 +287,15 @@ definitions:
       id:
         type: string
       text:
+        type: string
+    type: object
+  model.ParticipantDTO:
+    properties:
+      display_name:
+        type: string
+      ethereum_address:
+        type: string
+      id:
         type: string
     type: object
   model.Person:
@@ -463,11 +493,52 @@ paths:
       summary: List applications were applied by the current authenticated user
       tags:
       - application
+  /chats:
+    get:
+      consumes:
+      - application/json
+      description: User is requesting all available chats sorted by last message create
+        time in reverse order
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: chat will be returned with all messages
+          schema:
+            items:
+              $ref: '#/definitions/model.ChatDTO'
+            type: array
+        "401":
+          description: user is not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: user is not conversation participant
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "404":
+          description: chat does not exist
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Returns list of chats for the current user
+      tags:
+      - chat
   /chats/{chat_id}:
     get:
       consumes:
       - application/json
-      description: A chat participant requesting chat description with all messages
+      description: A chat participant is requesting chat description with all messages
       parameters:
       - description: chat id
         in: path
@@ -480,7 +551,7 @@ paths:
         "200":
           description: chat will be returned with all messages
           schema:
-            type: string
+            $ref: '#/definitions/model.Chat'
         "401":
           description: user is not authorized
           schema:

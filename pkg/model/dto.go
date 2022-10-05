@@ -82,4 +82,23 @@ type (
 		EthereumAddress string `json:"ethereum_address"`
 		Resources       string `json:"resources"`
 	}
+
+	// ChatDTO represents basic information about chat
+	ChatDTO struct {
+		ID            string            `json:"id"`
+		Topic         string            `json:"topic"`
+		Kind          string            `json:"kind"`
+		Title         string            `json:"title"`
+		JobID         string            `json:"job_id,omitempty"`
+		ApplicationID string            `json:"application_id,omitempty"`
+		ContractID    string            `json:"contract_id,omitempty"`
+		Participants  []*ParticipantDTO `json:"participants,omitempty"`
+	}
+
+	// ParticipantDTO represents is a chat participant
+	ParticipantDTO struct {
+		ID              string `json:"id"`
+		DisplayName     string `json:"display_name"`
+		EthereumAddress string `json:"ethereum_address"`
+	}
 )

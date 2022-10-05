@@ -95,7 +95,7 @@ func addPersonWithEthereumAddress(t *testing.T, login, ethereum_address string) 
 			String: login + "-token",
 			Valid:  true,
 		},
-    EthereumAddress: ethereum_address,
+		EthereumAddress: ethereum_address,
 	})
 	require.NoError(t, err)
 

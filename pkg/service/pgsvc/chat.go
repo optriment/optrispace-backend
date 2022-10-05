@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"optrispace.com/work/pkg/clog"
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
 )
@@ -19,16 +20,26 @@ type (
 	}
 )
 
+func topicParts(topic string) (kind, id string) {
+	switch {
+	case strings.HasPrefix(topic, "urn:"+kindApplication+":"):
+		return kindApplication, topic[len(kindApplication)+5:]
+	case strings.HasPrefix(topic, "urn:"+kindContract+":"):
+		return kindContract, topic[len(kindContract)+5:]
+	}
+	return "", ""
+}
+
 const (
-	topicApplicationPrefix = "urn:application:"
-	topicContractPrefix    = "urn:contract:"
+	kindApplication = "application"
+	kindContract    = "contract"
 
 	messageTextMaxLen = 4096
 )
 
 var (
-	chatTopicApplication = func(id string) string { return topicApplicationPrefix + id }
-	chatTopicContract    = func(id string) string { return topicContractPrefix + id } //nolint: deadcode,unused,varcheck
+	newChatTopicApplication = func(id string) string { return "urn:" + kindApplication + ":" + id }
+	newChatTopicContract    = func(id string) string { return "urn:" + kindContract + ":" + id } //nolint: deadcode,unused,varcheck
 )
 
 // NewChat creates service
@@ -182,6 +193,74 @@ func (s *ChatSvc) Get(ctx context.Context, chatID, participantID string) (*model
 				AuthorName: m.DisplayName,
 				Text:       m.Text,
 			})
+		}
+
+		return nil
+	})
+}
+
+// ListByParticipant implements service.Chat
+func (s *ChatSvc) ListByParticipant(ctx context.Context, participantID string) ([]*model.ChatDTO, error) {
+	var result []*model.ChatDTO
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		cc, err := queries.ChatsListByParticipant(ctx, participantID)
+		if err != nil {
+			return err
+		}
+
+		for _, c := range cc {
+
+			var (
+				kind, id      = topicParts(c.Topic)
+				jobID         = ""
+				applicationID = ""
+				contractID    = ""
+				title         = ""
+			)
+
+			switch kind {
+			case kindApplication:
+				details, err := queries.ChatGetDetailsByApplicationID(ctx, id)
+				if err != nil {
+					clog.Ctx(ctx).Warn().Err(err).Str("chat-topic", c.Topic).Msg("Failed to get information about chat.")
+				} else {
+					jobID = details.JobID
+					applicationID = details.ApplicationID
+					contractID = details.ContractID.String
+					title = details.JobTitle
+				}
+			}
+
+			found := false
+			for i := range result {
+				if result[i].ID == c.ID {
+					result[i].Participants = append(result[i].Participants, &model.ParticipantDTO{
+						ID:              c.PersonID,
+						DisplayName:     c.PersonDisplayName,
+						EthereumAddress: c.PersonEthereumAddress,
+					})
+					found = true
+					break
+				}
+			}
+			if !found {
+				result = append(result, &model.ChatDTO{
+					ID:            c.ID,
+					Topic:         c.Topic,
+					Kind:          kind,
+					Title:         title,
+					JobID:         jobID,
+					ApplicationID: applicationID,
+					ContractID:    contractID,
+					Participants: []*model.ParticipantDTO{
+						{
+							ID:              c.PersonID,
+							DisplayName:     c.PersonDisplayName,
+							EthereumAddress: c.PersonEthereumAddress,
+						},
+					},
+				})
+			}
 		}
 
 		return nil

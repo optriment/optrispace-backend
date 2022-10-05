@@ -27,6 +27,7 @@ func NewChat(sm service.Security, svc service.Chat) Registerer {
 // Register implements Registerer interface
 func (cont *Chat) Register(e *echo.Echo) {
 	e.POST("/chats/:chat_id/messages", cont.addMessage)
+	e.GET("/chats", cont.list)
 	e.GET("/chats/:chat_id", cont.getChat)
 	log.Debug().Str("controller", "chats").Msg("Registered")
 }
@@ -43,11 +44,11 @@ type newMessage struct {
 // @Param       message body     controller.newMessage true "New message"
 // @Param       chat_id path     string             true "chat id"
 // @Success     201     {string} model.Message
-// @Failure     401     {object} model.BackendError "user is not authorized"
-// @Failure     403     {object} model.BackendError "user is not conversation participant"
-// @Failure     404     {object} model.BackendError "chat does not exist"
+// @Failure     401 {object} model.BackendError "user is not authorized"
+// @Failure     403 {object} model.BackendError "user is not conversation participant"
+// @Failure     404 {object} model.BackendError "chat does not exist"
 // @Failure     422     {object} model.BackendError "message text exceeds maximum text length"
-// @Failure     500     {object} echo.HTTPError{message=string}
+// @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /chats/{chat_id}/messages [post]
 func (cont *Chat) addMessage(c echo.Context) error {
@@ -70,12 +71,12 @@ func (cont *Chat) addMessage(c echo.Context) error {
 }
 
 // @Summary     Returns a fully chat description
-// @Description A chat participant requesting chat description with all messages
+// @Description A chat participant is requesting chat description with all messages
 // @Tags        chat
 // @Accept      json
 // @Produce     json
 // @Param       chat_id path     string                true "chat id"
-// @Success     200     {string} model.Chat         "chat will be returned with all messages"
+// @Success     200     {object} model.Chat         "chat will be returned with all messages"
 // @Failure     401     {object} model.BackendError "user is not authorized"
 // @Failure     403     {object} model.BackendError "user is not conversation participant"
 // @Failure     404     {object} model.BackendError "chat does not exist"
@@ -89,6 +90,31 @@ func (cont *Chat) getChat(c echo.Context) error {
 	}
 
 	m, err := cont.svc.Get(c.Request().Context(), c.Param("chat_id"), uc.Subject.ID)
+	if err == nil {
+		return c.JSON(http.StatusOK, m)
+	}
+	return err
+}
+
+// @Summary     Returns list of chats for the current user
+// @Description User is requesting all available chats sorted by last message create time in reverse order
+// @Tags        chat
+// @Accept      json
+// @Produce     json
+// @Success     200 {array}  model.ChatDTO      "chat will be returned with all messages"
+// @Failure     401     {object} model.BackendError "user is not authorized"
+// @Failure     403     {object} model.BackendError "user is not conversation participant"
+// @Failure     404     {object} model.BackendError "chat does not exist"
+// @Failure     500     {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /chats [get]
+func (cont *Chat) list(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	m, err := cont.svc.ListByParticipant(c.Request().Context(), uc.Subject.ID)
 	if err == nil {
 		return c.JSON(http.StatusOK, m)
 	}

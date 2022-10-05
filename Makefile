@@ -55,7 +55,7 @@ seed: # Populates database with sample data
 $(LINTBIN):
 	@echo "Getting $@"
 	@mkdir -p $(@D)
-	GOBIN=$(abspath $(@D)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
+	GOBIN=$(abspath $(@D)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
 
 .PHONY: lint
 lint: $(LINTBIN) # Run linter
