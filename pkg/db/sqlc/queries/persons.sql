@@ -58,6 +58,9 @@ set
     , display_name = case when @display_name_change::boolean
         then @display_name::varchar else display_name end
 
+    , email = case when @email_change::boolean
+        then @email::varchar else email end
+
 where
     id = @id::varchar
 returning *;

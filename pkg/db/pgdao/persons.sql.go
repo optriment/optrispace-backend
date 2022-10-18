@@ -145,8 +145,11 @@ set
     , display_name = case when $3::boolean
         then $4::varchar else display_name end
 
+    , email = case when $5::boolean
+        then $6::varchar else email end
+
 where
-    id = $5::varchar
+    id = $7::varchar
 returning id, realm, login, password_hash, display_name, created_at, email, ethereum_address, resources, access_token, is_admin
 `
 
@@ -155,6 +158,8 @@ type PersonPatchParams struct {
 	EthereumAddress       string
 	DisplayNameChange     bool
 	DisplayName           string
+	EmailChange           bool
+	Email                 string
 	ID                    string
 }
 
@@ -164,6 +169,8 @@ func (q *Queries) PersonPatch(ctx context.Context, arg PersonPatchParams) (Perso
 		arg.EthereumAddress,
 		arg.DisplayNameChange,
 		arg.DisplayName,
+		arg.EmailChange,
+		arg.Email,
 		arg.ID,
 	)
 	var i Person

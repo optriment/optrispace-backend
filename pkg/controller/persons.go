@@ -110,6 +110,7 @@ func (cont *Person) list(c echo.Context) error {
 type updatePerson struct {
 	EthereumAddress string `json:"ethereum_address,omitempty"`
 	DisplayName     string `json:"display_name,omitempty"`
+	Email           string `json:"email,omitempty"`
 }
 
 var _ = updatePerson{}
