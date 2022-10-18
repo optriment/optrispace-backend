@@ -162,6 +162,90 @@ func TestPersonPatch(t *testing.T) {
 	require.NoError(t, pgdao.PurgeDB(ctx, db))
 	queries := pgdao.New(db)
 
+	t.Run("patch email ok", func(t *testing.T) {
+		thePerson, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:           pgdao.NewID(),
+			Realm:        "inhouse",
+			Login:        pgdao.NewID(),
+			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"email":" ME@DOMAIN.TLD "
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, personURL+"/"+thePerson.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.BasicPersonDTO)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.Equal(t, thePerson.ID, e.ID)
+			assert.Equal(t, "me@domain.tld", e.Email)
+
+			d, err := queries.PersonGet(ctx, thePerson.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, thePerson.ID, d.ID)
+				assert.Equal(t, "me@domain.tld", d.Email)
+			}
+		}
+	})
+
+	t.Run("patch email will not change the original value if new value is an empty string", func(t *testing.T) {
+		thePerson, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:           pgdao.NewID(),
+			Realm:        "inhouse",
+			Login:        pgdao.NewID(),
+			PasswordHash: pgsvc.CreateHashFromPassword("abcd"),
+			Email:        "me@domain.tld",
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"email":" "
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, personURL+"/"+thePerson.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+thePerson.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.BasicPersonDTO)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			assert.Equal(t, thePerson.ID, e.ID)
+			assert.Equal(t, "me@domain.tld", e.Email)
+
+			d, err := queries.PersonGet(ctx, thePerson.ID)
+			if assert.NoError(t, err) {
+				assert.Equal(t, thePerson.ID, d.ID)
+				assert.Equal(t, "me@domain.tld", d.Email)
+			}
+		}
+
+	})
+
 	t.Run("patch ethereum_address ok", func(t *testing.T) {
 		thePerson, err := queries.PersonAdd(ctx, pgdao.PersonAddParams{
 			ID:           pgdao.NewID(),

@@ -184,6 +184,8 @@ func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[str
 			EthereumAddress:       "",
 			DisplayNameChange:     false,
 			DisplayName:           "",
+			EmailChange:           false,
+			Email:                 "",
 			ID:                    id,
 		}
 
@@ -194,6 +196,12 @@ func (s *PersonSvc) Patch(ctx context.Context, id, actorID string, patch map[str
 		newDisplayName := strings.TrimSpace(fmt.Sprint(v))
 		if newDisplayName != "" {
 			params.DisplayName, params.DisplayNameChange = newDisplayName, c
+		}
+
+		v, c = patch["email"]
+		newEmail := strings.ToLower(strings.TrimSpace(fmt.Sprint(v)))
+		if newEmail != "" {
+			params.Email, params.EmailChange = newEmail, c
 		}
 
 		o, err := queries.PersonPatch(ctx, params)

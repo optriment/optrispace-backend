@@ -2237,6 +2237,9 @@ const docTemplate = `{
                 "display_name": {
                     "type": "string"
                 },
+                "email": {
+                    "type": "string"
+                },
                 "ethereum_address": {
                     "type": "string"
                 }
