@@ -133,6 +133,9 @@ type (
 
 		// Get returns chat description with all messages in it
 		Get(ctx context.Context, chatID, participantID string) (*model.Chat, error)
+
+		// ListByParticipant returns all chats by participant ID
+		ListByParticipant(ctx context.Context, participantID string) ([]*model.ChatDTO, error)
 	}
 )
 

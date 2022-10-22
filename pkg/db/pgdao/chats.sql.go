@@ -7,6 +7,8 @@ package pgdao
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
 
 const chatAdd = `-- name: ChatAdd :one
@@ -57,6 +59,37 @@ func (q *Queries) ChatGetByTopic(ctx context.Context, topic string) (Chat, error
 	return i, err
 }
 
+const chatGetDetailsByApplicationID = `-- name: ChatGetDetailsByApplicationID :one
+select
+      a.id as application_id
+    , j.id as job_id
+    , j.title as job_title
+    , c.id as contract_id
+from applications a
+join jobs j on a.job_id = j.id
+left join contracts c on a.id = c.application_id
+where a.id = $1::varchar
+`
+
+type ChatGetDetailsByApplicationIDRow struct {
+	ApplicationID string
+	JobID         string
+	JobTitle      string
+	ContractID    sql.NullString
+}
+
+func (q *Queries) ChatGetDetailsByApplicationID(ctx context.Context, applicationID string) (ChatGetDetailsByApplicationIDRow, error) {
+	row := q.db.QueryRowContext(ctx, chatGetDetailsByApplicationID, applicationID)
+	var i ChatGetDetailsByApplicationIDRow
+	err := row.Scan(
+		&i.ApplicationID,
+		&i.JobID,
+		&i.JobTitle,
+		&i.ContractID,
+	)
+	return i, err
+}
+
 const chatParticipantAdd = `-- name: ChatParticipantAdd :one
 insert into chats_participants (
     chat_id, person_id
@@ -96,6 +129,62 @@ func (q *Queries) ChatParticipantGet(ctx context.Context, arg ChatParticipantGet
 	var i ChatsParticipant
 	err := row.Scan(&i.ChatID, &i.PersonID)
 	return i, err
+}
+
+const chatsListByParticipant = `-- name: ChatsListByParticipant :many
+select
+      c.id, c.topic, c.created_at
+    , p.id as person_id
+    , p.display_name as person_display_name
+    , p.ethereum_address as person_ethereum_address
+from chats c
+join chats_participants cp on c.id = cp.chat_id
+join persons p on p.id = cp.person_id
+join messages m1 on c.id = m1.chat_id
+left outer join messages m2 on (c.id = m2.chat_id and m1.created_at < m2.created_at)
+where c.id in (select chat_id from chats_participants where person_id = $1::varchar)
+and m2.id is null
+order by m1.created_at desc, c.id
+`
+
+type ChatsListByParticipantRow struct {
+	ID                    string
+	Topic                 string
+	CreatedAt             time.Time
+	PersonID              string
+	PersonDisplayName     string
+	PersonEthereumAddress string
+}
+
+// Chat list order by created_at timestamp of the latest message that belongs chat. Order is inverse from the newest to the latest update.
+func (q *Queries) ChatsListByParticipant(ctx context.Context, participantID string) ([]ChatsListByParticipantRow, error) {
+	rows, err := q.db.QueryContext(ctx, chatsListByParticipant, participantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChatsListByParticipantRow
+	for rows.Next() {
+		var i ChatsListByParticipantRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Topic,
+			&i.CreatedAt,
+			&i.PersonID,
+			&i.PersonDisplayName,
+			&i.PersonEthereumAddress,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const chatsPurge = `-- name: ChatsPurge :exec

@@ -124,6 +124,13 @@ linters-settings:
         # - io.Copy(*bytes.Buffer)
         # - io.Copy(os.Stdout)
 
+  revive:
+    rules:
+      - name: package-comments
+        severity: warning
+        disabled: true
+
+
 linters:
   enable-all: true
   disable:
@@ -151,6 +158,9 @@ linters:
     - gci # conflicts with gofumpt
     - varnamelen
     - ireturn
+    - nonamedreturns
+    - dupword
+    - contextcheck
 
 issues:
   # Independently from option `exclude` we use default exclude patterns,

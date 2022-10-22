@@ -76,7 +76,7 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			return fmt.Errorf("unable to ApplicationAdd: %w", err)
 		}
 
-		if _, e := newChat(ctx, queries, chatTopicApplication(appl.ID), appl.Comment, appl.ApplicantID, job.CreatedBy); e != nil {
+		if _, e := newChat(ctx, queries, newChatTopicApplication(appl.ID), appl.Comment, appl.ApplicantID, job.CreatedBy); e != nil {
 			clog.Ctx(ctx).Warn().Err(e).Str("applicationID", appl.ID).Msg("Failed to create chat for application")
 		}
 
@@ -261,7 +261,7 @@ func (s *ApplicationSvc) GetChat(ctx context.Context, id, actorID string) (*mode
 			return fmt.Errorf("user %s has no rights to acquire chat info: %w", actorID, model.ErrEntityNotFound)
 		}
 
-		topic := chatTopicApplication(id)
+		topic := newChatTopicApplication(id)
 		ec, err := queries.ChatGetByTopic(ctx, topic)
 
 		if err == nil {

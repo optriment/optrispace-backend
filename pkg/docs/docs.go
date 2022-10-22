@@ -265,6 +265,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/chats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "User is requesting all available chats sorted by last message create time in reverse order",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Returns list of chats for the current user",
+                "responses": {
+                    "200": {
+                        "description": "chat will be returned with all messages",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ChatDTO"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "user is not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "403": {
+                        "description": "user is not conversation participant",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "404": {
+                        "description": "chat does not exist",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/chats/{chat_id}": {
             "get": {
                 "security": [
@@ -272,7 +339,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "A chat participant requesting chat description with all messages",
+                "description": "A chat participant is requesting chat description with all messages",
                 "consumes": [
                     "application/json"
                 ],
@@ -296,7 +363,7 @@ const docTemplate = `{
                     "200": {
                         "description": "chat will be returned with all messages",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/model.Chat"
                         }
                     },
                     "401": {
@@ -2311,6 +2378,38 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ChatDTO": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "string"
+                },
+                "contract_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ParticipantDTO"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topic": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Contract": {
             "type": "object",
             "properties": {
@@ -2526,6 +2625,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ParticipantDTO": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "ethereum_address": {
+                    "type": "string"
+                },
+                "id": {
                     "type": "string"
                 }
             }
