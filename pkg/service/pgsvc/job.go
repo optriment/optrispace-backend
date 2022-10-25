@@ -179,9 +179,31 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.JobDTO, error) {
 }
 
 // Block implements service.Job interface
-func (s *JobSvc) Block(ctx context.Context, id string) error {
+func (s *JobSvc) Block(ctx context.Context, id, actorID string) error {
 	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		return queries.JobBlock(ctx, id)
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return &model.BackendError{
+				Cause:   model.ErrEntityNotFound,
+				Message: "person does not exist",
+			}
+		}
+
+		if !person.IsAdmin {
+			return model.ErrInsufficientRights
+		}
+
+		job, err := queries.JobGet(ctx, id)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
+		return queries.JobBlock(ctx, job.ID)
 	})
 }
 

@@ -65,6 +65,27 @@ func (q *Queries) JobBlock(ctx context.Context, id string) error {
 	return err
 }
 
+const jobFind = `-- name: JobFind :one
+select id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at from jobs where id = $1::varchar
+`
+
+func (q *Queries) JobFind(ctx context.Context, id string) (Job, error) {
+	row := q.db.QueryRowContext(ctx, jobFind, id)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Budget,
+		&i.Duration,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedBy,
+		&i.BlockedAt,
+	)
+	return i, err
+}
+
 const jobGet = `-- name: JobGet :one
 select
     j.id
@@ -178,7 +199,7 @@ select
     from jobs j
     join persons p on p.id = j.created_by
     where j.blocked_at is null
-    order by created_at desc
+    order by j.created_at desc
 `
 
 type JobsListRow struct {
