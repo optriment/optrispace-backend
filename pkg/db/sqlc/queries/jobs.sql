@@ -14,7 +14,7 @@ select
     from jobs j
     join persons p on p.id = j.created_by
     where j.blocked_at is null
-    order by created_at desc;
+    order by j.created_at desc;
 
 -- name: JobGet :one
 select
@@ -32,6 +32,10 @@ select
     from jobs j
     join persons p on p.id = j.created_by
     where j.id = @id::varchar and j.blocked_at is null;
+
+-- name: JobFind :one
+-- It is used only for testing purposes.
+select * from jobs where id = @id::varchar;
 
 -- name: JobAdd :one
 insert into jobs (

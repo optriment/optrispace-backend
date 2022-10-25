@@ -18,13 +18,15 @@ import (
 )
 
 var (
-	resourceName = "contracts"
-	contractsURL = appURL + "/" + resourceName
+	contractsResourceName = "contracts"
+	contractsURL          = appURL + "/" + contractsResourceName
 )
 
-const validBlockchainAddress = "0x8Ca2702c5bcc50D79d9a059D58607028aa36Aa6c"
-const fundedContractAddress = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
-const notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
+const (
+	validBlockchainAddress   = "0x8Ca2702c5bcc50D79d9a059D58607028aa36Aa6c"
+	fundedContractAddress    = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
+	notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
+)
 
 func TestCreateContract(t *testing.T) {
 	t.Run("returns error for unauthorized request", func(t *testing.T) {
@@ -808,7 +810,7 @@ func TestCreateContract(t *testing.T) {
 			e := new(model.ContractDTO)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
-			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+resourceName+"/"+e.ID))
+			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+contractsResourceName+"/"+e.ID))
 
 			assert.NotEmpty(t, e.ID)
 			assert.NotEmpty(t, e.CreatedAt)
@@ -889,7 +891,7 @@ func TestGetContracts(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			ee := make([]*model.Contract, 0)
+			ee := make([]*model.ContractDTO, 0)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
 			assert.Empty(t, ee)
 		}

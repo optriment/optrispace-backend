@@ -204,13 +204,7 @@ func (cont *Job) block(c echo.Context) error {
 		return err
 	}
 
-	if !uc.Subject.IsAdmin {
-		return model.ErrInsufficientRights
-	}
-
-	id := c.Param("id")
-
-	if e := cont.svc.Block(c.Request().Context(), id); e != nil {
+	if e := cont.svc.Block(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
 		return e
 	}
 	return c.JSON(http.StatusOK, "{}")

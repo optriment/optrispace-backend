@@ -48,7 +48,7 @@ type (
 		Patch(ctx context.Context, id, customerID string, patch *model.UpdateJobDTO) (*model.JobDTO, error)
 
 		// Block job
-		Block(ctx context.Context, id string) error
+		Block(ctx context.Context, id, actorID string) error
 	}
 
 	// Person is a person who pay or earn
