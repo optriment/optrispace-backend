@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"flag"
 	"fmt"
 	"strings"
 
@@ -14,12 +13,6 @@ import (
 	"optrispace.com/work/pkg/db/pgdao"
 	"optrispace.com/work/pkg/model"
 	"optrispace.com/work/pkg/service/ethsvc"
-)
-
-// Used for testing purposes only
-const (
-	fundedContractAddress    = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
-	notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
 )
 
 type (
@@ -410,26 +403,6 @@ func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*m
 // checkAddressBalance checks that contract have enough coins to supply contract entity
 // It should return nil if there are enough money at the contract address in the chain
 func (s *ContractSvc) checkAddressBalance(ctx context.Context, requiredBalance decimal.Decimal, contractAddress string) error {
-	// NOTE: It is the hardcoded values from contract_test.go and used only for testing purpose
-	if flag.Lookup("test.v") != nil {
-		if contractAddress == fundedContractAddress {
-			return nil
-		}
-
-		if contractAddress == notFundedContractAddress {
-			return &model.BackendError{
-				Cause:    model.ErrInsufficientFunds,
-				Message:  "the contract does not have sufficient funds",
-				TechInfo: contractAddress,
-			}
-		}
-
-		return &model.BackendError{
-			Cause:   model.ErrInappropriateAction,
-			Message: fmt.Sprintf("Not implemented for: %s", contractAddress),
-		}
-	}
-
 	// NOTE: If you have an issue with getting balance from blockchain by contract address,
 	// please try to choose another server from https://chainlist.org/chain/97 and update ./testdata/dev.yaml
 	balance, err := s.eth.Balance(ctx, contractAddress)
