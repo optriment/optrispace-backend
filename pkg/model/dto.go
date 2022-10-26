@@ -30,6 +30,13 @@ type (
 		CustomerEthereumAddress string          `json:"customer_ethereum_address"`
 	}
 
+	// JobCardDTO is a representation of the job with extended attributes
+	JobCardDTO struct {
+		JobDTO
+
+		IsSuspended bool `json:"is_suspended"`
+	}
+
 	// UpdateJobDTO is a job representation on updation process
 	UpdateJobDTO struct {
 		Title       string `validate:"required"`

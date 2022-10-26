@@ -1314,7 +1314,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.JobDTO"
+                            "$ref": "#/definitions/model.JobCardDTO"
                         }
                     },
                     "404": {
@@ -1459,16 +1459,71 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.Job"
-                        }
+                        "description": "OK"
                     },
-                    "400": {
-                        "description": "invalid format",
+                    "401": {
+                        "description": "user not authorized",
                         "schema": {
                             "$ref": "#/definitions/model.BackendError"
                         }
+                    },
+                    "403": {
+                        "description": "user is not admin",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/{id}/suspend": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Suspends existent job to stop receiving applications",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "job"
+                ],
+                "summary": "Suspend a job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "401": {
                         "description": "user not authorized",
@@ -2557,6 +2612,47 @@
                     "type": "string"
                 },
                 "resources": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.JobCardDTO": {
+            "type": "object",
+            "properties": {
+                "applications_count": {
+                    "type": "integer"
+                },
+                "budget": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "customer_display_name": {
+                    "type": "string"
+                },
+                "customer_ethereum_address": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_suspended": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }

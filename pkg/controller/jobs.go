@@ -36,6 +36,7 @@ func (cont *Job) Register(e *echo.Echo) {
 	e.GET(resourceJob+"/:id", cont.get)
 	e.PUT(resourceJob+"/:id", cont.update)
 	e.POST(resourceJob+"/:id/block", cont.block)
+	e.POST(resourceJob+"/:id/suspend", cont.suspend)
 	log.Debug().Str("controller", resourceJob).Msg("Registered")
 }
 
@@ -112,8 +113,8 @@ func (cont *Job) list(c echo.Context) error {
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       id  path     string                     true "Job ID"
-// @Success     200 {object} model.JobDTO
+// @Param       id path string true "Job ID"
+// @Success     200 {object} model.JobCardDTO
 // @Failure     404 {object} model.BackendError "job not found"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
@@ -145,7 +146,7 @@ type updateJobParams struct {
 // @Accept      json
 // @Produce     json
 // @Param       job body     controller.updateJobParams true "Job params"
-// @Param       id  path     string true "Job ID"
+// @Param       id  path     string                     true "Job ID"
 // @Success     200 {object} model.JobDTO
 // @Failure     400 {object} model.BackendError "invalid format"
 // @Failure     401 {object} model.BackendError "user not authorized"
@@ -190,9 +191,8 @@ func (cont *Job) update(c echo.Context) error {
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       id  path     string true "Job ID"
-// @Success     200 {object} model.Job
-// @Failure     400 {object} model.BackendError "invalid format"
+// @Param       id path string true "Job ID"
+// @Success     200
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     403 {object} model.BackendError "user is not admin"
 // @Failure     500 {object} echo.HTTPError{message=string}
@@ -205,6 +205,30 @@ func (cont *Job) block(c echo.Context) error {
 	}
 
 	if e := cont.svc.Block(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
+		return e
+	}
+	return c.JSON(http.StatusOK, "{}")
+}
+
+// @Summary     Suspend a job
+// @Description Suspends existent job to stop receiving applications
+// @Tags        job
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string true "Job ID"
+// @Success     200
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     403 {object} model.BackendError "user is not admin"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /jobs/{id}/suspend [post]
+func (cont *Job) suspend(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	if e := cont.svc.Suspend(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
 		return e
 	}
 	return c.JSON(http.StatusOK, "{}")

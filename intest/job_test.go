@@ -456,6 +456,17 @@ func TestGetJobs(t *testing.T) {
 		err = pgdao.New(db).JobBlock(ctx, blockedJob.ID)
 		require.NoError(t, err)
 
+		suspendedJob, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title4",
+			Description: "Description4",
+			CreatedBy:   customer2.ID,
+		})
+		require.NoError(t, err)
+
+		err = pgdao.New(db).JobSuspend(ctx, suspendedJob.ID)
+		require.NoError(t, err)
+
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -577,7 +588,7 @@ func TestGetJob(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := new(model.JobDTO)
+			e := new(model.JobCardDTO)
 			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
 			if assert.NotEmpty(t, e) {
@@ -592,6 +603,51 @@ func TestGetJob(t *testing.T) {
 				assert.EqualValues(t, 0, e.ApplicationsCount)
 				assert.Equal(t, "Person1", e.CustomerDisplayName)
 				assert.Equal(t, "0x1234567890CUSTOMER1", e.CustomerEthereumAddress)
+				assert.False(t, e.IsSuspended)
+			}
+		}
+	})
+
+	t.Run("returns job if job is suspended", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:              pgdao.NewID(),
+			Login:           pgdao.NewID(),
+			DisplayName:     "Person1",
+			EthereumAddress: "0x1234567890CUSTOMER1",
+		})
+		require.NoError(t, err)
+
+		suspendedJob, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title",
+			Description: "Description",
+			Budget: sql.NullString{
+				String: "0.1",
+				Valid:  true,
+			},
+			CreatedBy: customer.ID,
+		})
+		require.NoError(t, err)
+
+		err = pgdao.New(db).JobSuspend(ctx, suspendedJob.ID)
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobsURL+"/"+suspendedJob.ID, nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := new(model.JobCardDTO)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+			if assert.NotEmpty(t, e) {
+				assert.Equal(t, suspendedJob.ID, e.ID)
+				assert.True(t, e.IsSuspended)
 			}
 		}
 	})
@@ -885,9 +941,9 @@ func TestUpdateJob(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := model.BackendError{}
+			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "entity not found", e.Message)
+			assert.Equal(t, "entity not found", e["message"])
 		}
 	})
 
@@ -1109,9 +1165,9 @@ func TestSetJobAsBlocked(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := model.BackendError{}
+			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "entity not found", e.Message)
+			assert.Equal(t, "entity not found", e["message"])
 		}
 	})
 
@@ -1159,9 +1215,9 @@ func TestSetJobAsBlocked(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := model.BackendError{}
+			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "entity not found", e.Message)
+			assert.Equal(t, "entity not found", e["message"])
 		}
 	})
 
@@ -1263,6 +1319,145 @@ func TestSetJobAsBlocked(t *testing.T) {
 			d, err := pgdao.New(db).JobFind(ctx, job.ID)
 			if assert.NoError(t, err) {
 				assert.NotEmpty(t, d.BlockedAt)
+			}
+		}
+	})
+}
+
+func TestSetJobAsSuspended(t *testing.T) {
+	t.Run("returns error for unauthorized request", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/qwerty/suspend", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnauthorized, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "Authorization required", e["message"])
+		}
+	})
+
+	t.Run("returns error if job does not exist", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+			EthereumAddress: pgdao.NewID(),
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/qwerty/suspend", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "entity not found", e["message"])
+		}
+	})
+
+	t.Run("returns error if a person is not an owner of a job", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+		})
+		require.NoError(t, err)
+
+		job, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title",
+			Description: "Description",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			CreatedBy: customer.ID,
+		})
+		require.NoError(t, err)
+
+		stranger, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/"+job.ID+"/suspend", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+stranger.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "insufficient rights", e["message"])
+		}
+	})
+
+	t.Run("suspends job", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		job, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title",
+			Description: "Description",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			CreatedBy: customer.ID,
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/"+job.ID+"/suspend", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			d, err := pgdao.New(db).JobFind(ctx, job.ID)
+			if assert.NoError(t, err) {
+				assert.NotEmpty(t, d.SuspendedAt)
 			}
 		}
 	})

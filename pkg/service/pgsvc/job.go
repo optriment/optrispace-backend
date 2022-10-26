@@ -113,8 +113,8 @@ func (s *JobSvc) Add(ctx context.Context, customerID string, dto *model.CreateJo
 }
 
 // Get implements service.Job interface
-func (s *JobSvc) Get(ctx context.Context, id string) (*model.JobDTO, error) {
-	var result *model.JobDTO
+func (s *JobSvc) Get(ctx context.Context, id string) (*model.JobCardDTO, error) {
+	var result *model.JobCardDTO
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
 		o, err := queries.JobGet(ctx, id)
 
@@ -131,19 +131,20 @@ func (s *JobSvc) Get(ctx context.Context, id string) (*model.JobDTO, error) {
 			budget = decimal.RequireFromString(o.Budget.String)
 		}
 
-		result = &model.JobDTO{
-			ID:                      o.ID,
-			Title:                   o.Title,
-			Description:             o.Description,
-			Budget:                  budget,
-			Duration:                o.Duration.Int32,
-			CreatedAt:               o.CreatedAt,
-			CreatedBy:               o.CreatedBy,
-			UpdatedAt:               o.UpdatedAt,
-			ApplicationsCount:       uint(o.ApplicationCount),
-			CustomerDisplayName:     o.CustomerDisplayName,
-			CustomerEthereumAddress: o.CustomerEthereumAddress,
-		}
+		result = &model.JobCardDTO{}
+		result.ID = o.ID
+		result.Title = o.Title
+		result.Description = o.Description
+		result.Budget = budget
+		result.Duration = o.Duration.Int32
+		result.CreatedAt = o.CreatedAt
+		result.CreatedBy = o.CreatedBy
+		result.UpdatedAt = o.UpdatedAt
+		result.ApplicationsCount = uint(o.ApplicationCount)
+		result.CustomerDisplayName = o.CustomerDisplayName
+		result.CustomerEthereumAddress = o.CustomerEthereumAddress
+		result.IsSuspended = o.SuspendedAt.Valid
+
 		return nil
 	})
 }
@@ -204,6 +205,35 @@ func (s *JobSvc) Block(ctx context.Context, id, actorID string) error {
 		}
 
 		return queries.JobBlock(ctx, job.ID)
+	})
+}
+
+// Suspend implements service.Job interface
+func (s *JobSvc) Suspend(ctx context.Context, id, actorID string) error {
+	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return &model.BackendError{
+				Cause:   model.ErrEntityNotFound,
+				Message: "person does not exist",
+			}
+		}
+
+		job, err := queries.JobGet(ctx, id)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
+		if person.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
+		}
+
+		return queries.JobSuspend(ctx, job.ID)
 	})
 }
 
