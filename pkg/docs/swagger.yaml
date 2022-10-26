@@ -249,6 +249,33 @@ definitions:
       resources:
         type: string
     type: object
+  model.JobCardDTO:
+    properties:
+      applications_count:
+        type: integer
+      budget:
+        type: number
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer_display_name:
+        type: string
+      customer_ethereum_address:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      is_suspended:
+        type: boolean
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.JobDTO:
     properties:
       applications_count:
@@ -1131,7 +1158,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.JobDTO'
+            $ref: '#/definitions/model.JobCardDTO'
         "404":
           description: job not found
           schema:
@@ -1220,12 +1247,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            $ref: '#/definitions/model.Job'
-        "400":
-          description: invalid format
-          schema:
-            $ref: '#/definitions/model.BackendError'
         "401":
           description: user not authorized
           schema:
@@ -1246,6 +1267,44 @@ paths:
       security:
       - BearerToken: []
       summary: Block a job
+      tags:
+      - job
+  /jobs/{id}/suspend:
+    post:
+      consumes:
+      - application/json
+      description: Suspends existent job to stop receiving applications
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: user not authorized
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "403":
+          description: user is not admin
+          schema:
+            $ref: '#/definitions/model.BackendError'
+        "500":
+          description: Internal Server Error
+          schema:
+            allOf:
+            - $ref: '#/definitions/echo.HTTPError'
+            - properties:
+                message:
+                  type: string
+              type: object
+      security:
+      - BearerToken: []
+      summary: Suspend a job
       tags:
       - job
   /jobs/{job_id}/applications:

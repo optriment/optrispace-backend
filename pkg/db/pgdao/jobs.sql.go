@@ -16,7 +16,7 @@ insert into jobs (
     id, title, description, budget, duration, created_by
 ) values (
     $1, $2, $3, $4, $5, $6
-) returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at
+) returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at
 `
 
 type JobAddParams struct {
@@ -48,16 +48,13 @@ func (q *Queries) JobAdd(ctx context.Context, arg JobAddParams) (Job, error) {
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.BlockedAt,
+		&i.SuspendedAt,
 	)
 	return i, err
 }
 
 const jobBlock = `-- name: JobBlock :exec
-update jobs
-set
-    blocked_at = now()
-where
-    id = $1::varchar
+update jobs set blocked_at = now() where id = $1::varchar
 `
 
 func (q *Queries) JobBlock(ctx context.Context, id string) error {
@@ -66,9 +63,10 @@ func (q *Queries) JobBlock(ctx context.Context, id string) error {
 }
 
 const jobFind = `-- name: JobFind :one
-select id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at from jobs where id = $1::varchar
+select id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at from jobs where id = $1::varchar
 `
 
+// It is used only for testing purposes.
 func (q *Queries) JobFind(ctx context.Context, id string) (Job, error) {
 	row := q.db.QueryRowContext(ctx, jobFind, id)
 	var i Job
@@ -82,6 +80,7 @@ func (q *Queries) JobFind(ctx context.Context, id string) (Job, error) {
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.BlockedAt,
+		&i.SuspendedAt,
 	)
 	return i, err
 }
@@ -96,6 +95,7 @@ select
     ,j.created_at
     ,j.created_by
     ,j.updated_at
+    ,j.suspended_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
     ,p.ethereum_address AS customer_ethereum_address
@@ -113,6 +113,7 @@ type JobGetRow struct {
 	CreatedAt               time.Time
 	CreatedBy               string
 	UpdatedAt               time.Time
+	SuspendedAt             sql.NullTime
 	ApplicationCount        int64
 	CustomerDisplayName     string
 	CustomerEthereumAddress string
@@ -130,6 +131,7 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 		&i.CreatedAt,
 		&i.CreatedBy,
 		&i.UpdatedAt,
+		&i.SuspendedAt,
 		&i.ApplicationCount,
 		&i.CustomerDisplayName,
 		&i.CustomerEthereumAddress,
@@ -147,7 +149,7 @@ set
     updated_at = now()
 where
     id = $5::varchar and $6::varchar = created_by
-returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at
+returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at
 `
 
 type JobPatchParams struct {
@@ -179,8 +181,18 @@ func (q *Queries) JobPatch(ctx context.Context, arg JobPatchParams) (Job, error)
 		&i.UpdatedAt,
 		&i.CreatedBy,
 		&i.BlockedAt,
+		&i.SuspendedAt,
 	)
 	return i, err
+}
+
+const jobSuspend = `-- name: JobSuspend :exec
+update jobs set suspended_at = now() where id = $1::varchar
+`
+
+func (q *Queries) JobSuspend(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, jobSuspend, id)
+	return err
 }
 
 const jobsList = `-- name: JobsList :many
@@ -198,7 +210,7 @@ select
     ,p.ethereum_address AS customer_ethereum_address
     from jobs j
     join persons p on p.id = j.created_by
-    where j.blocked_at is null
+    where j.blocked_at is null and j.suspended_at is null
     order by j.created_at desc
 `
 

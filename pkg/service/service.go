@@ -39,7 +39,7 @@ type (
 		Add(ctx context.Context, customerID string, dto *model.CreateJobDTO) (*model.JobDTO, error)
 
 		// Get returns a specific job by ID
-		Get(ctx context.Context, id string) (*model.JobDTO, error)
+		Get(ctx context.Context, id string) (*model.JobCardDTO, error)
 
 		// List returns a list of jobs
 		List(ctx context.Context) ([]*model.JobDTO, error)
@@ -49,6 +49,9 @@ type (
 
 		// Block job
 		Block(ctx context.Context, id, actorID string) error
+
+		// Suspend job
+		Suspend(ctx context.Context, id, actorID string) error
 	}
 
 	// Person is a person who pay or earn

@@ -99,7 +99,8 @@ type Job struct {
 	// Who created this job and should pay for it
 	CreatedBy string
 	// Job is blocked if this field is not null
-	BlockedAt sql.NullTime
+	BlockedAt   sql.NullTime
+	SuspendedAt sql.NullTime
 }
 
 // Messages were sent in chats by users

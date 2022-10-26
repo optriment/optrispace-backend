@@ -13,7 +13,7 @@ select
     ,p.ethereum_address AS customer_ethereum_address
     from jobs j
     join persons p on p.id = j.created_by
-    where j.blocked_at is null
+    where j.blocked_at is null and j.suspended_at is null
     order by j.created_at desc;
 
 -- name: JobGet :one
@@ -26,6 +26,7 @@ select
     ,j.created_at
     ,j.created_by
     ,j.updated_at
+    ,j.suspended_at
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
     ,p.ethereum_address AS customer_ethereum_address
@@ -57,12 +58,10 @@ where
 returning *;
 
 -- name: JobBlock :exec
-update jobs
-set
-    blocked_at = now()
-where
-    id = @id::varchar
-;
+update jobs set blocked_at = now() where id = @id::varchar;
+
+-- name: JobSuspend :exec
+update jobs set suspended_at = now() where id = @id::varchar;
 
 -- name: JobsPurge :exec
 -- Handle with care!
