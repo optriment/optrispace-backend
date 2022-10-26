@@ -10,4 +10,4 @@ server:
 db:
   url: postgres://postgres:postgres@localhost:65433/optrwork_test?sslmode=disable
 ethereum:
-  url: https://bsctestapi.terminet.io/rpc
+  url: test

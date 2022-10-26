@@ -2,11 +2,19 @@ package ethsvc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 	"optrispace.com/work/pkg/clog"
+	"optrispace.com/work/pkg/model"
+)
+
+// Used for testing purposes only
+const (
+	fundedContractAddress    = "0xaB8722B889D231d62c9eB35Eb1b557926F3B3289"
+	notFundedContractAddress = "0x9Ca2702c5bcc51D79d9a059D58607028aa36DD67"
 )
 
 type (
@@ -35,6 +43,26 @@ func NewEthereum(url string) Ethereum {
 
 // Balance returns balance of the network coin (ETH for Ethereum, BNB for BNB Smart Chain)
 func (s *ethereumSvc) Balance(ctx context.Context, address string) (decimal.Decimal, error) {
+	// NOTE: This value came from ./testdata/test.yaml
+	if s.url == "test" {
+		if address == fundedContractAddress {
+			return decimal.RequireFromString("42"), nil
+		}
+
+		if address == notFundedContractAddress {
+			return decimal.Zero, &model.BackendError{
+				Cause:    model.ErrInsufficientFunds,
+				Message:  "the contract does not have sufficient funds",
+				TechInfo: address,
+			}
+		}
+
+		return decimal.Zero, &model.BackendError{
+			Cause:   model.ErrInappropriateAction,
+			Message: fmt.Sprintf("Not implemented for: %s", address),
+		}
+	}
+
 	client, err := ethclient.DialContext(ctx, s.url)
 	if err != nil {
 		return decimal.Zero, err
