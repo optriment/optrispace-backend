@@ -237,6 +237,42 @@ func (s *JobSvc) Suspend(ctx context.Context, id, actorID string) error {
 	})
 }
 
+// Resume implements service.Job interface
+func (s *JobSvc) Resume(ctx context.Context, id, actorID string) error {
+	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return &model.BackendError{
+				Cause:   model.ErrEntityNotFound,
+				Message: "person does not exist",
+			}
+		}
+
+		job, err := queries.JobGet(ctx, id)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
+		if person.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
+		}
+
+		if !job.SuspendedAt.Valid {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "job is not suspended",
+			}
+		}
+
+		return queries.JobResume(ctx, job.ID)
+	})
+}
+
 // Patch implements service.Job interface
 func (s *JobSvc) Patch(ctx context.Context, id, actorID string, dto *model.UpdateJobDTO) (*model.JobDTO, error) {
 	var result *model.JobDTO

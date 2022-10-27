@@ -186,6 +186,15 @@ func (q *Queries) JobPatch(ctx context.Context, arg JobPatchParams) (Job, error)
 	return i, err
 }
 
+const jobResume = `-- name: JobResume :exec
+update jobs set suspended_at = null where id = $1::varchar
+`
+
+func (q *Queries) JobResume(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, jobResume, id)
+	return err
+}
+
 const jobSuspend = `-- name: JobSuspend :exec
 update jobs set suspended_at = now() where id = $1::varchar
 `

@@ -52,6 +52,9 @@ type (
 
 		// Suspend job
 		Suspend(ctx context.Context, id, actorID string) error
+
+		// Resume job
+		Resume(ctx context.Context, id, actorID string) error
 	}
 
 	// Person is a person who pay or earn
