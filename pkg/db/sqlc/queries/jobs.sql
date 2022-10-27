@@ -63,6 +63,9 @@ update jobs set blocked_at = now() where id = @id::varchar;
 -- name: JobSuspend :exec
 update jobs set suspended_at = now() where id = @id::varchar;
 
+-- name: JobResume :exec
+update jobs set suspended_at = null where id = @id::varchar;
+
 -- name: JobsPurge :exec
 -- Handle with care!
 DELETE FROM jobs;

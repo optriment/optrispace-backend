@@ -1501,6 +1501,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/jobs/{id}/resume": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Resumes existent job to continue receiving applications",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "job"
+                ],
+                "summary": "Resume a job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "user not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "403": {
+                        "description": "user is not an owner",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/jobs/{id}/suspend": {
             "post": {
                 "security": [
@@ -1539,7 +1603,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "user is not admin",
+                        "description": "user is not an owner",
                         "schema": {
                             "$ref": "#/definitions/model.BackendError"
                         }

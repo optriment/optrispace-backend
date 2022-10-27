@@ -37,6 +37,7 @@ func (cont *Job) Register(e *echo.Echo) {
 	e.PUT(resourceJob+"/:id", cont.update)
 	e.POST(resourceJob+"/:id/block", cont.block)
 	e.POST(resourceJob+"/:id/suspend", cont.suspend)
+	e.POST(resourceJob+"/:id/resume", cont.resume)
 	log.Debug().Str("controller", resourceJob).Msg("Registered")
 }
 
@@ -218,7 +219,7 @@ func (cont *Job) block(c echo.Context) error {
 // @Param       id  path     string true "Job ID"
 // @Success     200
 // @Failure     401 {object} model.BackendError "user not authorized"
-// @Failure     403 {object} model.BackendError "user is not admin"
+// @Failure     403 {object} model.BackendError "user is not an owner"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /jobs/{id}/suspend [post]
@@ -229,6 +230,30 @@ func (cont *Job) suspend(c echo.Context) error {
 	}
 
 	if e := cont.svc.Suspend(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
+		return e
+	}
+	return c.JSON(http.StatusOK, "{}")
+}
+
+// @Summary     Resume a job
+// @Description Resumes existent job to continue receiving applications
+// @Tags        job
+// @Accept      json
+// @Produce     json
+// @Param       id  path     string true "Job ID"
+// @Success     200
+// @Failure     401 {object} model.BackendError "user not authorized"
+// @Failure     403 {object} model.BackendError "user is not an owner"
+// @Failure     500 {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /jobs/{id}/resume [post]
+func (cont *Job) resume(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	if e := cont.svc.Resume(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
 		return e
 	}
 	return c.JSON(http.StatusOK, "{}")
