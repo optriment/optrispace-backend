@@ -50,6 +50,13 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			return fmt.Errorf("unable to get job %s info: %w", application.Job.ID, err)
 		}
 
+		if job.SuspendedAt.Valid {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "Job does not accept new applications",
+			}
+		}
+
 		appl, err := queries.ApplicationAdd(ctx, pgdao.ApplicationAddParams{
 			ID:          id,
 			Comment:     application.Comment,

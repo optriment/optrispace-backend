@@ -228,6 +228,41 @@ func TestApplication(t *testing.T) {
 		}
 	})
 
+	t.Run("returns error if job is suspended", func(t *testing.T) {
+		suspendedJob, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title",
+			Description: "Description",
+			CreatedBy:   createdBy.ID,
+		})
+		require.NoError(t, err)
+
+		err = pgdao.New(db).JobSuspend(ctx, suspendedJob.ID)
+		require.NoError(t, err)
+
+		body := `{
+			"comment": "My comment",
+			"price": 0.1
+		}`
+
+		suspendedJobURL := appURL + "/jobs/" + suspendedJob.ID + "/" + resourceName
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, suspendedJobURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+applicant1.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := model.BackendError{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.EqualValues(t, "Job does not accept new applications", e.Message)
+		}
+	})
+
 	t.Run("job-get•:id", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobURL, nil)
 		require.NoError(t, err)
