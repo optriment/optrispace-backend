@@ -108,4 +108,28 @@ type (
 		DisplayName     string `json:"display_name"`
 		EthereumAddress string `json:"ethereum_address"`
 	}
+
+	// CreateApplicationDTO is an application representation on applyment process
+	CreateApplicationDTO struct {
+		JobID   string `validate:"required"`
+		Comment string `validate:"required"`
+		Price   decimal.Decimal
+	}
+
+	// ApplicationDTO is an application for a job
+	ApplicationDTO struct {
+		ID                       string          `json:"id"`
+		JobID                    string          `json:"job_id"`
+		JobTitle                 string          `json:"job_title"`
+		JobDescription           string          `json:"job_description"`
+		JobBudget                decimal.Decimal `json:"job_budget"`
+		ApplicantID              string          `json:"applicant_id"`
+		ContractID               string          `json:"contract_id"`
+		ContractStatus           string          `json:"contract_status"`
+		Comment                  string          `json:"comment"`
+		Price                    decimal.Decimal `json:"price"`
+		ApplicantEthereumAddress string          `json:"applicant_ethereum_address"`
+		ApplicantDisplayName     string          `json:"applicant_display_name"`
+		CreatedAt                time.Time       `json:"created_at"`
+	}
 )

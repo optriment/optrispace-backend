@@ -44,10 +44,10 @@ func TestApplicationChat(t *testing.T) {
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.EqualValues(t, "entity not found", e.Message)
+			assert.EqualValues(t, "insufficient rights", e.Message)
 		}
 	})
 

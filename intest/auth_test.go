@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -185,8 +184,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("me•401", func(t *testing.T) {
-		body := `{
-		}`
+		body := `{}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, meURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -204,8 +202,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("me•ok", func(t *testing.T) {
-		body := `{
-		}`
+		body := `{}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, meURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -245,9 +242,9 @@ func TestAuth(t *testing.T) {
 
 	t.Run("login•ok", func(t *testing.T) {
 		body := `{
-				"login":" MYLOGIN ",
-				"password":"12345678"
-			}`
+			"login":" MYLOGIN ",
+			"password":"12345678"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -274,9 +271,9 @@ func TestAuth(t *testing.T) {
 
 	t.Run("login•is empty", func(t *testing.T) {
 		body := `{
-				"login":"",
-				"password":"12345678"
-			}`
+			"login":" ",
+			"password":"12345678"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -287,7 +284,6 @@ func TestAuth(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			fmt.Printf("%s\n", res.Body)
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
 			assert.EqualValues(t, "login is required", e.Message)
@@ -296,9 +292,9 @@ func TestAuth(t *testing.T) {
 
 	t.Run("password•is empty", func(t *testing.T) {
 		body := `{
-				"login":"mylogin",
-				"password":""
-			}`
+			"login":"mylogin",
+			"password":""
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -309,7 +305,6 @@ func TestAuth(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			fmt.Printf("%s\n", res.Body)
 			e := model.BackendError{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
 			assert.EqualValues(t, "password is required", e.Message)
@@ -318,9 +313,9 @@ func TestAuth(t *testing.T) {
 
 	t.Run("login•invalid-password", func(t *testing.T) {
 		body := `{
-				"login":"mylogin",
-				"password":"------"
-			}`
+			"login":"mylogin",
+			"password":"------"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -342,9 +337,9 @@ func TestAuth(t *testing.T) {
 
 	t.Run("login•invalid-login", func(t *testing.T) {
 		body := `{
-				"login": "far-long-invalid-login",
-				"password": ""
-			}`
+			"login": "far-long-invalid-login",
+			"password": ""
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -389,9 +384,9 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		body := `{
-				"old_password": "1234",
-				"new_password": "abcd"
-			}`
+			"old_password": "1234",
+			"new_password": "abcd"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPut, passwordURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -430,9 +425,9 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		body := `{
-				"old_password": "0987",
-				"new_password": "abcd"
-			}`
+			"old_password": "0987",
+			"new_password": "abcd"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPut, passwordURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -462,9 +457,9 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		body := `{
-				"old_password": "1234",
-				"new_password": "abcd"
-			}`
+			"old_password": "1234",
+			"new_password": "abcd"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPut, passwordURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -498,8 +493,8 @@ func TestChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		body := `{
-				"old_password": "1234"
-			}`
+			"old_password": "1234"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPut, passwordURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)
@@ -592,9 +587,9 @@ func TestLoginTransmutation(t *testing.T) {
 
 	t.Run("login•ok", func(t *testing.T) {
 		body := `{
-				"login":"\t   \t  \rMyLogiN   \t   \t",
-				"password":"12345678"
-			}`
+			"login":"\t   \t  \rMyLogiN   \t   \t",
+			"password":"12345678"
+		}`
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader([]byte(body)))
 		require.NoError(t, err)

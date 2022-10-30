@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"path"
 
@@ -30,30 +32,30 @@ func NewApplication(sm service.Security, svc service.Application) Registerer {
 // Register implements Registerer interface
 func (cont *Application) Register(e *echo.Echo) {
 	e.POST(resourceJob+"/:job_id/"+resourceApplication, cont.add)
+	e.GET(resourceApplication, cont.listByApplicant)
 	e.GET(resourceApplication+"/:id", cont.get)
 	e.GET(resourceApplication+"/:id/chat", cont.getChat)
-	e.GET(resourceApplication+"/my", cont.listMy)
-	e.GET(resourceApplication, cont.list)
-	e.GET(resourceJob+"/:job_id/"+resourceApplication, cont.list)
+	e.GET(resourceJob+"/:job_id/application", cont.getForJob)
+	e.GET(resourceJob+"/:job_id/"+resourceApplication, cont.listByJob)
 	log.Debug().Str("controller", resourceApplication).Msg("Registered")
 }
 
-type newApplication struct {
-	Comment string          `json:"comment,omitempty"`
-	Price   decimal.Decimal `json:"price,omitempty"`
+type createApplicationParams struct {
+	Comment string          `json:"comment" validate:"required"`
+	Price   decimal.Decimal `json:"price" validate:"required"`
 }
 
-// @Summary     Make new application for a job
-// @Description Applicant create new application for a job
+// @Summary     Creates a new application for a job
+// @Description Applicant creates a new application for a job
 // @Tags        application, job
 // @Accept      json
 // @Produce     json
-// @Param       application body     controller.newApplication true "New application request"
-// @Param       job_id      path     string                    true "Job ID to apply"
-// @Success     200         {object} model.Application
+// @Param       application body     controller.createApplicationParams true "New application request"
+// @Param       job_id      path     string                             true "Job ID to apply"
+// @Success     201         {object} model.ApplicationDTO
 // @Failure     401         {object} model.BackendError "user not authorized"
 // @Failure     404         {object} model.BackendError "job with specified ID is not found"
-// @Failure     422         {object} model.BackendError "validation failed (details in response)"
+// @Failure     422         {object} model.BackendError "validation failed"
 // @Failure     500         {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /jobs/{job_id}/applications [post]
@@ -63,66 +65,84 @@ func (cont *Application) add(c echo.Context) error {
 		return err
 	}
 
-	if uc.Subject.EthereumAddress == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: "Ethereum address is required",
-		}
-	}
-
-	ie := new(newApplication)
+	ie := new(createApplicationParams)
 
 	if e := c.Bind(ie); e != nil {
 		return e
 	}
 
-	if ie.Comment == "" {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("Comment"),
-		}
-	}
-
-	if decimal.Zero.Equal(ie.Price) {
-		return &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("Price"),
-		}
-	}
-
-	createdAppl, err := cont.svc.Add(c.Request().Context(), &model.Application{
-		Applicant: &model.JobApplicant{ID: uc.Subject.ID},
-		Comment:   ie.Comment,
-		Price:     ie.Price,
-		Job:       &model.Job{ID: c.Param("job_id")},
-	})
-	if err != nil {
+	if err = validateStruct(ie); err != nil {
 		return err
 	}
 
-	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceApplication, createdAppl.ID))
-	return c.JSON(http.StatusCreated, createdAppl)
+	dto := model.CreateApplicationDTO{
+		JobID:   c.Param("job_id"),
+		Comment: ie.Comment,
+		Price:   ie.Price,
+	}
+
+	newApplication, err := cont.svc.Add(c.Request().Context(), uc.Subject.ID, &dto)
+	if err != nil {
+		return fmt.Errorf("unable to add application: %w", err)
+	}
+
+	c.Response().Header().Set(echo.HeaderLocation, path.Join("/", resourceApplication, newApplication.ID))
+	return c.JSON(http.StatusCreated, newApplication)
 }
 
 // @Summary     Get an application
-// @Description Applicant create new application for a job
+// @Description Returns an application by ID
 // @Tags        application
 // @Accept      json
 // @Produce     json
 // @Param       id  path     string true "Application ID"
-// @Success     200 {object} model.Application
+// @Success     200    {object} model.ApplicationDTO
 // @Failure     401    {object} model.BackendError "user not authorized"
 // @Failure     404 {object} model.BackendError "application not found"
 // @Failure     500    {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /applications/{id} [get]
 func (cont *Application) get(c echo.Context) error {
-	ctx := c.Request().Context()
-	id := c.Param("id")
-	o, err := cont.svc.Get(ctx, id)
+	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
+
+	o, err := cont.svc.Get(c.Request().Context(), c.Param("id"), uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, o)
+}
+
+// @Summary     Get an application for specific job and applicant
+// @Description Returns an application
+// @Tags        application
+// @Accept      json
+// @Produce     json
+// @Param       job_id path     string true "Job ID"
+// @Success     200 {object} model.ApplicationDTO
+// @Failure     401    {object} model.BackendError "user not authorized"
+// @Failure     404    {object} model.BackendError "job not found"
+// @Failure     500    {object} echo.HTTPError{message=string}
+// @Security    BearerToken
+// @Router      /jobs/{job_id}/application [get]
+func (cont *Application) getForJob(c echo.Context) error {
+	uc, err := cont.sm.FromEchoContext(c)
+	if err != nil {
+		return err
+	}
+
+	o, err := cont.svc.GetForJob(c.Request().Context(), c.Param("job_id"), uc.Subject.ID)
+	if err != nil {
+		return err
+	}
+
+	// In case of applicant has not applied yet
+	if o == nil {
+		return c.JSON(http.StatusOK, json.RawMessage("{}"))
+	}
+
 	return c.JSON(http.StatusOK, o)
 }
 
@@ -154,31 +174,19 @@ func (cont *Application) getChat(c echo.Context) error {
 	return c.JSON(http.StatusOK, o)
 }
 
-// @Summary     List applications by current authenticated user
-// @Description Returns applications list for the current user — as an applicant or as a job creator
-// @Tags        application
-// @Accept      json
-// @Produce     json
-// @Success     200 {array}  model.Application
-// @Failure     401 {object} model.BackendError "user not authorized"
-// @Failure     500 {object} echo.HTTPError{message=string}
-// @Security    BearerToken
-// @Router      /applications [get]
-func _() {}
-
 // @Summary     List applications for the job
-// @Description Returns applications list for the job by job_id. The current user MUST be an applicant or a job creator.
+// @Description Returns applications list for the job by job_id
 // @Tags        application, job
 // @Accept      json
 // @Produce     json
 // @Param       job_id path     string true "Job ID"
-// @Success     200    {array}  model.Application
+// @Success     200    {array}  model.ApplicationDTO
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     404    {object} model.BackendError "job not found"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
 // @Router      /jobs/{job_id}/applications [get]
-func (cont *Application) list(c echo.Context) error {
+func (cont *Application) listByJob(c echo.Context) error {
 	ctx := c.Request().Context()
 	jobID := c.Param("job_id")
 
@@ -187,15 +195,7 @@ func (cont *Application) list(c echo.Context) error {
 		return err
 	}
 
-	if jobID == "" { // full list for the current user
-		oo, e := cont.svc.ListBy(ctx, "", uc.Subject.ID)
-		if e != nil {
-			return e
-		}
-		return c.JSON(http.StatusOK, oo)
-	}
-
-	oo, err := cont.svc.ListBy(ctx, jobID, uc.Subject.ID)
+	oo, err := cont.svc.ListByJob(ctx, jobID, uc.Subject.ID)
 	if err != nil {
 		return err
 	}
@@ -203,25 +203,23 @@ func (cont *Application) list(c echo.Context) error {
 	return c.JSON(http.StatusOK, oo)
 }
 
-// @Summary     List applications were applied by the current authenticated user
-// @Description Returns applications list made by the current user as an applicant
+// @Summary     List of applications
+// @Description Returns applications
 // @Tags        application
 // @Accept      json
 // @Produce     json
-// @Success     200 {array}  model.Application
+// @Success     200 {array}  model.ApplicationDTO
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     500 {object} echo.HTTPError{message=string}
 // @Security    BearerToken
-// @Router      /applications/my [get]
-func (cont *Application) listMy(c echo.Context) error {
-	ctx := c.Request().Context()
-
+// @Router      /applications [get]
+func (cont *Application) listByApplicant(c echo.Context) error {
 	uc, err := cont.sm.FromEchoContext(c)
 	if err != nil {
 		return err
 	}
 
-	oo, err := cont.svc.ListByApplicant(ctx, uc.Subject.ID)
+	oo, err := cont.svc.ListByApplicant(c.Request().Context(), uc.Subject.ID)
 	if err != nil {
 		return err
 	}

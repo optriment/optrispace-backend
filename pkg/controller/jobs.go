@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path"
@@ -106,6 +106,7 @@ func (cont *Job) list(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(http.StatusOK, oo)
 }
 
@@ -121,16 +122,11 @@ func (cont *Job) list(c echo.Context) error {
 // @Security    BearerToken
 // @Router      /jobs/{id} [get]
 func (cont *Job) get(c echo.Context) error {
-	id := c.Param("id")
-
-	o, err := cont.svc.Get(c.Request().Context(), id)
-	if errors.Is(model.ErrEntityNotFound, err) {
-		return echo.NewHTTPError(http.StatusNotFound, "Entity with specified id not found")
-	}
-
+	o, err := cont.svc.Get(c.Request().Context(), c.Param("id"))
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(http.StatusOK, o)
 }
 
@@ -184,6 +180,7 @@ func (cont *Job) update(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(http.StatusOK, o)
 }
 
@@ -208,7 +205,8 @@ func (cont *Job) block(c echo.Context) error {
 	if e := cont.svc.Block(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
 		return e
 	}
-	return c.JSON(http.StatusOK, "{}")
+
+	return c.JSON(http.StatusOK, json.RawMessage("{}"))
 }
 
 // @Summary     Suspend a job
@@ -216,7 +214,7 @@ func (cont *Job) block(c echo.Context) error {
 // @Tags        job
 // @Accept      json
 // @Produce     json
-// @Param       id  path     string true "Job ID"
+// @Param       id path string true "Job ID"
 // @Success     200
 // @Failure     401 {object} model.BackendError "user not authorized"
 // @Failure     403 {object} model.BackendError "user is not an owner"
@@ -232,7 +230,8 @@ func (cont *Job) suspend(c echo.Context) error {
 	if e := cont.svc.Suspend(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
 		return e
 	}
-	return c.JSON(http.StatusOK, "{}")
+
+	return c.JSON(http.StatusOK, json.RawMessage("{}"))
 }
 
 // @Summary     Resume a job
@@ -256,5 +255,6 @@ func (cont *Job) resume(c echo.Context) error {
 	if e := cont.svc.Resume(c.Request().Context(), c.Param("id"), uc.Subject.ID); e != nil {
 		return e
 	}
-	return c.JSON(http.StatusOK, "{}")
+
+	return c.JSON(http.StatusOK, json.RawMessage("{}"))
 }

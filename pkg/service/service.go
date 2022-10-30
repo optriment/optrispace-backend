@@ -76,14 +76,20 @@ type (
 
 	// Application is application for a job offer
 	Application interface {
-		GenericCRUD[model.Application]
-		// ListBy returns list of entities by specified filters
-		// If jobID != "", method returns list of jobs
-		// if actorID != "", method returns list of applications for job author or applications
-		ListBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error)
+		// Add creates a new application for job
+		Add(ctx context.Context, applicantID string, dto *model.CreateApplicationDTO) (*model.ApplicationDTO, error)
+
+		// Get returns an application by ID and applicant
+		Get(ctx context.Context, id, actorID string) (*model.ApplicationDTO, error)
+
+		// GetForJob returns application for specific job by applicant
+		GetForJob(ctx context.Context, jobID, actorID string) (*model.ApplicationDTO, error)
+
+		// ListByJob returns applications belong to specific job by ID
+		ListByJob(ctx context.Context, jobID, actorID string) ([]*model.ApplicationDTO, error)
 
 		// ListByApplicant returns list of applications by specified applicant
-		ListByApplicant(ctx context.Context, applicantID string) ([]*model.Application, error)
+		ListByApplicant(ctx context.Context, applicantID string) ([]*model.ApplicationDTO, error)
 
 		// GetChat returns chat associated with this application
 		GetChat(ctx context.Context, id, actorID string) (*model.Chat, error)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -518,7 +519,7 @@ func TestGetJob(t *testing.T) {
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Entity with specified id not found", e["message"])
+			assert.Equal(t, "entity not found", e["message"])
 		}
 	})
 
@@ -552,7 +553,7 @@ func TestGetJob(t *testing.T) {
 		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "Entity with specified id not found", e["message"])
+			assert.Equal(t, "entity not found", e["message"])
 		}
 	})
 
@@ -874,42 +875,6 @@ func TestUpdateJob(t *testing.T) {
 		})
 	})
 
-	t.Run("returns error if customer does not have ethereum_address", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"title": " New title ",
-			"description": " New description ",
-			"budget": 0.1,
-			"duration": 1
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPut, jobsURL+"/qwerty", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "customer does not have wallet", e["message"])
-		}
-	})
-
 	t.Run("returns error if job does not exist", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
@@ -944,6 +909,58 @@ func TestUpdateJob(t *testing.T) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
 			assert.Equal(t, "entity not found", e["message"])
+		}
+	})
+
+	t.Run("returns error if customer does not have ethereum_address", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		job, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title before change",
+			Description: "Description before change",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			Duration: sql.NullInt32{
+				Int32: 24,
+				Valid: true,
+			},
+			CreatedBy: customer.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"title": " New title ",
+			"description": " New description ",
+			"budget": 0.1,
+			"duration": 1
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, jobsURL+"/"+job.ID, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "customer does not have wallet", e["message"])
 		}
 	})
 
@@ -1107,35 +1124,6 @@ func TestSetJobAsBlocked(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error if person is not an admin", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/qwerty/block", nil)
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "insufficient rights", e["message"])
-		}
-	})
-
 	t.Run("returns error if job does not exist", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
@@ -1150,11 +1138,6 @@ func TestSetJobAsBlocked(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.NoError(t, queries.PersonSetIsAdmin(ctx, pgdao.PersonSetIsAdminParams{
-			IsAdmin: true,
-			ID:      customer.ID,
-		}))
-
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/qwerty/block", nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -1168,6 +1151,47 @@ func TestSetJobAsBlocked(t *testing.T) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
 			assert.Equal(t, "entity not found", e["message"])
+		}
+	})
+
+	t.Run("returns error if person is not an admin", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+		})
+		require.NoError(t, err)
+
+		job, err := queries.JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Title",
+			Description: "Description",
+			Budget: sql.NullString{
+				String: "120.000",
+				Valid:  true,
+			},
+			CreatedBy: customer.ID,
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, jobsURL+"/"+job.ID+"/block", nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "insufficient rights", e["message"])
 		}
 	})
 
@@ -1316,6 +1340,10 @@ func TestSetJobAsBlocked(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			bb, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.EqualValues(t, "{}\n", string(bb))
+
 			d, err := pgdao.New(db).JobFind(ctx, job.ID)
 			if assert.NoError(t, err) {
 				assert.NotEmpty(t, d.BlockedAt)
@@ -1455,6 +1483,10 @@ func TestSetJobAsSuspended(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			bb, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.EqualValues(t, "{}\n", string(bb))
+
 			d, err := pgdao.New(db).JobFind(ctx, job.ID)
 			if assert.NoError(t, err) {
 				assert.NotEmpty(t, d.SuspendedAt)
@@ -1638,6 +1670,10 @@ func TestSetJobAsResumed(t *testing.T) {
 		require.NoError(t, err)
 
 		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			bb, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.EqualValues(t, "{}\n", string(bb))
+
 			d, err := pgdao.New(db).JobFind(ctx, suspendedJob.ID)
 			if assert.NoError(t, err) {
 				assert.Empty(t, d.SuspendedAt)
