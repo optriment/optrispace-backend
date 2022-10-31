@@ -27,7 +27,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "Returns applications list for the current user — as an applicant or as a job creator",
+                "description": "Returns applications",
                 "consumes": [
                     "application/json"
                 ],
@@ -37,69 +37,14 @@ const docTemplate = `{
                 "tags": [
                     "application"
                 ],
-                "summary": "List applications by current authenticated user",
+                "summary": "List of applications",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.Application"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "user not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.BackendError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/echo.HTTPError"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/applications/my": {
-            "get": {
-                "security": [
-                    {
-                        "BearerToken": []
-                    }
-                ],
-                "description": "Returns applications list made by the current user as an applicant",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "application"
-                ],
-                "summary": "List applications were applied by the current authenticated user",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.Application"
+                                "$ref": "#/definitions/model.ApplicationDTO"
                             }
                         }
                     },
@@ -137,7 +82,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "Applicant create new application for a job",
+                "description": "Returns an application by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -161,7 +106,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Application"
+                            "$ref": "#/definitions/model.ApplicationDTO"
                         }
                     },
                     "401": {
@@ -1629,6 +1574,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/jobs/{job_id}/application": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Returns an application",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "application"
+                ],
+                "summary": "Get an application for specific job and applicant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "job_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ApplicationDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "user not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "404": {
+                        "description": "job not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackendError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/echo.HTTPError"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/jobs/{job_id}/applications": {
             "get": {
                 "security": [
@@ -1636,7 +1648,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "Returns applications list for the job by job_id. The current user MUST be an applicant or a job creator.",
+                "description": "Returns applications list for the job by job_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -1663,7 +1675,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.Application"
+                                "$ref": "#/definitions/model.ApplicationDTO"
                             }
                         }
                     },
@@ -1705,7 +1717,7 @@ const docTemplate = `{
                         "BearerToken": []
                     }
                 ],
-                "description": "Applicant create new application for a job",
+                "description": "Applicant creates a new application for a job",
                 "consumes": [
                     "application/json"
                 ],
@@ -1716,7 +1728,7 @@ const docTemplate = `{
                     "application",
                     "job"
                 ],
-                "summary": "Make new application for a job",
+                "summary": "Creates a new application for a job",
                 "parameters": [
                     {
                         "description": "New application request",
@@ -1724,7 +1736,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.newApplication"
+                            "$ref": "#/definitions/controller.createApplicationParams"
                         }
                     },
                     {
@@ -1736,10 +1748,10 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Application"
+                            "$ref": "#/definitions/model.ApplicationDTO"
                         }
                     },
                     "401": {
@@ -1755,7 +1767,7 @@ const docTemplate = `{
                         }
                     },
                     "422": {
-                        "description": "validation failed (details in response)",
+                        "description": "validation failed",
                         "schema": {
                             "$ref": "#/definitions/model.BackendError"
                         }
@@ -2308,6 +2320,21 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "controller.createApplicationParams": {
+            "type": "object",
+            "required": [
+                "comment",
+                "price"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
         "controller.createContractParams": {
             "type": "object",
             "required": [
@@ -2363,17 +2390,6 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
-                }
-            }
-        },
-        "controller.newApplication": {
-            "type": "object",
-            "properties": {
-                "comment": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
                 }
             }
         },
@@ -2437,17 +2453,26 @@ const docTemplate = `{
                 "message": {}
             }
         },
-        "model.Application": {
+        "model.ApplicationDTO": {
             "type": "object",
             "properties": {
-                "applicant": {
-                    "$ref": "#/definitions/model.JobApplicant"
+                "applicant_display_name": {
+                    "type": "string"
+                },
+                "applicant_ethereum_address": {
+                    "type": "string"
+                },
+                "applicant_id": {
+                    "type": "string"
                 },
                 "comment": {
                     "type": "string"
                 },
-                "contract": {
-                    "$ref": "#/definitions/model.Contract"
+                "contract_id": {
+                    "type": "string"
+                },
+                "contract_status": {
+                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -2455,14 +2480,20 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "job": {
-                    "$ref": "#/definitions/model.Job"
+                "job_budget": {
+                    "type": "number"
+                },
+                "job_description": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "job_title": {
+                    "type": "string"
                 },
                 "price": {
                     "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
                 }
             }
         },
@@ -2529,56 +2560,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Contract": {
-            "type": "object",
-            "properties": {
-                "application": {
-                    "$ref": "#/definitions/model.Application"
-                },
-                "contract_address": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "customer": {
-                    "$ref": "#/definitions/model.Person"
-                },
-                "customer_address": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "duration": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "performer": {
-                    "$ref": "#/definitions/model.Person"
-                },
-                "performer_address": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
         "model.ContractDTO": {
             "type": "object",
             "properties": {
@@ -2631,58 +2612,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.Job": {
-            "type": "object",
-            "properties": {
-                "applications_count": {
-                    "type": "integer"
-                },
-                "budget": {
-                    "type": "number"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "customer": {
-                    "$ref": "#/definitions/model.Person"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "duration": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.JobApplicant": {
-            "type": "object",
-            "properties": {
-                "display_name": {
-                    "type": "string"
-                },
-                "ethereum_address": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "resources": {
                     "type": "string"
                 }
             }

@@ -73,18 +73,21 @@ func (s *ContractSvc) Add(ctx context.Context, customerID string, dto *model.Cre
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		application, err := queries.ApplicationGet(ctx, strings.TrimSpace(dto.ApplicationID))
 		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "application does not exist",
-			}
+			return model.ErrEntityNotFound
+		}
+
+		job, err := queries.JobGet(ctx, application.JobID)
+		if err != nil {
+			return model.ErrEntityNotFound
 		}
 
 		customer, err := queries.PersonGet(ctx, customerID)
 		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "customer does not exist",
-			}
+			return model.ErrEntityNotFound
+		}
+
+		if customer.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
 		}
 
 		customerEthereumAddress := strings.ToLower(strings.TrimSpace(customer.EthereumAddress))
@@ -101,6 +104,10 @@ func (s *ContractSvc) Add(ctx context.Context, customerID string, dto *model.Cre
 				Cause:   model.ErrEntityNotFound,
 				Message: "performer does not exist",
 			}
+		}
+
+		if customer.ID == performer.ID {
+			return model.ErrInappropriateAction
 		}
 
 		performerEthereumAddress := strings.ToLower(strings.TrimSpace(performer.EthereumAddress))
@@ -122,7 +129,7 @@ func (s *ContractSvc) Add(ctx context.Context, customerID string, dto *model.Cre
 			ID:            pgdao.NewID(),
 			CustomerID:    customer.ID,
 			PerformerID:   application.ApplicantID,
-			ApplicationID: strings.TrimSpace(application.ID),
+			ApplicationID: application.ID,
 			Title:         strings.TrimSpace(dto.Title),
 			Description:   strings.TrimSpace(dto.Description),
 			Price:         dto.Price.String(),
@@ -365,11 +372,16 @@ func (s *ContractSvc) GetByIDForPerson(ctx context.Context, id, personID string)
 }
 
 // ListByPersonID loads all related contracts for specific person
-func (s *ContractSvc) ListByPersonID(ctx context.Context, personID string) ([]*model.ContractDTO, error) {
+func (s *ContractSvc) ListByPersonID(ctx context.Context, actorID string) ([]*model.ContractDTO, error) {
 	result := make([]*model.ContractDTO, 0)
 
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		aa, err := queries.ContractsGetByPerson(ctx, personID)
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		aa, err := queries.ContractsGetByPerson(ctx, person.ID)
 		if err != nil {
 			return fmt.Errorf("unable to ContractsGetByPerson: %w", err)
 		}

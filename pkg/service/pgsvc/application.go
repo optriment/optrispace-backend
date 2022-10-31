@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -26,56 +27,78 @@ func NewApplication(db *sql.DB) *ApplicationSvc {
 }
 
 // Add implements Application interface
-func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application) (*model.Application, error) {
-	var result *model.Application
+func (s *ApplicationSvc) Add(ctx context.Context, applicantID string, dto *model.CreateApplicationDTO) (*model.ApplicationDTO, error) {
+	var result *model.ApplicationDTO
+
+	if strings.TrimSpace(dto.Comment) == "" {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("comment"),
+		}
+	}
+
+	if decimal.Zero.Equal(dto.Price) {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("price"),
+		}
+	}
+
+	if dto.Price.IsNegative() {
+		return nil, &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustBePositive("price"),
+		}
+	}
+
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		id := pgdao.NewID()
+		job, err := queries.JobGet(ctx, dto.JobID)
 
-		if application.Price.IsNegative() {
-			return &model.BackendError{
-				Cause:   model.ErrValidationFailed,
-				Message: model.ValidationErrorMustBePositive("Price"),
-			}
-		}
-
-		job, err := queries.JobGet(ctx, application.Job.ID)
 		if errors.Is(err, sql.ErrNoRows) {
-			return &model.BackendError{
-				Cause:    model.ErrEntityNotFound,
-				Message:  "job not found",
-				TechInfo: application.Job.ID,
-			}
+			return model.ErrEntityNotFound
 		}
+
 		if err != nil {
-			return fmt.Errorf("unable to get job %s info: %w", application.Job.ID, err)
+			return fmt.Errorf("unable to get job %s info: %w", dto.JobID, err)
 		}
 
 		if job.SuspendedAt.Valid {
 			return &model.BackendError{
 				Cause:   model.ErrValidationFailed,
-				Message: "Job does not accept new applications",
+				Message: "job does not accept new applications",
 			}
 		}
 
-		appl, err := queries.ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          id,
-			Comment:     application.Comment,
-			Price:       application.Price.String(),
-			JobID:       application.Job.ID,
-			ApplicantID: application.Applicant.ID,
-		})
+		applicant, err := queries.PersonGet(ctx, applicantID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		if applicant.ID == job.CreatedBy {
+			return model.ErrInsufficientRights
+		}
+
+		applicantEthereumAddress := strings.ToLower(strings.TrimSpace(applicant.EthereumAddress))
+		if applicantEthereumAddress == "" {
+			return &model.BackendError{
+				Cause:   model.ErrValidationFailed,
+				Message: "applicant does not have wallet",
+			}
+		}
+
+		applicationParams := pgdao.ApplicationAddParams{
+			ID:          pgdao.NewID(),
+			Comment:     strings.TrimSpace(dto.Comment),
+			Price:       dto.Price.String(),
+			JobID:       job.ID,
+			ApplicantID: applicant.ID,
+		}
+
+		newApplication, err := queries.ApplicationAdd(ctx, applicationParams)
 
 		if pqe, ok := err.(*pq.Error); ok { //nolint: errorlint
 			if pqe.Code == "23505" {
 				return fmt.Errorf("%s: %w", pqe.Detail, model.ErrApplicationAlreadyExists)
-			}
-
-			if pqe.Code == "23503" && pqe.Constraint == "applications_job_id_fkey" {
-				return &model.BackendError{
-					Cause:    model.ErrEntityNotFound,
-					Message:  "job not found",
-					TechInfo: application.Job.ID,
-				}
 			}
 		}
 
@@ -83,18 +106,70 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 			return fmt.Errorf("unable to ApplicationAdd: %w", err)
 		}
 
-		if _, e := newChat(ctx, queries, newChatTopicApplication(appl.ID), appl.Comment, appl.ApplicantID, job.CreatedBy); e != nil {
-			clog.Ctx(ctx).Warn().Err(e).Str("applicationID", appl.ID).Msg("Failed to create chat for application")
+		if _, e := newChat(ctx, queries, newChatTopicApplication(newApplication.ID), newApplication.Comment, newApplication.ApplicantID, job.CreatedBy); e != nil {
+			clog.Ctx(ctx).Warn().Err(e).Str("applicationID", newApplication.ID).Msg("Failed to create chat for application")
 		}
 
-		result = &model.Application{
-			ID:        appl.ID,
-			CreatedAt: appl.CreatedAt,
-			UpdatedAt: appl.UpdatedAt,
-			Applicant: &model.JobApplicant{ID: appl.ApplicantID},
-			Comment:   appl.Comment,
-			Price:     decimal.RequireFromString(appl.Price),
-			Job:       &model.Job{ID: appl.JobID},
+		result = &model.ApplicationDTO{
+			ID:          newApplication.ID,
+			JobID:       job.ID,
+			ApplicantID: applicant.ID,
+			Comment:     newApplication.Comment,
+			Price:       decimal.RequireFromString(newApplication.Price),
+			CreatedAt:   newApplication.CreatedAt,
+		}
+
+		return nil
+	})
+}
+
+// GetForJob returns application for specific job by applicant
+func (s *ApplicationSvc) GetForJob(ctx context.Context, jobID, actorID string) (*model.ApplicationDTO, error) {
+	var result *model.ApplicationDTO
+	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		job, err := queries.JobGet(ctx, jobID)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to get job %s info: %w", jobID, err)
+		}
+
+		applicant, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		if applicant.ID == job.CreatedBy {
+			return model.ErrInsufficientRights
+		}
+
+		a, err := queries.ApplicationFindByJobAndApplicant(ctx, pgdao.ApplicationFindByJobAndApplicantParams{
+			JobID:       job.ID,
+			ApplicantID: applicant.ID,
+		})
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to ApplicationFindByJobAndApplicant with jobID=%s, applicant_id=%s: %w", job.ID, applicant.ID, err)
+		}
+
+		result = &model.ApplicationDTO{
+			ID:                       a.ID,
+			JobID:                    a.JobID,
+			ApplicantID:              a.ApplicantID,
+			Comment:                  a.Comment,
+			Price:                    decimal.RequireFromString(a.Price),
+			CreatedAt:                a.CreatedAt,
+			ApplicantEthereumAddress: a.ApplicantEthereumAddress,
+			ApplicantDisplayName:     a.ApplicantDisplayName,
+			ContractID:               a.ContractID.String,
+			ContractStatus:           a.ContractStatus.String,
 		}
 
 		return nil
@@ -102,10 +177,11 @@ func (s *ApplicationSvc) Add(ctx context.Context, application *model.Application
 }
 
 // Get implements Application interface
-func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application, error) {
-	var result *model.Application
+func (s *ApplicationSvc) Get(ctx context.Context, id, actorID string) (*model.ApplicationDTO, error) {
+	var result *model.ApplicationDTO
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		a, err := queries.ApplicationGet(ctx, id)
+		application, err := queries.ApplicationGet(ctx, id)
+
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ErrEntityNotFound
 		}
@@ -114,81 +190,92 @@ func (s *ApplicationSvc) Get(ctx context.Context, id string) (*model.Application
 			return fmt.Errorf("unable to ApplicationGet with id=%s: %w", id, err)
 		}
 
-		job := &model.Job{
-			ID:    a.JobID,
-			Title: a.JobTitle,
+		job, err := queries.JobGet(ctx, application.JobID)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
 		}
 
-		if a.JobBudget.Valid {
-			job.Budget = decimal.RequireFromString(a.JobBudget.String)
+		if err != nil {
+			return fmt.Errorf("unable to JobGet with id=%s: %w", id, err)
 		}
 
-		result = &model.Application{
-			ID:        a.ID,
-			CreatedAt: a.CreatedAt,
-			UpdatedAt: a.UpdatedAt,
-			Applicant: &model.JobApplicant{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName, EthereumAddress: a.ApplicantEthereumAddress},
-			Comment:   a.Comment,
-			Price:     decimal.RequireFromString(a.Price),
-			Job:       job,
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		if person.ID != application.ApplicantID && person.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
+		}
+
+		result = &model.ApplicationDTO{
+			ID:                       application.ID,
+			JobID:                    application.JobID,
+			JobTitle:                 application.JobTitle,
+			JobDescription:           application.JobDescription,
+			ApplicantID:              application.ApplicantID,
+			Comment:                  application.Comment,
+			Price:                    decimal.RequireFromString(application.Price),
+			CreatedAt:                application.CreatedAt,
+			ApplicantEthereumAddress: application.ApplicantEthereumAddress,
+			ApplicantDisplayName:     application.ApplicantDisplayName,
+			ContractID:               application.ContractID.String,
+			ContractStatus:           application.ContractStatus.String,
+		}
+
+		if application.JobBudget.Valid {
+			result.JobBudget = decimal.RequireFromString(application.JobBudget.String)
 		}
 
 		return nil
 	})
 }
 
-// List implements Application interface
-func (s *ApplicationSvc) List(ctx context.Context) ([]*model.Application, error) {
-	return s.listBy(ctx, "", "")
-}
+// ListByJob returns applications belong to specific job by ID
+func (s *ApplicationSvc) ListByJob(ctx context.Context, jobID, actorID string) ([]*model.ApplicationDTO, error) {
+	result := make([]*model.ApplicationDTO, 0)
 
-// ListBy implements Application interface
-func (s *ApplicationSvc) ListBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error) {
-	return s.listBy(ctx, jobID, actorID)
-}
-
-func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*model.Application, error) {
-	result := make([]*model.Application, 0)
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		aa, err := queries.ApplicationsListBy(ctx, pgdao.ApplicationsListByParams{
-			JobID:   jobID,
-			ActorID: actorID,
-		})
+		job, err := queries.JobGet(ctx, jobID)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
 		if err != nil {
-			return fmt.Errorf("unable to ApplicationsListBy: %w", err)
+			return fmt.Errorf("unable to JobGet with id='%s': %w", jobID, err)
+		}
+
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		if person.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
+		}
+
+		aa, err := queries.ApplicationsGetByJob(ctx, job.ID)
+		if err != nil {
+			return fmt.Errorf("unable to ApplicationsGetByJob: %w", err)
 		}
 
 		for _, a := range aa {
-			job := &model.Job{
-				ID:          a.JobID,
-				Title:       a.JobTitle,
-				Description: a.JobDescription,
+			app := &model.ApplicationDTO{
+				ID:                       a.ID,
+				JobID:                    a.JobID,
+				ApplicantID:              a.ApplicantID,
+				Comment:                  a.Comment,
+				Price:                    decimal.RequireFromString(a.Price),
+				CreatedAt:                a.CreatedAt,
+				ApplicantEthereumAddress: a.ApplicantEthereumAddress,
+				ApplicantDisplayName:     a.ApplicantDisplayName,
+				ContractID:               a.ContractID.String,
+				ContractStatus:           a.ContractStatus.String,
 			}
 
-			if a.JobBudget.Valid {
-				job.Budget = decimal.RequireFromString(a.JobBudget.String)
-			}
-
-			var contract *model.Contract
-
-			if a.ContractID.Valid {
-				contract = &model.Contract{
-					ID:     a.ContractID.String,
-					Status: a.ContractStatus.String,
-					Price:  decimal.RequireFromString(a.ContractPrice.String),
-				}
-			}
-
-			result = append(result, &model.Application{
-				ID:        a.ID,
-				CreatedAt: a.CreatedAt,
-				UpdatedAt: a.UpdatedAt,
-				Applicant: &model.JobApplicant{ID: a.ApplicantID, DisplayName: a.ApplicantDisplayName, EthereumAddress: a.ApplicantEthereumAddress},
-				Comment:   a.Comment,
-				Price:     decimal.RequireFromString(a.Price),
-				Job:       job,
-				Contract:  contract,
-			})
+			result = append(result, app)
 		}
 
 		return nil
@@ -196,45 +283,40 @@ func (s *ApplicationSvc) listBy(ctx context.Context, jobID, actorID string) ([]*
 }
 
 // ListByApplicant returns all applications for specific applicant
-func (s *ApplicationSvc) ListByApplicant(ctx context.Context, applicantID string) ([]*model.Application, error) {
-	result := make([]*model.Application, 0)
+func (s *ApplicationSvc) ListByApplicant(ctx context.Context, actorID string) ([]*model.ApplicationDTO, error) {
+	result := make([]*model.ApplicationDTO, 0)
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		aa, err := queries.ApplicationsGetByApplicant(ctx, applicantID)
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		aa, err := queries.ApplicationsGetByApplicant(ctx, person.ID)
 		if err != nil {
 			return fmt.Errorf("unable to ApplicationsGetByApplicant: %w", err)
 		}
 
 		for _, a := range aa {
-			job := &model.Job{
-				ID:          a.JobID,
-				Title:       a.JobTitle,
-				Description: a.JobDescription,
+			app := &model.ApplicationDTO{
+				ID:                       a.ID,
+				JobID:                    a.JobID,
+				JobTitle:                 a.JobTitle,
+				JobDescription:           a.JobDescription,
+				ApplicantID:              a.ApplicantID,
+				Comment:                  a.Comment,
+				Price:                    decimal.RequireFromString(a.Price),
+				CreatedAt:                a.CreatedAt,
+				ApplicantEthereumAddress: a.ApplicantEthereumAddress,
+				ApplicantDisplayName:     a.ApplicantDisplayName,
+				ContractID:               a.ContractID.String,
+				ContractStatus:           a.ContractStatus.String,
 			}
 
 			if a.JobBudget.Valid {
-				job.Budget = decimal.RequireFromString(a.JobBudget.String)
+				app.JobBudget = decimal.RequireFromString(a.JobBudget.String)
 			}
 
-			var contract *model.Contract
-
-			if a.ContractID.Valid {
-				contract = &model.Contract{
-					ID:     a.ContractID.String,
-					Status: a.ContractStatus.String,
-					Price:  decimal.RequireFromString(a.ContractPrice.String),
-				}
-			}
-
-			result = append(result, &model.Application{
-				ID:        a.ID,
-				CreatedAt: a.CreatedAt,
-				UpdatedAt: a.UpdatedAt,
-				Applicant: &model.JobApplicant{ID: a.ApplicantID},
-				Comment:   a.Comment,
-				Price:     decimal.RequireFromString(a.Price),
-				Job:       job,
-				Contract:  contract,
-			})
+			result = append(result, app)
 		}
 
 		return nil
@@ -255,7 +337,13 @@ func (s *ApplicationSvc) GetChat(ctx context.Context, id, actorID string) (*mode
 			return fmt.Errorf("unable to get application by id %s: %w", id, err)
 		}
 
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
 		job, err := queries.JobGet(ctx, application.JobID)
+
 		if errors.Is(err, sql.ErrNoRows) {
 			err = model.ErrEntityNotFound
 		}
@@ -264,8 +352,8 @@ func (s *ApplicationSvc) GetChat(ctx context.Context, id, actorID string) (*mode
 			return fmt.Errorf("unable to get job by id %s: %w", application.JobID, err)
 		}
 
-		if actorID != application.ApplicantID && actorID != job.CreatedBy {
-			return fmt.Errorf("user %s has no rights to acquire chat info: %w", actorID, model.ErrEntityNotFound)
+		if person.ID != application.ApplicantID && person.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
 		}
 
 		topic := newChatTopicApplication(id)

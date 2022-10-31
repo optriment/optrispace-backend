@@ -49,7 +49,7 @@ func TestCreateContract(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error if body is not a valid JSON", func(t *testing.T) {
+	t.Run("with validation errors", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
 		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
@@ -59,403 +59,326 @@ func TestCreateContract(t *testing.T) {
 				String: pgdao.NewID(),
 				Valid:  true,
 			},
-			EthereumAddress: pgdao.NewID(),
 		})
 		require.NoError(t, err)
 
-		body := `{z}`
+		t.Run("returns error if body is not a valid JSON", func(t *testing.T) {
+			body := `{z}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "invalid JSON", e["message"])
-		}
+			if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "invalid JSON", e["message"])
+			}
+		})
+
+		t.Run("returns error if application_id is missing", func(t *testing.T) {
+			body := `{}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "application_id is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if title is missing", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty"
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "title is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if description is missing", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty",
+				"title": "title"
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "description is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if price is missing", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty",
+				"title": "title",
+				"description": "description"
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "price is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if application_id is an empty string", func(t *testing.T) {
+			body := `{
+				"application_id": " ",
+				"title": " ",
+				"description": " ",
+				"price": "0.1"
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "application_id is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if title is an empty string", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty",
+				"title": " ",
+				"description": "description",
+				"price": 0.1
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "title is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if description is an empty string", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty",
+				"title": "title",
+				"description": " ",
+				"price": 0.1
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "description is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if price is not a number", func(t *testing.T) {
+			body := `{
+				"application_id": " ",
+				"title": " ",
+				"description": " ",
+				"price": "qwe"
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"?application_id=zzzzzz", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "invalid format", e["message"])
+			}
+		})
+
+		t.Run("returns error if price is zero", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty",
+				"title": "title",
+				"description": "description",
+				"price": 0
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "price is required", e["message"])
+			}
+		})
+
+		t.Run("returns error if price is negative", func(t *testing.T) {
+			body := `{
+				"application_id": "qwerty",
+				"title": "title",
+				"description": "description",
+				"price": -0.1
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "price must be positive", e["message"])
+			}
+		})
+
+		t.Run("returns error if application does not exist", func(t *testing.T) {
+			body := `{
+				"application_id": "GgdQfiJGBNfiXQq4DCyPAH",
+				"title": "title",
+				"description": "description",
+				"price": 42.35
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := map[string]any{}
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+				assert.Equal(t, "entity not found", e["message"])
+			}
+		})
 	})
 
-	t.Run("returns error if application_id is missing", func(t *testing.T) {
+	t.Run("returns error if application_id does not belong to job owned by customer", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
 		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 			ID:    pgdao.NewID(),
 			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
 		})
 		require.NoError(t, err)
 
-		body := `{}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
+		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+		})
 		require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "application_id is required", e["message"])
-		}
-	})
+		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Contracts testing",
+			Description: "Contracts testing description",
+			CreatedBy:   customer.ID,
+		})
+		require.NoError(t, err)
 
-	t.Run("returns error if title is missing", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+			ID:          pgdao.NewID(),
+			Comment:     "Do it!",
+			JobID:       job.ID,
+			Price:       "42.35",
+			ApplicantID: performer.ID,
+		})
+		require.NoError(t, err)
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+		anotherCustomer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 			ID:    pgdao.NewID(),
 			Login: pgdao.NewID(),
 			AccessToken: sql.NullString{
 				String: pgdao.NewID(),
 				Valid:  true,
 			},
-			EthereumAddress: pgdao.NewID(),
 		})
 		require.NoError(t, err)
 
 		body := `{
-			"application_id": "qwerty"
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "title is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if description is missing", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "qwerty",
-			"title": "title"
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "description is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if price is missing", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "qwerty",
-			"title": "title",
-			"description": "description"
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "price is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if application_id is an empty string", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": " ",
-			"title": " ",
-			"description": " ",
-			"price": "0.1"
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "application_id is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if title is an empty string", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "qwerty",
-			"title": " ",
-			"description": "description",
-			"price": 0.1
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "title is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if description is an empty string", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "qwerty",
-			"title": "title",
-			"description": " ",
-			"price": 0.1
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "description is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if price is not a number", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": " ",
-			"title": " ",
-			"description": " ",
-			"price": "qwe"
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"?application_id=zzzzzz", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "invalid format", e["message"])
-		}
-	})
-
-	t.Run("returns error if price is zero", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "qwerty",
-			"title": "title",
-			"description": "description",
-			"price": 0
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "price is required", e["message"])
-		}
-	})
-
-	t.Run("returns error if price is negative", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "qwerty",
-			"title": "title",
-			"description": "description",
-			"price": -0.1
-		}`
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if assert.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := map[string]any{}
-			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "price must be positive", e["message"])
-		}
-	})
-
-	t.Run("returns error if application does not exist", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
-
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: pgdao.NewID(),
-		})
-		require.NoError(t, err)
-
-		body := `{
-			"application_id": "GgdQfiJGBNfiXQq4DCyPAH",
+			"application_id": "` + application.ID + `",
 			"title": "title",
 			"description": "description",
 			"price": 42.35
@@ -465,15 +388,15 @@ func TestCreateContract(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
 		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+anotherCustomer.AccessToken.String)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusNotFound, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+		if assert.Equal(t, http.StatusForbidden, res.StatusCode, "Invalid result status code '%s'", res.Status) {
 			e := map[string]any{}
 			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-			assert.Equal(t, "application does not exist", e["message"])
+			assert.Equal(t, "insufficient rights", e["message"])
 		}
 	})
 
@@ -493,10 +416,6 @@ func TestCreateContract(t *testing.T) {
 		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 			ID:    pgdao.NewID(),
 			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
 		})
 		require.NoError(t, err)
 
@@ -557,10 +476,6 @@ func TestCreateContract(t *testing.T) {
 		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 			ID:    pgdao.NewID(),
 			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
 		})
 		require.NoError(t, err)
 
@@ -604,6 +519,60 @@ func TestCreateContract(t *testing.T) {
 		}
 	})
 
+	t.Run("returns error if customer and performer are the same person", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+			AccessToken: sql.NullString{
+				String: pgdao.NewID(),
+				Valid:  true,
+			},
+			EthereumAddress: pgdao.NewID(),
+		})
+		require.NoError(t, err)
+
+		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:          pgdao.NewID(),
+			Title:       "Contracts testing",
+			Description: "Contracts testing description",
+			CreatedBy:   customer.ID,
+		})
+		require.NoError(t, err)
+
+		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+			ID:          pgdao.NewID(),
+			Comment:     "Do it!",
+			JobID:       job.ID,
+			Price:       "42.35",
+			ApplicantID: customer.ID,
+		})
+		require.NoError(t, err)
+
+		body := `{
+			"application_id": "` + application.ID + `",
+			"title": "title",
+			"description": "description",
+			"price": 42.35
+		}`
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+		req.Header.Set(echo.HeaderContentType, "application/json")
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusBadRequest, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			e := map[string]any{}
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+			assert.Equal(t, "inappropriate action", e["message"])
+		}
+	})
+
 	t.Run("returns error if customer and performer have the same ethereum_address", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
@@ -619,12 +588,8 @@ func TestCreateContract(t *testing.T) {
 		require.NoError(t, err)
 
 		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
+			ID:              pgdao.NewID(),
+			Login:           pgdao.NewID(),
 			EthereumAddress: customer.EthereumAddress,
 		})
 		require.NoError(t, err)
@@ -684,12 +649,8 @@ func TestCreateContract(t *testing.T) {
 		require.NoError(t, err)
 
 		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
+			ID:              pgdao.NewID(),
+			Login:           pgdao.NewID(),
 			EthereumAddress: pgdao.NewID(),
 		})
 		require.NoError(t, err)

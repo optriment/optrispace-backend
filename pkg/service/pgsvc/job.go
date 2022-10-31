@@ -59,13 +59,11 @@ func (s *JobSvc) Add(ctx context.Context, customerID string, dto *model.CreateJo
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		customer, err := queries.PersonGet(ctx, customerID)
 		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "customer does not exist",
-			}
+			return model.ErrInsufficientRights
 		}
 
 		customerEthereumAddress := strings.ToLower(strings.TrimSpace(customer.EthereumAddress))
+
 		if customerEthereumAddress == "" {
 			return &model.BackendError{
 				Cause:   model.ErrValidationFailed,
@@ -155,8 +153,9 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.JobDTO, error) {
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
 		oo, err := queries.JobsList(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to JobReadAll job: %w", err)
+			return fmt.Errorf("unable to JobsList job: %w", err)
 		}
+
 		for _, o := range oo {
 			budget := decimal.Zero
 			if o.Budget.Valid {
@@ -175,6 +174,7 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.JobDTO, error) {
 				CustomerEthereumAddress: o.CustomerEthereumAddress,
 			})
 		}
+
 		return nil
 	})
 }
@@ -182,18 +182,6 @@ func (s *JobSvc) List(ctx context.Context) ([]*model.JobDTO, error) {
 // Block implements service.Job interface
 func (s *JobSvc) Block(ctx context.Context, id, actorID string) error {
 	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		person, err := queries.PersonGet(ctx, actorID)
-		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "person does not exist",
-			}
-		}
-
-		if !person.IsAdmin {
-			return model.ErrInsufficientRights
-		}
-
 		job, err := queries.JobGet(ctx, id)
 
 		if errors.Is(err, sql.ErrNoRows) {
@@ -202,6 +190,15 @@ func (s *JobSvc) Block(ctx context.Context, id, actorID string) error {
 
 		if err != nil {
 			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
+		}
+
+		if !person.IsAdmin {
+			return model.ErrInsufficientRights
 		}
 
 		return queries.JobBlock(ctx, job.ID)
@@ -211,14 +208,6 @@ func (s *JobSvc) Block(ctx context.Context, id, actorID string) error {
 // Suspend implements service.Job interface
 func (s *JobSvc) Suspend(ctx context.Context, id, actorID string) error {
 	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		person, err := queries.PersonGet(ctx, actorID)
-		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "person does not exist",
-			}
-		}
-
 		job, err := queries.JobGet(ctx, id)
 
 		if errors.Is(err, sql.ErrNoRows) {
@@ -227,6 +216,11 @@ func (s *JobSvc) Suspend(ctx context.Context, id, actorID string) error {
 
 		if err != nil {
 			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
 		}
 
 		if person.ID != job.CreatedBy {
@@ -240,14 +234,6 @@ func (s *JobSvc) Suspend(ctx context.Context, id, actorID string) error {
 // Resume implements service.Job interface
 func (s *JobSvc) Resume(ctx context.Context, id, actorID string) error {
 	return doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
-		person, err := queries.PersonGet(ctx, actorID)
-		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "person does not exist",
-			}
-		}
-
 		job, err := queries.JobGet(ctx, id)
 
 		if errors.Is(err, sql.ErrNoRows) {
@@ -256,6 +242,11 @@ func (s *JobSvc) Resume(ctx context.Context, id, actorID string) error {
 
 		if err != nil {
 			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
+		person, err := queries.PersonGet(ctx, actorID)
+		if err != nil {
+			return model.ErrInsufficientRights
 		}
 
 		if person.ID != job.CreatedBy {
@@ -306,12 +297,23 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, dto *model.Updat
 	}
 
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		job, err := queries.JobGet(ctx, id)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+		}
+
 		customer, err := queries.PersonGet(ctx, actorID)
 		if err != nil {
-			return &model.BackendError{
-				Cause:   model.ErrEntityNotFound,
-				Message: "customer does not exist",
-			}
+			return model.ErrInsufficientRights
+		}
+
+		if customer.ID != job.CreatedBy {
+			return model.ErrInsufficientRights
 		}
 
 		customerEthereumAddress := strings.ToLower(strings.TrimSpace(customer.EthereumAddress))
@@ -323,14 +325,13 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, dto *model.Updat
 		}
 
 		params := &pgdao.JobPatchParams{
-			ID:    id,
-			Actor: customer.ID,
+			ID:          job.ID,
+			Actor:       customer.ID,
+			Title:       strings.TrimSpace(dto.Title),
+			Description: strings.TrimSpace(dto.Description),
+			Budget:      dto.Budget.String(),
+			Duration:    dto.Duration,
 		}
-
-		params.Title = strings.TrimSpace(dto.Title)
-		params.Description = strings.TrimSpace(dto.Description)
-		params.Budget = dto.Budget.String()
-		params.Duration = dto.Duration
 
 		_, err = queries.JobPatch(ctx, *params)
 
@@ -339,26 +340,26 @@ func (s *JobSvc) Patch(ctx context.Context, id, actorID string, dto *model.Updat
 		}
 
 		if err != nil {
-			return fmt.Errorf("unable to JobPatch with id='%s': %w", id, err)
+			return fmt.Errorf("unable to JobPatch with id='%s': %w", job.ID, err)
 		}
 
-		job, err := queries.JobGet(ctx, id)
+		updatedJob, err := queries.JobGet(ctx, job.ID)
 		if err != nil {
-			return fmt.Errorf("unable to JobGet with id='%s': %w", id, err)
+			return fmt.Errorf("unable to JobGet with id='%s': %w", job.ID, err)
 		}
 
 		result = &model.JobDTO{
-			ID:                      job.ID,
-			Title:                   job.Title,
-			Description:             job.Description,
-			Budget:                  decimal.RequireFromString(job.Budget.String),
-			Duration:                job.Duration.Int32,
-			CreatedAt:               job.CreatedAt,
-			CreatedBy:               job.CreatedBy,
-			UpdatedAt:               job.UpdatedAt,
-			ApplicationsCount:       uint(job.ApplicationCount),
-			CustomerDisplayName:     job.CustomerDisplayName,
-			CustomerEthereumAddress: job.CustomerEthereumAddress,
+			ID:                      updatedJob.ID,
+			Title:                   updatedJob.Title,
+			Description:             updatedJob.Description,
+			Budget:                  decimal.RequireFromString(updatedJob.Budget.String),
+			Duration:                updatedJob.Duration.Int32,
+			CreatedAt:               updatedJob.CreatedAt,
+			CreatedBy:               updatedJob.CreatedBy,
+			UpdatedAt:               updatedJob.UpdatedAt,
+			ApplicationsCount:       uint(updatedJob.ApplicationCount),
+			CustomerDisplayName:     updatedJob.CustomerDisplayName,
+			CustomerEthereumAddress: updatedJob.CustomerEthereumAddress,
 		}
 
 		return nil
