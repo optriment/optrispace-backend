@@ -710,103 +710,259 @@ func TestCreateContract(t *testing.T) {
 	})
 
 	t.Run("creates contract", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: "0x1234567890CUSTOMER",
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+				EthereumAddress: "0x1234567890CUSTOMER",
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-			EthereumAddress: "0x1234567890PERFORMER",
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+				EthereumAddress: "0x1234567890PERFORMER",
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		body := `{
-			"application_id": "` + application.ID + `",
-			"title": " Title ",
-			"description": " Description ",
-			"price": 42.35
-		}`
+			body := `{
+				"application_id": "` + application.ID + `",
+				"title": " Title ",
+				"description": " Description ",
+				"price": 42.35
+			}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusCreated, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			e := new(model.ContractDTO)
-			require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+			if assert.Equal(t, http.StatusCreated, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
 
-			assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+contractsResourceName+"/"+e.ID))
+				assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+contractsResourceName+"/"+e.ID))
 
-			assert.NotEmpty(t, e.ID)
-			assert.NotEmpty(t, e.CreatedAt)
-			assert.NotEmpty(t, e.UpdatedAt)
-			assert.Equal(t, e.CustomerID, customer.ID)
-			assert.Equal(t, e.PerformerID, performer.ID)
-			assert.Equal(t, e.ApplicationID, application.ID)
-			assert.Equal(t, e.Title, "Title")
-			assert.Equal(t, e.Description, "Description")
-			assert.EqualValues(t, 0, e.Duration)
-			assert.True(t, decimal.RequireFromString("42.35").Equal(e.Price))
-			assert.Equal(t, e.ContractAddress, "")
-			assert.Equal(t, e.CustomerAddress, "0x1234567890customer")
-			assert.Equal(t, e.PerformerAddress, "0x1234567890performer")
-			assert.Equal(t, e.Status, "created")
+				assert.NotEmpty(t, e.ID)
+				assert.NotEmpty(t, e.CreatedAt)
+				assert.NotEmpty(t, e.UpdatedAt)
+				assert.Equal(t, e.CustomerID, customer.ID)
+				assert.Equal(t, e.PerformerID, performer.ID)
+				assert.Equal(t, e.ApplicationID, application.ID)
+				assert.Equal(t, e.Title, "Title")
+				assert.Equal(t, e.Description, "Description")
+				assert.EqualValues(t, 0, e.Duration)
+				assert.True(t, decimal.RequireFromString("42.35").Equal(e.Price))
+				assert.Equal(t, e.ContractAddress, "")
+				assert.Equal(t, e.CustomerAddress, "0x1234567890customer")
+				assert.Equal(t, e.PerformerAddress, "0x1234567890performer")
+				assert.Equal(t, e.Status, "created")
 
-			d, err := pgdao.New(db).ContractGet(ctx, e.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, e.ID, d.ID)
-				assert.Equal(t, e.CustomerID, d.CustomerID)
-				assert.Equal(t, e.PerformerID, d.PerformerID)
-				assert.Equal(t, e.ApplicationID, d.ApplicationID)
-				assert.Equal(t, e.Title, d.Title)
-				assert.Equal(t, e.Description, d.Description)
-				assert.Equal(t, e.Price.String(), d.Price)
-				assert.EqualValues(t, e.Duration, d.Duration.Int32)
-				assert.Equal(t, e.Status, d.Status)
-				assert.Equal(t, e.CreatedBy, d.CreatedBy)
-				assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
-				assert.Equal(t, e.UpdatedAt, d.UpdatedAt.UTC())
-				assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
-				assert.Equal(t, e.PerformerAddress, d.PerformerAddress)
-				assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+				d, err := pgdao.New(db).ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, e.ID, d.ID)
+					assert.Equal(t, e.CustomerID, d.CustomerID)
+					assert.Equal(t, e.PerformerID, d.PerformerID)
+					assert.Equal(t, e.ApplicationID, d.ApplicationID)
+					assert.Equal(t, e.Title, d.Title)
+					assert.Equal(t, e.Description, d.Description)
+					assert.Equal(t, e.Price.String(), d.Price)
+					assert.EqualValues(t, e.Duration, d.Duration.Int32)
+					assert.Equal(t, e.Status, d.Status)
+					assert.Equal(t, e.CreatedBy, d.CreatedBy)
+					assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
+					assert.Equal(t, e.UpdatedAt, d.UpdatedAt.UTC())
+					assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+					assert.Equal(t, e.PerformerAddress, d.PerformerAddress)
+					assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+d.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been created")
+							assert.Equal(t, messages[0].CreatedBy, customer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+				EthereumAddress: "0x1234567890CUSTOMER",
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+				EthereumAddress: "0x1234567890PERFORMER",
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{
+				"application_id": "` + application.ID + `",
+				"title": " Title ",
+				"description": " Description ",
+				"price": 42.35
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL, bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusCreated, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				assert.True(t, strings.HasPrefix(res.Header.Get(echo.HeaderLocation), "/"+contractsResourceName+"/"+e.ID))
+
+				assert.NotEmpty(t, e.ID)
+				assert.NotEmpty(t, e.CreatedAt)
+				assert.NotEmpty(t, e.UpdatedAt)
+				assert.Equal(t, e.CustomerID, customer.ID)
+				assert.Equal(t, e.PerformerID, performer.ID)
+				assert.Equal(t, e.ApplicationID, application.ID)
+				assert.Equal(t, e.Title, "Title")
+				assert.Equal(t, e.Description, "Description")
+				assert.EqualValues(t, 0, e.Duration)
+				assert.True(t, decimal.RequireFromString("42.35").Equal(e.Price))
+				assert.Equal(t, e.ContractAddress, "")
+				assert.Equal(t, e.CustomerAddress, "0x1234567890customer")
+				assert.Equal(t, e.PerformerAddress, "0x1234567890performer")
+				assert.Equal(t, e.Status, "created")
+
+				d, err := pgdao.New(db).ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, e.ID, d.ID)
+					assert.Equal(t, e.CustomerID, d.CustomerID)
+					assert.Equal(t, e.PerformerID, d.PerformerID)
+					assert.Equal(t, e.ApplicationID, d.ApplicationID)
+					assert.Equal(t, e.Title, d.Title)
+					assert.Equal(t, e.Description, d.Description)
+					assert.Equal(t, e.Price.String(), d.Price)
+					assert.EqualValues(t, e.Duration, d.Duration.Int32)
+					assert.Equal(t, e.Status, d.Status)
+					assert.Equal(t, e.CreatedBy, d.CreatedBy)
+					assert.Equal(t, e.CreatedAt, d.CreatedAt.UTC())
+					assert.Equal(t, e.UpdatedAt, d.UpdatedAt.UTC())
+					assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+					assert.Equal(t, e.PerformerAddress, d.PerformerAddress)
+					assert.Equal(t, e.CustomerAddress, d.CustomerAddress)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+d.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been created")
+							assert.Equal(t, messages[1].CreatedBy, customer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -1475,77 +1631,213 @@ func TestSetContractAsAccepted(t *testing.T) {
 	})
 
 	t.Run("returns success", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-			ID:              pgdao.NewID(),
-			Title:           "Do it!",
-			Description:     "Descriptive message",
-			Price:           "42.35",
-			Duration:        sql.NullInt32{Int32: 35, Valid: true},
-			CustomerID:      customer.ID,
-			PerformerID:     performer.ID,
-			ApplicationID:   application.ID,
-			CreatedBy:       customer.ID,
-			Status:          model.ContractCreated,
-			ContractAddress: validBlockchainAddress,
-		})
-		require.NoError(t, err)
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "42.35",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractCreated,
+				ContractAddress: validBlockchainAddress,
+			})
+			require.NoError(t, err)
 
-		body := `{}`
+			body := `{}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/accept", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/accept", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			c, err := queries.ContractGet(ctx, contract.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, model.ContractAccepted, c.Status)
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractAccepted, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been accepted")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "42.35",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractCreated,
+				ContractAddress: validBlockchainAddress,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/accept", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractAccepted, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been accepted")
+							assert.Equal(t, messages[1].CreatedBy, performer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -2119,78 +2411,215 @@ func TestSetContractAsDeployed(t *testing.T) {
 	})
 
 	t.Run("returns success", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-			ID:            pgdao.NewID(),
-			Title:         "Do it!",
-			Description:   "Descriptive message",
-			Price:         "42.35",
-			Duration:      sql.NullInt32{Int32: 35, Valid: true},
-			CustomerID:    customer.ID,
-			PerformerID:   performer.ID,
-			ApplicationID: application.ID,
-			CreatedBy:     customer.ID,
-			Status:        model.ContractAccepted,
-		})
-		require.NoError(t, err)
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:            pgdao.NewID(),
+				Title:         "Do it!",
+				Description:   "Descriptive message",
+				Price:         "42.35",
+				Duration:      sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:    customer.ID,
+				PerformerID:   performer.ID,
+				ApplicationID: application.ID,
+				CreatedBy:     customer.ID,
+				Status:        model.ContractAccepted,
+			})
+			require.NoError(t, err)
 
-		body := `{
-			"contract_address": "` + validBlockchainAddress + `"
-		}`
+			body := `{
+				"contract_address": "` + validBlockchainAddress + `"
+			}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/deploy", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/deploy", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			c, err := queries.ContractGet(ctx, contract.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, model.ContractDeployed, c.Status)
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractDeployed, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been deployed")
+							assert.Equal(t, messages[0].CreatedBy, customer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:            pgdao.NewID(),
+				Title:         "Do it!",
+				Description:   "Descriptive message",
+				Price:         "42.35",
+				Duration:      sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:    customer.ID,
+				PerformerID:   performer.ID,
+				ApplicationID: application.ID,
+				CreatedBy:     customer.ID,
+				Status:        model.ContractAccepted,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{
+				"contract_address": "` + validBlockchainAddress + `"
+			}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/deploy", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractDeployed, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been deployed")
+							assert.Equal(t, messages[1].CreatedBy, customer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -2615,77 +3044,213 @@ func TestSetContractAsSigned(t *testing.T) {
 	})
 
 	t.Run("returns success", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-			ID:              pgdao.NewID(),
-			Title:           "Do it!",
-			Description:     "Descriptive message",
-			Price:           "42.35",
-			Duration:        sql.NullInt32{Int32: 35, Valid: true},
-			CustomerID:      customer.ID,
-			PerformerID:     performer.ID,
-			ApplicationID:   application.ID,
-			CreatedBy:       customer.ID,
-			Status:          model.ContractDeployed,
-			ContractAddress: validBlockchainAddress,
-		})
-		require.NoError(t, err)
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "42.35",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractDeployed,
+				ContractAddress: validBlockchainAddress,
+			})
+			require.NoError(t, err)
 
-		body := `{}`
+			body := `{}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/sign", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/sign", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			c, err := queries.ContractGet(ctx, contract.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, model.ContractSigned, c.Status)
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractSigned, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been signed")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "42.35",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractDeployed,
+				ContractAddress: validBlockchainAddress,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/sign", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractSigned, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been signed")
+							assert.Equal(t, messages[1].CreatedBy, performer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -3110,77 +3675,213 @@ func TestSetContractAsFunded(t *testing.T) {
 	})
 
 	t.Run("returns success", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-			ID:              pgdao.NewID(),
-			Title:           "Do it!",
-			Description:     "Descriptive message",
-			Price:           "0.12",
-			Duration:        sql.NullInt32{Int32: 35, Valid: true},
-			CustomerID:      customer.ID,
-			PerformerID:     performer.ID,
-			ApplicationID:   application.ID,
-			CreatedBy:       customer.ID,
-			Status:          model.ContractSigned,
-			ContractAddress: fundedContractAddress,
-		})
-		require.NoError(t, err)
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "0.12",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractSigned,
+				ContractAddress: fundedContractAddress,
+			})
+			require.NoError(t, err)
 
-		body := `{}`
+			body := `{}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/fund", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/fund", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			c, err := queries.ContractGet(ctx, contract.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, model.ContractFunded, c.Status)
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractFunded, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been funded")
+							assert.Equal(t, messages[0].CreatedBy, customer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "0.12",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractSigned,
+				ContractAddress: fundedContractAddress,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/fund", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractFunded, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been funded")
+							assert.Equal(t, messages[1].CreatedBy, customer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -3532,77 +4233,213 @@ func TestSetContractAsApproved(t *testing.T) {
 	})
 
 	t.Run("returns success", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-			ID:              pgdao.NewID(),
-			Title:           "Do it!",
-			Description:     "Descriptive message",
-			Price:           "0.12",
-			Duration:        sql.NullInt32{Int32: 35, Valid: true},
-			CustomerID:      customer.ID,
-			PerformerID:     performer.ID,
-			ApplicationID:   application.ID,
-			CreatedBy:       customer.ID,
-			Status:          model.ContractFunded,
-			ContractAddress: fundedContractAddress,
-		})
-		require.NoError(t, err)
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "0.12",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractFunded,
+				ContractAddress: fundedContractAddress,
+			})
+			require.NoError(t, err)
 
-		body := `{}`
+			body := `{}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/approve", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/approve", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			c, err := queries.ContractGet(ctx, contract.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, model.ContractApproved, c.Status)
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractApproved, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been approved")
+							assert.Equal(t, messages[0].CreatedBy, customer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "0.12",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractFunded,
+				ContractAddress: fundedContractAddress,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/approve", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+customer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractApproved, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been approved")
+							assert.Equal(t, messages[1].CreatedBy, customer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -3954,76 +4791,212 @@ func TestSetContractAsCompleted(t *testing.T) {
 	})
 
 	t.Run("returns success", func(t *testing.T) {
-		require.NoError(t, pgdao.PurgeDB(ctx, db))
+		t.Run("when there is no chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
 
-		customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
-			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),
-			AccessToken: sql.NullString{
-				String: pgdao.NewID(),
-				Valid:  true,
-			},
-		})
-		require.NoError(t, err)
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
 
-		job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
-			ID:          pgdao.NewID(),
-			Title:       "Contracts testing",
-			Description: "Contracts testing description",
-			CreatedBy:   customer.ID,
-		})
-		require.NoError(t, err)
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
 
-		application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
-			ID:          pgdao.NewID(),
-			Comment:     "Do it!",
-			JobID:       job.ID,
-			Price:       "42.35",
-			ApplicantID: performer.ID,
-		})
-		require.NoError(t, err)
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
 
-		contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
-			ID:              pgdao.NewID(),
-			Title:           "Do it!",
-			Description:     "Descriptive message",
-			Price:           "0.12",
-			Duration:        sql.NullInt32{Int32: 35, Valid: true},
-			CustomerID:      customer.ID,
-			PerformerID:     performer.ID,
-			ApplicationID:   application.ID,
-			CreatedBy:       customer.ID,
-			Status:          model.ContractApproved,
-			ContractAddress: fundedContractAddress,
-		})
-		require.NoError(t, err)
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "0.12",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractApproved,
+				ContractAddress: fundedContractAddress,
+			})
+			require.NoError(t, err)
 
-		body := `{}`
+			body := `{}`
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/complete", bytes.NewReader([]byte(body)))
-		require.NoError(t, err)
-		req.Header.Set(clog.HeaderXHint, t.Name())
-		req.Header.Set(echo.HeaderContentType, "application/json")
-		req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/complete", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
-			c, err := queries.ContractGet(ctx, contract.ID)
-			if assert.NoError(t, err) {
-				assert.Equal(t, model.ContractCompleted, c.Status)
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractCompleted, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 1)
+							assert.Equal(t, messages[0].Text, "Contract has been completed")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+						}
+					}
+				}
 			}
-		}
+		})
+
+		t.Run("when there is chat between participants", func(t *testing.T) {
+			require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+			customer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			performer, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+				ID:    pgdao.NewID(),
+				Login: pgdao.NewID(),
+				AccessToken: sql.NullString{
+					String: pgdao.NewID(),
+					Valid:  true,
+				},
+			})
+			require.NoError(t, err)
+
+			job, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+				ID:          pgdao.NewID(),
+				Title:       "Contracts testing",
+				Description: "Contracts testing description",
+				CreatedBy:   customer.ID,
+			})
+			require.NoError(t, err)
+
+			application, err := pgdao.New(db).ApplicationAdd(ctx, pgdao.ApplicationAddParams{
+				ID:          pgdao.NewID(),
+				Comment:     "Do it!",
+				JobID:       job.ID,
+				Price:       "42.35",
+				ApplicantID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			contract, err := pgdao.New(db).ContractAdd(ctx, pgdao.ContractAddParams{
+				ID:              pgdao.NewID(),
+				Title:           "Do it!",
+				Description:     "Descriptive message",
+				Price:           "0.12",
+				Duration:        sql.NullInt32{Int32: 35, Valid: true},
+				CustomerID:      customer.ID,
+				PerformerID:     performer.ID,
+				ApplicationID:   application.ID,
+				CreatedBy:       customer.ID,
+				Status:          model.ContractApproved,
+				ContractAddress: fundedContractAddress,
+			})
+			require.NoError(t, err)
+
+			chat, err := pgdao.New(db).ChatAdd(ctx, pgdao.ChatAddParams{
+				ID:    pgdao.NewID(),
+				Topic: "urn:application:" + application.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: customer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = pgdao.New(db).ChatParticipantAdd(ctx, pgdao.ChatParticipantAddParams{
+				ChatID:   chat.ID,
+				PersonID: performer.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+				ID:        pgdao.NewID(),
+				ChatID:    chat.ID,
+				CreatedBy: performer.ID,
+				Text:      "I want it",
+			})
+			require.NoError(t, err)
+
+			body := `{}`
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, contractsURL+"/"+contract.ID+"/complete", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set(clog.HeaderXHint, t.Name())
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			req.Header.Set(echo.HeaderAuthorization, "Bearer "+performer.AccessToken.String)
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+				e := new(model.ContractDTO)
+				require.NoError(t, json.NewDecoder(res.Body).Decode(e))
+
+				c, err := queries.ContractGet(ctx, e.ID)
+				if assert.NoError(t, err) {
+					assert.Equal(t, model.ContractCompleted, c.Status)
+
+					chat, err := pgdao.New(db).ChatGetByTopic(ctx, "urn:application:"+e.ApplicationID)
+
+					if assert.NoError(t, err) {
+						messages, err := pgdao.New(db).MessagesListByChat(ctx, chat.ID)
+
+						if assert.NoError(t, err) {
+							assert.Len(t, messages, 2)
+
+							assert.Equal(t, messages[0].Text, "I want it")
+							assert.Equal(t, messages[0].CreatedBy, performer.ID)
+
+							assert.Equal(t, messages[1].Text, "Contract has been completed")
+							assert.Equal(t, messages[1].CreatedBy, performer.ID)
+						}
+					}
+				}
+			}
+		})
 	})
 }

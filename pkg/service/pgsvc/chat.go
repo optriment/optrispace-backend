@@ -91,7 +91,7 @@ func newChat(ctx context.Context, queries *pgdao.Queries, topic, text, createdBy
 			PersonID: p,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to add a person %s for a new chat: %w", p, err)
+			return nil, fmt.Errorf("unable to add a participant %s for a new chat: %w", p, err)
 		}
 	}
 
