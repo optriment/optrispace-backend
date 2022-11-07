@@ -35,39 +35,8 @@ func NewContract(db *sql.DB, eth ethsvc.Ethereum) *ContractSvc {
 func (s *ContractSvc) Add(ctx context.Context, customerID string, dto *model.CreateContractDTO) (*model.ContractDTO, error) {
 	var result *model.ContractDTO
 
-	if strings.TrimSpace(dto.ApplicationID) == "" {
-		return nil, &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("application_id"),
-		}
-	}
-
-	if strings.TrimSpace(dto.Title) == "" {
-		return nil, &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("title"),
-		}
-	}
-
-	if strings.TrimSpace(dto.Description) == "" {
-		return nil, &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("description"),
-		}
-	}
-
-	if decimal.Zero.Equal(dto.Price) {
-		return nil, &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorRequired("price"),
-		}
-	}
-
-	if dto.Price.IsNegative() {
-		return nil, &model.BackendError{
-			Cause:   model.ErrValidationFailed,
-			Message: model.ValidationErrorMustBePositive("price"),
-		}
+	if err := validateCreateContractParams(dto); err != nil {
+		return nil, err
 	}
 
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
@@ -158,26 +127,49 @@ func (s *ContractSvc) Add(ctx context.Context, customerID string, dto *model.Cre
 			return fmt.Errorf("unable to ContractAdd: %w", err)
 		}
 
-		result = &model.ContractDTO{ //nolint: dupl
-			ID:               newContract.ID,
-			CustomerID:       newContract.CustomerID,
-			PerformerID:      newContract.PerformerID,
-			ApplicationID:    newContract.ApplicationID,
-			Title:            newContract.Title,
-			Description:      newContract.Description,
-			Price:            decimal.RequireFromString(newContract.Price),
-			Duration:         newContract.Duration.Int32,
-			Status:           newContract.Status,
-			CreatedAt:        newContract.CreatedAt,
-			UpdatedAt:        newContract.UpdatedAt,
-			CreatedBy:        newContract.CreatedBy,
-			ContractAddress:  newContract.ContractAddress,
-			CustomerAddress:  newContract.CustomerAddress,
-			PerformerAddress: newContract.PerformerAddress,
-		}
+		result = restoreContractFromDatabase(newContract)
 
-		return nil
+		return notifyContractStatusChanged(ctx, queries, newContract.CustomerID, newContract.Status, newContract)
 	})
+}
+
+func validateCreateContractParams(dto *model.CreateContractDTO) error {
+	if strings.TrimSpace(dto.ApplicationID) == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("application_id"),
+		}
+	}
+
+	if strings.TrimSpace(dto.Title) == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("title"),
+		}
+	}
+
+	if strings.TrimSpace(dto.Description) == "" {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("description"),
+		}
+	}
+
+	if decimal.Zero.Equal(dto.Price) {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorRequired("price"),
+		}
+	}
+
+	if dto.Price.IsNegative() {
+		return &model.BackendError{
+			Cause:   model.ErrValidationFailed,
+			Message: model.ValidationErrorMustBePositive("price"),
+		}
+	}
+
+	return nil
 }
 
 // Accept makes contract accepted
@@ -451,22 +443,9 @@ func (s *ContractSvc) toStatus(ctx context.Context, actorID string, patchParams 
 			return fmt.Errorf("unable to ContractPatch with id=%s: %w", patchParams.ID, err)
 		}
 
-		result = &model.ContractDTO{ //nolint: dupl
-			ID:               o.ID,
-			Title:            o.Title,
-			Description:      o.Description,
-			Price:            decimal.RequireFromString(o.Price),
-			Duration:         o.Duration.Int32,
-			Status:           o.Status,
-			CreatedAt:        o.CreatedAt,
-			UpdatedAt:        o.UpdatedAt,
-			CreatedBy:        o.CreatedBy,
-			ContractAddress:  o.ContractAddress,
-			CustomerAddress:  o.CustomerAddress,
-			PerformerAddress: o.PerformerAddress,
-		}
+		result = restoreContractFromDatabase(o)
 
-		return err
+		return notifyContractStatusChanged(ctx, queries, actorID, o.Status, o)
 	})
 }
 
@@ -476,30 +455,79 @@ func contractByIDPersonID(ctx context.Context, queries *pgdao.Queries, id, perso
 		PersonID: personID,
 	}
 
-	a, err := queries.ContractGetByIDAndPersonID(ctx, contractParams)
+	contract, err := queries.ContractGetByIDAndPersonID(ctx, contractParams)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, model.ErrEntityNotFound
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("unable to ContractGet with id=%s: %w", id, err)
+		return nil, fmt.Errorf("unable to ContractGetByIDAndPersonID with id=%s: %w", id, err)
 	}
 
-	return &model.ContractDTO{ //nolint: dupl
-		ID:               a.ID,
-		CustomerID:       a.CustomerID,
-		PerformerID:      a.PerformerID,
-		ApplicationID:    a.ApplicationID,
-		Title:            a.Title,
-		Description:      a.Description,
-		Price:            decimal.RequireFromString(a.Price),
-		Duration:         a.Duration.Int32,
-		Status:           a.Status,
-		CreatedAt:        a.CreatedAt,
-		UpdatedAt:        a.UpdatedAt,
-		CreatedBy:        a.CreatedBy,
-		ContractAddress:  a.ContractAddress,
-		CustomerAddress:  a.CustomerAddress,
-		PerformerAddress: a.PerformerAddress,
-	}, nil
+	return restoreContractFromDatabase(contract), nil
+}
+
+func restoreContractFromDatabase(contract pgdao.Contract) *model.ContractDTO {
+	result := &model.ContractDTO{
+		ID:               contract.ID,
+		CustomerID:       contract.CustomerID,
+		PerformerID:      contract.PerformerID,
+		ApplicationID:    contract.ApplicationID,
+		Title:            contract.Title,
+		Description:      contract.Description,
+		Price:            decimal.RequireFromString(contract.Price),
+		Duration:         contract.Duration.Int32,
+		Status:           contract.Status,
+		CreatedAt:        contract.CreatedAt,
+		UpdatedAt:        contract.UpdatedAt,
+		CreatedBy:        contract.CreatedBy,
+		ContractAddress:  contract.ContractAddress,
+		CustomerAddress:  contract.CustomerAddress,
+		PerformerAddress: contract.PerformerAddress,
+	}
+
+	return result
+}
+
+func notifyContractStatusChanged(ctx context.Context, queries *pgdao.Queries, actorID, newStatus string, contract pgdao.Contract) error {
+	contractNewStatus := "Contract has been " + newStatus
+
+	topic := newChatTopicApplication(contract.ApplicationID)
+	chat, err := queries.ChatGetByTopic(ctx, topic)
+
+	// NOTE: This is a workaround to make sure that chat already exists
+	if errors.Is(err, sql.ErrNoRows) {
+		var participantID string
+
+		if actorID == contract.CustomerID {
+			participantID = contract.PerformerID
+		} else {
+			participantID = contract.CustomerID
+		}
+
+		_, err = newChat(ctx, queries, topic, contractNewStatus, actorID, participantID)
+
+		if err != nil {
+			return fmt.Errorf("unable to create chat and add message: %w", err)
+		}
+
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("unable to get chat by topic: %w", err)
+	}
+
+	_, err = queries.MessageAdd(ctx, pgdao.MessageAddParams{
+		ID:        pgdao.NewID(),
+		ChatID:    chat.ID,
+		CreatedBy: actorID,
+		Text:      contractNewStatus,
+	})
+
+	if err != nil {
+		return fmt.Errorf("unable to add message to chat: %w", err)
+	}
+
+	return nil
 }
