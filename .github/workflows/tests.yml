@@ -25,24 +25,24 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.18
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
 
-    - name: Build
-      run: go build -v -race ./...
+      - name: Build
+        run: go build -v -race ./...
 
-    - name: Lint
-      run: make lint
+      - name: Lint
+        run: make lint
 
-    - name: Run web server
-      run: make test-start-backend &
+      - name: Run web server
+        run: make test-start-backend &
 
-    - name: Tests
-      run: make test-integration
+      - name: Tests
+        run: make test-integration
 
-    - name: Test swagger generation
-      run: make swag-init
+      - name: Test swagger generation
+        run: make swag-init
