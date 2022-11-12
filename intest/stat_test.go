@@ -292,11 +292,12 @@ func TestStats(t *testing.T) {
 
 			require.NoError(t, json.Unmarshal(bb, stats))
 
-			assert.Len(t, stats.Registrations, 3)
-			assert.EqualValues(t, 1, stats.Registrations["2021-08-15"])
-			assert.EqualValues(t, 1, stats.Registrations["2022-01-01"])
-			assert.EqualValues(t, 6, stats.Registrations[time.Now().Format("2006-01-02")])
+			assert.Len(t, stats.RegistrationsByDate, 3)
+			assert.EqualValues(t, 1, stats.RegistrationsByDate["2021-08-15"])
+			assert.EqualValues(t, 1, stats.RegistrationsByDate["2022-01-01"])
+			assert.EqualValues(t, 6, stats.RegistrationsByDate[time.Now().Format("2006-01-02")])
 
+			assert.EqualValues(t, 8, stats.TotalRegistrations)
 			assert.EqualValues(t, 2, stats.OpenedJobs)
 			assert.EqualValues(t, 7, stats.TotalContracts)
 			assert.True(t, decimal.RequireFromString("122.002").Equal(stats.TotalTransactionsVolume))
@@ -324,7 +325,8 @@ func TestStatsWithoutData(t *testing.T) {
 
 			require.NoError(t, json.Unmarshal(bb, stats))
 
-			assert.Len(t, stats.Registrations, 0)
+			assert.Len(t, stats.RegistrationsByDate, 0)
+			assert.EqualValues(t, 0, stats.TotalRegistrations)
 			assert.EqualValues(t, 0, stats.OpenedJobs)
 			assert.EqualValues(t, 0, stats.TotalContracts)
 			assert.True(t, decimal.Zero.Equal(stats.TotalTransactionsVolume))

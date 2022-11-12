@@ -4,6 +4,10 @@ from persons p
 group by day
 order by day;
 
+-- name: StatsGetRegistrationsCount :one
+select count(id) AS count
+from persons;
+
 -- name: StatsGetOpenedJobsCount :one
 select count(id) AS count
 from jobs
