@@ -7,12 +7,12 @@ import (
 
 // In this file we should specify common API infos
 
-// @title       Optrispace API
+// @title       OptriSpace API
 // @version     1.0
-// @description Optrispace Server API
+// @description OptriSpace Server API
 
-// @license.name Apache 2.0
-// @license.url  http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name MIT
+// @license.url  https://github.com/optriment/optrispace-backend/blob/develop/LICENSE
 
 // @host     localhost:8080
 // @BasePath /

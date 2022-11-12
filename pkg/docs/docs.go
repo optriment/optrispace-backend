@@ -12,8 +12,8 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {},
         "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+            "name": "MIT",
+            "url": "https://github.com/optriment/optrispace-backend/blob/develop/LICENSE"
         },
         "version": "{{.Version}}"
     },
@@ -2770,11 +2770,20 @@ const docTemplate = `{
         "model.Stats": {
             "type": "object",
             "properties": {
+                "opened_jobs": {
+                    "type": "integer"
+                },
                 "registrations": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "integer"
                     }
+                },
+                "total_contracts": {
+                    "type": "integer"
+                },
+                "total_transactions_volume": {
+                    "type": "number"
                 }
             }
         },
@@ -2809,8 +2818,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Optrispace API",
-	Description:      "Optrispace Server API",
+	Title:            "OptriSpace API",
+	Description:      "OptriSpace Server API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 }

@@ -44,3 +44,41 @@ func (q *Queries) StatRegistrationsByDate(ctx context.Context) ([]StatRegistrati
 	}
 	return items, nil
 }
+
+const statsGetContractsCount = `-- name: StatsGetContractsCount :one
+select count(id) AS count
+from contracts
+`
+
+func (q *Queries) StatsGetContractsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, statsGetContractsCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const statsGetContractsVolume = `-- name: StatsGetContractsVolume :one
+select coalesce(sum(price), 0)::decimal AS volume
+from contracts
+where status IN ('approved', 'completed')
+`
+
+func (q *Queries) StatsGetContractsVolume(ctx context.Context) (string, error) {
+	row := q.db.QueryRowContext(ctx, statsGetContractsVolume)
+	var volume string
+	err := row.Scan(&volume)
+	return volume, err
+}
+
+const statsGetOpenedJobsCount = `-- name: StatsGetOpenedJobsCount :one
+select count(id) AS count
+from jobs
+where suspended_at is null and blocked_at is null
+`
+
+func (q *Queries) StatsGetOpenedJobsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, statsGetOpenedJobsCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}

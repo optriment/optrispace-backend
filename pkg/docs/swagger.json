@@ -1,12 +1,12 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Optrispace Server API",
-        "title": "Optrispace API",
+        "description": "OptriSpace Server API",
+        "title": "OptriSpace API",
         "contact": {},
         "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+            "name": "MIT",
+            "url": "https://github.com/optriment/optrispace-backend/blob/develop/LICENSE"
         },
         "version": "1.0"
     },
@@ -2763,11 +2763,20 @@
         "model.Stats": {
             "type": "object",
             "properties": {
+                "opened_jobs": {
+                    "type": "integer"
+                },
                 "registrations": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "integer"
                     }
+                },
+                "total_contracts": {
+                    "type": "integer"
+                },
+                "total_transactions_volume": {
+                    "type": "number"
                 }
             }
         },

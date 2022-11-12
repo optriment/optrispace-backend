@@ -296,10 +296,16 @@ definitions:
     type: object
   model.Stats:
     properties:
+      opened_jobs:
+        type: integer
       registrations:
         additionalProperties:
           type: integer
         type: object
+      total_contracts:
+        type: integer
+      total_transactions_volume:
+        type: number
     type: object
   model.UserContext:
     properties:
@@ -313,11 +319,11 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: Optrispace Server API
+  description: OptriSpace Server API
   license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
-  title: Optrispace API
+    name: MIT
+    url: https://github.com/optriment/optrispace-backend/blob/develop/LICENSE
+  title: OptriSpace API
   version: "1.0"
 paths:
   /applications:
