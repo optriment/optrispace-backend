@@ -26,18 +26,24 @@ func NewStats(db *sql.DB) *StatsSvc {
 func (s *StatsSvc) Stats(ctx context.Context) (*model.Stats, error) {
 	var result *model.Stats
 	return result, doWithQueries(ctx, s.db, defaultRoTxOpts, func(queries *pgdao.Queries) error {
-		oo, err := queries.StatRegistrationsByDate(ctx)
+		result = &model.Stats{
+			RegistrationsByDate: map[string]int{},
+		}
+
+		registrationsByDate, err := queries.StatRegistrationsByDate(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to StatRegistrationsByDate: %w", err)
 		}
 
-		result = &model.Stats{
-			Registrations: map[string]int{},
+		for _, r := range registrationsByDate {
+			result.RegistrationsByDate[r.Day.Format("2006-01-02")] = int(r.Registrations)
 		}
 
-		for _, o := range oo {
-			result.Registrations[o.Day.Format("2006-01-02")] = int(o.Registrations)
+		registrationsCount, err := queries.StatsGetRegistrationsCount(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to StatsGetRegistrationsCount: %w", err)
 		}
+		result.TotalRegistrations = registrationsCount
 
 		openedJobs, err := queries.StatsGetOpenedJobsCount(ctx)
 		if err != nil {

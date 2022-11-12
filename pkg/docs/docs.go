@@ -2282,14 +2282,14 @@ const docTemplate = `{
         },
         "/stats": {
             "get": {
-                "description": "Get statistics for user registrations grouped by days",
+                "description": "Get stats",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "stats"
                 ],
-                "summary": "Get statistics for user registrations",
+                "summary": "Get stats",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2774,6 +2774,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "registrations": {
+                    "type": "integer"
+                },
+                "registrations_by_date": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "integer"

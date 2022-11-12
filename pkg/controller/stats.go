@@ -31,8 +31,8 @@ func (cont *Stats) Register(e *echo.Echo) {
 	log.Debug().Str("controller", resourceStats).Msg("Registered")
 }
 
-// @Summary     Get statistics for user registrations
-// @Description Get statistics for user registrations grouped by days
+// @Summary     Get stats
+// @Description Get stats
 // @Tags        stats
 // @Produce     json
 // @Success     200 {object} model.Stats

@@ -82,3 +82,15 @@ func (q *Queries) StatsGetOpenedJobsCount(ctx context.Context) (int64, error) {
 	err := row.Scan(&count)
 	return count, err
 }
+
+const statsGetRegistrationsCount = `-- name: StatsGetRegistrationsCount :one
+select count(id) AS count
+from persons
+`
+
+func (q *Queries) StatsGetRegistrationsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, statsGetRegistrationsCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
