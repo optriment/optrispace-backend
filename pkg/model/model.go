@@ -76,7 +76,10 @@ type (
 
 	// Stats for statistics
 	Stats struct {
-		Registrations map[string]int `json:"registrations,omitempty"`
+		Registrations           map[string]int  `json:"registrations"`
+		OpenedJobs              int64           `json:"opened_jobs"`
+		TotalContracts          int64           `json:"total_contracts"`
+		TotalTransactionsVolume decimal.Decimal `json:"total_transactions_volume"`
 	}
 
 	// Chat is a chat instance
