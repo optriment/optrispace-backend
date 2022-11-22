@@ -1,5 +1,8 @@
 # Contributing to OptriSpace Backend
 
+[![Tests](https://github.com/optriment/optrispace-backend/actions/workflows/tests.yml/badge.svg)](https://github.com/optriment/optrispace-backend/actions/workflows/tests.yml)
+[![Spell](https://github.com/optriment/optrispace-backend/actions/workflows/spell.yml/badge.svg)](https://github.com/optriment/optrispace-backend/actions/workflows/spell.yml)
+
 The development branch is `develop`.\
 This is the default branch that all Pull Requests (PR) should be made against.
 
