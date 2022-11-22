@@ -43,11 +43,11 @@ returning *;
 -- name: ContractsGetByPerson :many
 select
     c.*
-    , pc.display_name as customer_name
-    , pp.display_name as performer_name
+    ,(CASE WHEN pc.display_name = '' THEN pc.login ELSE pc.display_name END)::varchar AS customer_name
+    ,(CASE WHEN pp.display_name = '' THEN pp.login ELSE pp.display_name END)::varchar AS performer_name
 from contracts c
-left join persons pc on c.customer_id = pc.id
-left join persons pp on c.performer_id = pp.id
+join persons pc on c.customer_id = pc.id
+join persons pp on c.performer_id = pp.id
 where c.customer_id = @person_id::varchar or c.performer_id = @person_id::varchar
 order by c.created_at desc;
 

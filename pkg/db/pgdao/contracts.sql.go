@@ -205,11 +205,11 @@ func (q *Queries) ContractPatch(ctx context.Context, arg ContractPatchParams) (C
 const contractsGetByPerson = `-- name: ContractsGetByPerson :many
 select
     c.id, c.customer_id, c.performer_id, c.application_id, c.title, c.description, c.price, c.duration, c.status, c.created_by, c.created_at, c.updated_at, c.customer_address, c.performer_address, c.contract_address
-    , pc.display_name as customer_name
-    , pp.display_name as performer_name
+    ,(CASE WHEN pc.display_name = '' THEN pc.login ELSE pc.display_name END)::varchar AS customer_name
+    ,(CASE WHEN pp.display_name = '' THEN pp.login ELSE pp.display_name END)::varchar AS performer_name
 from contracts c
-left join persons pc on c.customer_id = pc.id
-left join persons pp on c.performer_id = pp.id
+join persons pc on c.customer_id = pc.id
+join persons pp on c.performer_id = pp.id
 where c.customer_id = $1::varchar or c.performer_id = $1::varchar
 order by c.created_at desc
 `
@@ -230,8 +230,8 @@ type ContractsGetByPersonRow struct {
 	CustomerAddress  string
 	PerformerAddress string
 	ContractAddress  string
-	CustomerName     sql.NullString
-	PerformerName    sql.NullString
+	CustomerName     string
+	PerformerName    string
 }
 
 func (q *Queries) ContractsGetByPerson(ctx context.Context, personID string) ([]ContractsGetByPersonRow, error) {
