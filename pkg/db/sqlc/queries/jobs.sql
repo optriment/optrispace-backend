@@ -11,9 +11,10 @@ select
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
     ,p.ethereum_address AS customer_ethereum_address
+    ,j.visibility
     from jobs j
     join persons p on p.id = j.created_by
-    where j.blocked_at is null and j.suspended_at is null
+    where j.blocked_at is null and j.suspended_at is null and j.visibility = 'public'
     order by j.updated_at desc;
 
 -- name: JobGet :one
@@ -69,3 +70,6 @@ update jobs set suspended_at = null where id = @id::varchar;
 -- name: JobsPurge :exec
 -- Handle with care!
 DELETE FROM jobs;
+
+-- name: JobHide :exec
+update jobs set visibility = 'hidden' where id = @id::varchar;
