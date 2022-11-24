@@ -395,7 +395,7 @@ func TestGetJobs(t *testing.T) {
 		}
 	})
 
-	t.Run("returns only available jobs ordered by created_at descending", func(t *testing.T) {
+	t.Run("returns only available jobs ordered by updated_at descending", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
 		customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
@@ -468,6 +468,17 @@ func TestGetJobs(t *testing.T) {
 		err = pgdao.New(db).JobSuspend(ctx, suspendedJob.ID)
 		require.NoError(t, err)
 
+		// Patch job1 to have greater updated_at than job2
+		_, err = pgdao.New(db).JobPatch(ctx, pgdao.JobPatchParams{
+			Title:       job1.Title,
+			Description: job1.Description,
+			Budget:      job1.Budget.String,
+			Duration:    job1.Duration.Int32,
+			ID:          job1.ID,
+			Actor:       customer1.ID,
+		})
+		require.NoError(t, err)
+
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobsURL, nil)
 		require.NoError(t, err)
 		req.Header.Set(clog.HeaderXHint, t.Name())
@@ -481,7 +492,7 @@ func TestGetJobs(t *testing.T) {
 
 			assert.Equal(t, 2, len(ee))
 
-			expectedJob2 := ee[0]
+			expectedJob2 := ee[1]
 			assert.Equal(t, expectedJob2.ID, job2.ID)
 			assert.Equal(t, expectedJob2.Title, "Title2")
 			assert.Equal(t, expectedJob2.Description, "Description2")
@@ -491,7 +502,7 @@ func TestGetJobs(t *testing.T) {
 			assert.Equal(t, "Person2", expectedJob2.CustomerDisplayName)
 			assert.Equal(t, "0x1234567890CUSTOMER2", expectedJob2.CustomerEthereumAddress)
 
-			expectedJob1 := ee[1]
+			expectedJob1 := ee[0]
 			assert.Equal(t, expectedJob1.ID, job1.ID)
 			assert.Equal(t, expectedJob1.Title, "Title1")
 			assert.Equal(t, expectedJob1.Description, "Description1")

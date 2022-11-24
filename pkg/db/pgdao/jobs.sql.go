@@ -220,7 +220,7 @@ select
     from jobs j
     join persons p on p.id = j.created_by
     where j.blocked_at is null and j.suspended_at is null
-    order by j.created_at desc
+    order by j.updated_at desc
 `
 
 type JobsListRow struct {
