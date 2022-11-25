@@ -400,7 +400,7 @@ func TestGetJobs(t *testing.T) {
 
 		customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
 			ID:    pgdao.NewID(),
-			Login: pgdao.NewID(),	
+			Login: pgdao.NewID(),
 		})
 		require.NoError(t, err)
 
@@ -439,10 +439,9 @@ func TestGetJobs(t *testing.T) {
 
 			assert.Equal(t, 1, len(ee))
 
-			expectedJob := ee[0]
-			assert.Equal(t, expectedJob.ID, job2.ID)
-			assert.Equal(t, expectedJob.CreatedBy, job2.CreatedBy)
-			assert.Equal(t, "public", job2.Visibility)
+			actualJob := ee[0]
+			assert.Equal(t, job2.ID, actualJob.ID)
+			assert.Equal(t, job2.CreatedBy, actualJob.CreatedBy)
 		}
 	})
 

@@ -229,7 +229,6 @@ select
     ,(select count(*) from applications a where a.job_id = j.id) as application_count
     ,(CASE WHEN p.display_name = '' THEN p.login ELSE p.display_name END)::varchar AS customer_display_name
     ,p.ethereum_address AS customer_ethereum_address
-    ,j.visibility
     from jobs j
     join persons p on p.id = j.created_by
     where j.blocked_at is null and j.suspended_at is null and j.visibility = 'public'
@@ -248,7 +247,6 @@ type JobsListRow struct {
 	ApplicationCount        int64
 	CustomerDisplayName     string
 	CustomerEthereumAddress string
-	Visibility              string
 }
 
 func (q *Queries) JobsList(ctx context.Context) ([]JobsListRow, error) {
@@ -272,7 +270,6 @@ func (q *Queries) JobsList(ctx context.Context) ([]JobsListRow, error) {
 			&i.ApplicationCount,
 			&i.CustomerDisplayName,
 			&i.CustomerEthereumAddress,
-			&i.Visibility,
 		); err != nil {
 			return nil, err
 		}
