@@ -13,7 +13,7 @@ select
     ,p.ethereum_address AS customer_ethereum_address
     from jobs j
     join persons p on p.id = j.created_by
-    where j.blocked_at is null and j.suspended_at is null
+    where j.blocked_at is null and j.suspended_at is null and j.visibility = 'public'
     order by j.updated_at desc;
 
 -- name: JobGet :one
@@ -69,3 +69,6 @@ update jobs set suspended_at = null where id = @id::varchar;
 -- name: JobsPurge :exec
 -- Handle with care!
 DELETE FROM jobs;
+
+-- name: JobHide :exec
+update jobs set visibility = 'hidden' where id = @id::varchar;

@@ -101,6 +101,8 @@ type Job struct {
 	// Job is blocked if this field is not null
 	BlockedAt   sql.NullTime
 	SuspendedAt sql.NullTime
+	// Job visibility. Like public and hidden.
+	Visibility string
 }
 
 // Messages were sent in chats by users

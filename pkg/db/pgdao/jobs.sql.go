@@ -16,7 +16,7 @@ insert into jobs (
     id, title, description, budget, duration, created_by
 ) values (
     $1, $2, $3, $4, $5, $6
-) returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at
+) returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at, visibility
 `
 
 type JobAddParams struct {
@@ -49,6 +49,7 @@ func (q *Queries) JobAdd(ctx context.Context, arg JobAddParams) (Job, error) {
 		&i.CreatedBy,
 		&i.BlockedAt,
 		&i.SuspendedAt,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -63,7 +64,7 @@ func (q *Queries) JobBlock(ctx context.Context, id string) error {
 }
 
 const jobFind = `-- name: JobFind :one
-select id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at from jobs where id = $1::varchar
+select id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at, visibility from jobs where id = $1::varchar
 `
 
 // It is used only for testing purposes.
@@ -81,6 +82,7 @@ func (q *Queries) JobFind(ctx context.Context, id string) (Job, error) {
 		&i.CreatedBy,
 		&i.BlockedAt,
 		&i.SuspendedAt,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -139,6 +141,15 @@ func (q *Queries) JobGet(ctx context.Context, id string) (JobGetRow, error) {
 	return i, err
 }
 
+const jobHide = `-- name: JobHide :exec
+update jobs set visibility = 'hidden' where id = $1::varchar
+`
+
+func (q *Queries) JobHide(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, jobHide, id)
+	return err
+}
+
 const jobPatch = `-- name: JobPatch :one
 update jobs
 set
@@ -149,7 +160,7 @@ set
     updated_at = now()
 where
     id = $5::varchar and $6::varchar = created_by
-returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at
+returning id, title, description, budget, duration, created_at, updated_at, created_by, blocked_at, suspended_at, visibility
 `
 
 type JobPatchParams struct {
@@ -182,6 +193,7 @@ func (q *Queries) JobPatch(ctx context.Context, arg JobPatchParams) (Job, error)
 		&i.CreatedBy,
 		&i.BlockedAt,
 		&i.SuspendedAt,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -219,7 +231,7 @@ select
     ,p.ethereum_address AS customer_ethereum_address
     from jobs j
     join persons p on p.id = j.created_by
-    where j.blocked_at is null and j.suspended_at is null
+    where j.blocked_at is null and j.suspended_at is null and j.visibility = 'public'
     order by j.updated_at desc
 `
 

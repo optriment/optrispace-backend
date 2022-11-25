@@ -395,6 +395,56 @@ func TestGetJobs(t *testing.T) {
 		}
 	})
 
+	t.Run("returns only public jobs", func(t *testing.T) {
+		require.NoError(t, pgdao.PurgeDB(ctx, db))
+
+		customer1, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+		})
+		require.NoError(t, err)
+
+		job1, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:        pgdao.NewID(),
+			CreatedBy: customer1.ID,
+		})
+		require.NoError(t, err)
+
+		// Job is public by default. Set job1 from public to hidden.
+		err = pgdao.New(db).JobHide(ctx, job1.ID)
+		require.NoError(t, err)
+
+		customer2, err := pgdao.New(db).PersonAdd(ctx, pgdao.PersonAddParams{
+			ID:    pgdao.NewID(),
+			Login: pgdao.NewID(),
+		})
+		require.NoError(t, err)
+
+		job2, err := pgdao.New(db).JobAdd(ctx, pgdao.JobAddParams{
+			ID:        pgdao.NewID(),
+			CreatedBy: customer2.ID,
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, jobsURL, nil)
+		require.NoError(t, err)
+		req.Header.Set(clog.HeaderXHint, t.Name())
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if assert.Equal(t, http.StatusOK, res.StatusCode, "Invalid result status code '%s'", res.Status) {
+			ee := make([]*model.JobDTO, 0)
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&ee))
+
+			assert.Equal(t, 1, len(ee))
+
+			actualJob := ee[0]
+			assert.Equal(t, job2.ID, actualJob.ID)
+			assert.Equal(t, job2.CreatedBy, actualJob.CreatedBy)
+		}
+	})
+
 	t.Run("returns only available jobs ordered by updated_at descending", func(t *testing.T) {
 		require.NoError(t, pgdao.PurgeDB(ctx, db))
 
