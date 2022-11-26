@@ -105,3 +105,7 @@ swag-init: $(SWAGBIN) # (re)generate swagger specification with swag
 .PHONY: swag-fmt
 swag-fmt: $(SWAGBIN) # format swag comment annotations
 	$(SWAGBIN) fmt --dir ./pkg/controller --generalInfo api.go
+
+.PHONY: ci-check-uncommitted-changes
+ci-check-uncommitted-changes:
+	./scripts/ci-check-uncommitted-changes.bash
