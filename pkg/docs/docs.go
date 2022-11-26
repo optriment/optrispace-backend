@@ -2773,9 +2773,6 @@ const docTemplate = `{
                 "opened_jobs": {
                     "type": "integer"
                 },
-                "registrations": {
-                    "type": "integer"
-                },
                 "registrations_by_date": {
                     "type": "object",
                     "additionalProperties": {
@@ -2783,6 +2780,9 @@ const docTemplate = `{
                     }
                 },
                 "total_contracts": {
+                    "type": "integer"
+                },
+                "total_registrations": {
                     "type": "integer"
                 },
                 "total_transactions_volume": {
