@@ -149,6 +149,8 @@ definitions:
         type: string
       kind:
         type: string
+      last_message_at:
+        type: string
       participants:
         items:
           $ref: '#/definitions/model.ParticipantDTO'

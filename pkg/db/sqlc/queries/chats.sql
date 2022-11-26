@@ -42,6 +42,7 @@ select
     , p.id as person_id
     , p.display_name as person_display_name
     , p.ethereum_address as person_ethereum_address
+    , m1.created_at as last_message_at
 from chats c
 join chats_participants cp on c.id = cp.chat_id
 join persons p on p.id = cp.person_id

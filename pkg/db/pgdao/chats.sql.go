@@ -137,6 +137,7 @@ select
     , p.id as person_id
     , p.display_name as person_display_name
     , p.ethereum_address as person_ethereum_address
+    , m1.created_at as last_message_at
 from chats c
 join chats_participants cp on c.id = cp.chat_id
 join persons p on p.id = cp.person_id
@@ -154,6 +155,7 @@ type ChatsListByParticipantRow struct {
 	PersonID              string
 	PersonDisplayName     string
 	PersonEthereumAddress string
+	LastMessageAt         time.Time
 }
 
 // Chat list order by created_at timestamp of the latest message that belongs chat. Order is inverse from the newest to the latest update.
@@ -173,6 +175,7 @@ func (q *Queries) ChatsListByParticipant(ctx context.Context, participantID stri
 			&i.PersonID,
 			&i.PersonDisplayName,
 			&i.PersonEthereumAddress,
+			&i.LastMessageAt,
 		); err != nil {
 			return nil, err
 		}

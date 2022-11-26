@@ -100,6 +100,7 @@ type (
 		ApplicationID string            `json:"application_id,omitempty"`
 		ContractID    string            `json:"contract_id,omitempty"`
 		Participants  []*ParticipantDTO `json:"participants,omitempty"`
+		LastMessageAt time.Time         `json:"last_message_at"`
 	}
 
 	// ParticipantDTO represents is a chat participant

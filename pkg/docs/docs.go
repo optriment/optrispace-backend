@@ -2546,6 +2546,9 @@ const docTemplate = `{
                 "kind": {
                     "type": "string"
                 },
+                "last_message_at": {
+                    "type": "string"
+                },
                 "participants": {
                     "type": "array",
                     "items": {
