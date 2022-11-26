@@ -2766,9 +2766,6 @@
                 "opened_jobs": {
                     "type": "integer"
                 },
-                "registrations": {
-                    "type": "integer"
-                },
                 "registrations_by_date": {
                     "type": "object",
                     "additionalProperties": {
@@ -2776,6 +2773,9 @@
                     }
                 },
                 "total_contracts": {
+                    "type": "integer"
+                },
+                "total_registrations": {
                     "type": "integer"
                 },
                 "total_transactions_volume": {

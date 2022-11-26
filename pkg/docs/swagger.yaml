@@ -298,13 +298,13 @@ definitions:
     properties:
       opened_jobs:
         type: integer
-      registrations:
-        type: integer
       registrations_by_date:
         additionalProperties:
           type: integer
         type: object
       total_contracts:
+        type: integer
+      total_registrations:
         type: integer
       total_transactions_volume:
         type: number
