@@ -127,8 +127,18 @@ func (s *ChatSvc) AddMessage(ctx context.Context, chatID, participantID, text st
 
 	var result *model.Message
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
+		chat, err := queries.ChatGet(ctx, chatID)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ErrEntityNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to get chat %s info: %w", chatID, err)
+		}
+
 		if _, e := queries.ChatParticipantGet(ctx, pgdao.ChatParticipantGetParams{
-			ChatID:   chatID,
+			ChatID:   chat.ID,
 			PersonID: participantID,
 		}); e != nil {
 			if errors.Is(e, sql.ErrNoRows) {
@@ -139,7 +149,7 @@ func (s *ChatSvc) AddMessage(ctx context.Context, chatID, participantID, text st
 
 		r, err := queries.MessageAdd(ctx, pgdao.MessageAddParams{
 			ID:        pgdao.NewID(),
-			ChatID:    chatID,
+			ChatID:    chat.ID,
 			CreatedBy: participantID,
 			Text:      strings.TrimSpace(text),
 		})
@@ -201,7 +211,8 @@ func (s *ChatSvc) Get(ctx context.Context, chatID, participantID string) (*model
 
 // ListByParticipant implements service.Chat
 func (s *ChatSvc) ListByParticipant(ctx context.Context, participantID string) ([]*model.ChatDTO, error) {
-	var result []*model.ChatDTO
+	result := make([]*model.ChatDTO, 0)
+
 	return result, doWithQueries(ctx, s.db, defaultRwTxOpts, func(queries *pgdao.Queries) error {
 		cc, err := queries.ChatsListByParticipant(ctx, participantID)
 		if err != nil {
@@ -209,7 +220,6 @@ func (s *ChatSvc) ListByParticipant(ctx context.Context, participantID string) (
 		}
 
 		for _, c := range cc {
-
 			var (
 				kind, id      = topicParts(c.Topic)
 				jobID         = ""
@@ -252,6 +262,7 @@ func (s *ChatSvc) ListByParticipant(ctx context.Context, participantID string) (
 					JobID:         jobID,
 					ApplicationID: applicationID,
 					ContractID:    contractID,
+					LastMessageAt: c.LastMessageAt,
 					Participants: []*model.ParticipantDTO{
 						{
 							ID:              c.PersonID,

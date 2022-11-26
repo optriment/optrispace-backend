@@ -115,8 +115,9 @@ func (cont *Chat) list(c echo.Context) error {
 	}
 
 	m, err := cont.svc.ListByParticipant(c.Request().Context(), uc.Subject.ID)
-	if err == nil {
-		return c.JSON(http.StatusOK, m)
+	if err != nil {
+		return err
 	}
-	return err
+
+	return c.JSON(http.StatusOK, m)
 }
