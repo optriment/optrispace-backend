@@ -46,3 +46,9 @@ jobs:
 
       - name: Test swagger generation
         run: make swag-init
+
+      - name: Format swagger documentation
+        run: make swag-fmt
+
+      - name: Check uncommitted changes
+        run: make ci-check-uncommitted-changes
